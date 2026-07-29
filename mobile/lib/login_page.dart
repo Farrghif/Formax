@@ -158,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                               elevation: 2,
                             ),
                             child: const Text(
-                              'Masuk',
+                              'Login',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -176,13 +176,13 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'Belum punya akun?',
+                        'Don\'t have an account?',
                         style: TextStyle(color: Colors.white),
                       ),
                       TextButton(
                         onPressed: () {},
                         child: const Text(
-                          'Daftar Sekarang',
+                          'Sign Up',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

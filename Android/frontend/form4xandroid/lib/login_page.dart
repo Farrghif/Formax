@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
                     color: Colors.white,
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Welcome Text
                   const Text(
                     'Selamat Datang',
@@ -60,13 +60,10 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 8),
                   const Text(
                     'Silakan login untuk melanjutkan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Login Form Card
                   Container(
                     padding: const EdgeInsets.all(24.0),
@@ -95,12 +92,14 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Password Field
                         TextFormField(
                           controller: _passwordController,
@@ -125,12 +124,14 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        
+
                         // Forgot Password
                         Align(
                           alignment: Alignment.centerRight,
@@ -140,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Login Button
                         SizedBox(
                           width: double.infinity,
@@ -170,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
