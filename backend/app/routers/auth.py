@@ -45,3 +45,29 @@ def logout(current_user: models.User = Depends(get_current_user)):
 @router.get("/me", response_model=schemas.UserOut)
 def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+
+@router.put("/me", response_model=schemas.UserOut)
+def update_me(
+    payload: schemas.ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if payload.full_name is not None:
+        if not payload.full_name.strip():
+            raise HTTPException(status_code=400, detail="Nama lengkap tidak boleh kosong")
+        current_user.full_name = payload.full_name.strip()
+
+    if payload.email is not None:
+        existing_user = db.query(models.User).filter(models.User.email == str(payload.email)).first()
+        if existing_user and existing_user.id != current_user.id:
+            raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+        current_user.email = str(payload.email)
+
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
