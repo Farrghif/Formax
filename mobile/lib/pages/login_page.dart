@@ -107,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                           obscureText: !_isPasswordVisible,
                           decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline),
+                            prefixIcon: const Icon(Icons.assessment),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _isPasswordVisible
