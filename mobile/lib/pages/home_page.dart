@@ -7,6 +7,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
+          foregroundColor: Colors.blue,
           title: Text('Form4x',
           style: TextStyle(
             color: Colors.black,
@@ -16,6 +17,7 @@ class HomePage extends StatelessWidget {
         ),
         backgroundColor: Colors.white,
         centerTitle: true,
+        elevation: 0.0,
       ),
     );
   }
