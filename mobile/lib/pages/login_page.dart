@@ -24,14 +24,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF4A00E0), // Deep Purple
-              Color.fromARGB(255, 45, 78, 226), // Lighter Purple
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+         color: Colors.white,
         ),
         child: SafeArea(
           child: Center(
@@ -44,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
                   const Icon(
                     Icons.lock_person_rounded,
                     size: 80,
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 32, 28, 28),
                   ),
                   const SizedBox(height: 24),
                   
