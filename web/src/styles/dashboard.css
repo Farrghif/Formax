@@ -1,0 +1,444 @@
+/* ===================================================
+   DASHBOARD PAGE STYLES
+   =================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Root layout ---- */
+.db-root {
+  font-family: 'Inter', system-ui, sans-serif;
+  display: flex;
+  min-height: 100vh;
+  background: #f0f4fa;
+  color: #1e293b;
+}
+
+/* ---- Loading ---- */
+.db-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.db-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.db-sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: #b0bfd4;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px 20px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+}
+
+/* Logo */
+.db-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 36px;
+  padding-left: 4px;
+}
+
+.db-logo-icon {
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(236,72,153,0.3));
+}
+
+.db-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-logo-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+
+.db-logo-tagline {
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.4;
+}
+
+/* Nav */
+.db-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.db-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.db-nav-item:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.db-nav-item.active {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+/* Sidebar Footer */
+.db-sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.db-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+
+.db-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f472b6, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(236,72,153,0.35);
+}
+
+.db-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.db-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.db-user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-user-email {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-logout-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.db-logout-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.db-main {
+  margin-left: 220px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Topbar */
+.db-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  background: #fff;
+  border-bottom: 1px solid #e8edf5;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+  gap: 20px;
+}
+
+.db-page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  flex-shrink: 0;
+}
+
+.db-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f5f9;
+  border-radius: 50px;
+  padding: 9px 18px;
+  max-width: 400px;
+  width: 100%;
+  border: 1.5px solid transparent;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.db-search-wrap:focus-within {
+  background: #fff;
+  border-color: #3b82f6;
+}
+
+.db-search-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.db-search {
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  width: 100%;
+}
+
+.db-search::placeholder { color: #94a3b8; }
+
+/* Content area */
+.db-content {
+  padding: 28px 32px;
+  flex: 1;
+}
+
+/* ---- Grid ---- */
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 20px;
+}
+
+/* Create card */
+.db-card-create {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 200px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  color: #94a3b8;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.22s ease;
+}
+
+.db-card-create:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59,130,246,0.04);
+  transform: translateY(-2px);
+}
+
+.db-create-icon {
+  width: 48px;
+  height: 48px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: inherit;
+}
+
+/* Template card */
+.db-card-template {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-card-template:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.db-card-preview {
+  background: var(--card-color, #c7d7f0);
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.db-preview-lines {
+  background: rgba(255,255,255,0.9);
+  border-radius: 8px;
+  padding: 14px 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.db-preview-line {
+  height: 6px;
+  border-radius: 4px;
+  background: #d1dff0;
+}
+.db-line-wide  { width: 100%; }
+.db-line-mid   { width: 72%; }
+.db-line-short { width: 48%; }
+
+.db-card-footer {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.db-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.db-card-date {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.db-card-menu {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.db-card-menu:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Empty state */
+.db-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 14px;
+  color: #cbd5e1;
+}
+
+.db-empty-state p {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .db-sidebar {
+    width: 72px;
+    padding: 20px 10px;
+  }
+  .db-logo-text, .db-user-info, .db-nav-item span { display: none; }
+  .db-nav-item { justify-content: center; padding: 10px; }
+  .db-user { justify-content: center; }
+  .db-main { margin-left: 72px; }
+  .db-content { padding: 20px 16px; }
+  .db-topbar { padding: 16px; }
+}
