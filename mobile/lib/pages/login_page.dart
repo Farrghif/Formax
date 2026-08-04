@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -63,11 +65,18 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
+                    children: 
+                    
+                    [
                       const SizedBox(height: 10),
 
                       // Logo
-                      const FlutterLogo(size: 70),
+                      Align(
+                       alignment: Alignment.topCenter,
+                      child: Image.asset(
+                            'assets/icons/logoForm4x.png',
+                              ),
+                           ),
 
                       const SizedBox(height: 20),
 
@@ -176,7 +185,16 @@ class _LoginPageState extends State<LoginPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            if (isLogin) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const HomePage(),
+                                ),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E66D0),
                             foregroundColor: Colors.white,
