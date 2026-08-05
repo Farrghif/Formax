@@ -29,11 +29,21 @@ class HomePage extends StatelessWidget {
           child: TextField(
             decoration: InputDecoration(
               filled: true,
+              hintText: 'Search',
               fillColor: Colors.white,
               contentPadding: EdgeInsets.all(10),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.all(12),
-                child: SvgPicture.asset('assets/icons/searchicon.svg'),
+              prefixIcon: Container(
+                child: IntrinsicHeight(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SvgPicture.asset('assets/icons/searchicon.svg'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
               border: OutlineInputBorder(
@@ -50,14 +60,29 @@ class HomePage extends StatelessWidget {
   AppBar appBar() {
     return AppBar(
       foregroundColor: Colors.blue,
-      title: Text(
-        'Form4x',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          
-        ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Form4x',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              
+
+            ),
+          ),
+          const Text(
+            'Tempat membuat Form terlengkap',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
+          )
+        ],
       ),
       
       
