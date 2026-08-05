@@ -9,33 +9,41 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: appBar(),
-      body: Column(
-        children: [
-          Container(
-            margin: EdgeInsets.only(top: 35, left: 20, right: 20),
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0XFFB4C5D4).withOpacity(0.11),
-                  blurRadius: 40,
-                  spreadRadius: 0.0
-                )
-              ]
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: EdgeInsets.all(15),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none
-                ),
+    );
+  }
+
+  Column searchBar() {
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.only(top: 5, left: 5, right: 5),
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Color(0XFFB4C5D4).withOpacity(0.11),
+                blurRadius: 40,
+                spreadRadius: 0.0
+              )
+            ]
+          ),
+          child: TextField(
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: EdgeInsets.all(10),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SvgPicture.asset('assets/icons/searchicon.svg'),
+              ),
+
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(55),
+                borderSide: BorderSide.none
               ),
             ),
-          )
-        ],
-      ),
+          ),
+        )
+      ],
     );
   }
 
@@ -48,16 +56,22 @@ class HomePage extends StatelessWidget {
           color: Colors.white,
           fontSize: 22,
           fontWeight: FontWeight.bold,
+          
         ),
       ),
+      
+      
       backgroundColor: Color(0xFFB4C5D4),
-      centerTitle: true,
+      centerTitle: false,
       leading: GestureDetector(
         onTap: () {},
         child: Container(
-        margin: EdgeInsets.all(10),
-        alignment: Alignment.center,
-        child: const Icon(Icons.menu, color: Colors.white, ),
+        margin: EdgeInsets.all(5),
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 1, left: 10, right: 5),
+          child: SvgPicture.asset('assets/icons/pP.svg'),
+        ),
       ),
       
         // decoration: BoxDecoration(
@@ -65,6 +79,25 @@ class HomePage extends StatelessWidget {
         //   borderRadius: BorderRadius.circular(10),
         // ),
       ),
+      actions: [
+        Container(
+        margin: EdgeInsets.all(10),
+        alignment: Alignment.center,
+        width: 37,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 1, left: 5, right: 10),
+          child: const Icon(Icons.menu, color: Colors.white, ),
+        ),
+      ),
+      ],
+
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 25, left: 5, right: 5),
+          child: searchBar(),
+          )
+        ),
     );
   }
 }

@@ -41,14 +41,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
-            Align(
-              alignment: Alignment.center,
-              child: Image.asset(
-                'assets/icons/logoForm4x.png',
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
+            // Align(
+            //   alignment: Alignment.center,
+            //   child: Image.asset(
+            //     'assets/icons/logoForm4x.png',
+            //     width: double.infinity,
+            //     fit: BoxFit.cover,
+            //   ),
+            // ),
 
 
             // Bottom image
