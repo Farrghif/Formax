@@ -41,16 +41,25 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
-            // Bottom image
             Align(
-              alignment: Alignment.bottomCenter,
+              alignment: Alignment.center,
               child: Image.asset(
-                'assets/images/bawahloginregister.png',
+                'assets/icons/logoForm4x.png',
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
             ),
 
+
+            // Bottom image
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Image.asset(
+                'assets/images/bawahloginregister.png',
+              ),
+            ),
+
+            
             // Main content
             Center(
               child: SingleChildScrollView(
