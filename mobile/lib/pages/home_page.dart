@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'login_page.dart';
-import 'formmakerpage.dart';
+import 'templatemakerpage.dart';
 
 class FormTemplate {
   final String title;
@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> {
         onTap: () async {
           final newTemplate = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const FormMakerPage()),
+            MaterialPageRoute(builder: (context) => const TemplateMakerPage()),
           );
           if (newTemplate != null && newTemplate is FormTemplate) {
             setState(() {
