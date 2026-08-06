@@ -1,6 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,6 +11,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool isLogin = true;
+  bool _isLoading = false;
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -194,16 +195,64 @@ class _LoginPageState extends State<LoginPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (isLogin) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const HomePage(),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isLoading = true;
+                                  });
+
+                                  final email = emailController.text.trim();
+                                  final password = passwordController.text.trim();
+
+                                  if (email.isEmpty || password.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Email and password cannot be empty')),
+                                    );
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                    return;
+                                  }
+
+                                  Map<String, dynamic> result;
+                                  if (isLogin) {
+                                    result = await ApiService.login(email, password);
+                                  } else {
+                                    final fullName = fullNameController.text.trim();
+                                    if (fullName.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Full name cannot be empty')),
+                                      );
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      return;
+                                    }
+                                    result = await ApiService.register(fullName, email, password);
+                                  }
+
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+
+                                  if (result['success'] == true) {
+                                    if (mounted) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const HomePage(),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(result['message'] ?? 'An error occurred')),
+                                      );
+                                    }
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E66D0),
                             foregroundColor: Colors.white,
@@ -212,8 +261,18 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text(isLogin ? 'Login' : 'Register'),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(isLogin ? 'Login' : 'Register'),
                         ),
+
                       ),
 
                       const SizedBox(height: 12),
