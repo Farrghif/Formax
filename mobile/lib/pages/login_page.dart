@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: const Color.fromARGB(000, 255, 255, 255),
       body: SafeArea(
         child: Stack(
           children: [
@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
             Align(
               alignment: Alignment.topCenter,
               child: Image.asset(
-                'assets/images/atasloginregister.png',
+                'assets/images/ataslginregister.png',
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
@@ -149,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 20),
 
-                      if (!isLogin) ...[
+                      if (isLogin) ...[
                         _buildLabel('Full Name*'),
                         _buildTextField(
                           controller: fullNameController,
@@ -205,13 +205,35 @@ class _LoginPageState extends State<LoginPage> {
                                   final email = emailController.text.trim();
                                   final password = passwordController.text.trim();
 
-                                  if (email.isEmpty || password.isEmpty) {
+                                  // Validasi format email dengan Regex sederhana
+                                  final bool emailValid = 
+                                      RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(email);
+
+                                  if (email.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Email and password cannot be empty')),
+                                      const SnackBar(content: Text('Email tidak boleh kosong!')),
                                     );
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
+                                    setState(() => _isLoading = false);
+                                    return;
+                                  } else if (!emailValid) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Format email tidak valid!')),
+                                    );
+                                    setState(() => _isLoading = false);
+                                    return;
+                                  }
+
+                                  if (password.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Password tidak boleh kosong!')),
+                                    );
+                                    setState(() => _isLoading = false);
+                                    return;
+                                  } else if (password.length < 6) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Password minimal 6 karakter!')),
+                                    );
+                                    setState(() => _isLoading = false);
                                     return;
                                   }
 
