@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/api_service.dart';
+import 'login_page.dart';
 import 'templatemakerpage.dart';
-
 class FormTemplate {
   final String title;
   final String subtitle;
@@ -18,6 +19,22 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  String _fullName = "User";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final result = await ApiService.getMe();
+    if (result['success'] == true && mounted) {
+      setState(() {
+        _fullName = result['data']['full_name'] ?? "User";
+      });
+    }
+  }
 
   List<FormTemplate> templates = [
     FormTemplate(title: "Quizz", subtitle: "Updated 2 days ago"),
@@ -284,17 +301,28 @@ class _HomePageState extends State<HomePage> {
                   child: Icon(Icons.person, color: Colors.grey),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Gita NUr',
-                    style: TextStyle(
+                    _fullName,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF374151),
                     ),
                   ),
                 ),
-                Icon(Icons.logout, color: Color(0xFF9CA3AF)),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Color(0xFF9CA3AF)),
+                  onPressed: () async {
+                    await ApiService.removeToken();
+                    if (!context.mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
               ],
             ),
           ),

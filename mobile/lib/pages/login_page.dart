@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(000, 255, 255, 255),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
             Align(
               alignment: Alignment.topCenter,
               child: Image.asset(
-                'assets/images/ataslginregister.png',
+                'assets/images/atasloginregister.png',
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
@@ -149,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 20),
 
-                      if (isLogin) ...[
+                      if (!isLogin) ...[
                         _buildLabel('Full Name*'),
                         _buildTextField(
                           controller: fullNameController,
