@@ -14,7 +14,7 @@ router = APIRouter(prefix="/forms", tags=["export"])
 
 @router.get("/{form_id}/export")
 def export_submissions_to_excel(
-    form_id: uuid.UUID,
+    form_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):

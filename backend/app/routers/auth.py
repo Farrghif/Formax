@@ -9,7 +9,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup", response_model=schemas.TokenResponse)
 def signup(payload: schemas.SignUpRequest, db: Session = Depends(get_db)):
-    existing = db.query(models.User).filter(models.User.email == payload.email).first()
+    existing = db.query(models.User).filter(models.User.email == str(payload.email)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email sudah terdaftar")
 
@@ -28,7 +28,7 @@ def signup(payload: schemas.SignUpRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.TokenResponse)
 def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    user = db.query(models.User).filter(models.User.email == str(payload.email)).first()
     if not user or not security.verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email atau password salah")
 

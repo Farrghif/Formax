@@ -36,7 +36,7 @@ def create_form(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    if db.query(models.Form).filter(models.Form.slug == payload.slug).first():
+    if db.query(models.Form).filter(models.Form.slug == str(payload.slug)).first():
         raise HTTPException(status_code=400, detail="Slug sudah dipakai, pilih yang lain")
 
     form = models.Form(
@@ -56,7 +56,7 @@ def create_form(
         # copy questions dari template ke form ini (snapshot, bukan reference)
         template_questions = (
             db.query(models.Question)
-            .filter(models.Question.template_id == payload.template_id)
+            .filter(models.Question.template_id == str(payload.template_id))
             .order_by(models.Question.order_index)
             .all()
         )
@@ -86,7 +86,7 @@ def create_form(
 
 
 @router.get("/{form_id}", response_model=schemas.FormOut)
-def get_form_for_owner(form_id: uuid.UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def get_form_for_owner(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form tidak ditemukan")
@@ -97,7 +97,7 @@ def get_form_for_owner(form_id: uuid.UUID, db: Session = Depends(get_db), curren
 
 @router.patch("/{form_id}", response_model=schemas.FormOut)
 def update_form(
-    form_id: uuid.UUID, payload: schemas.FormUpdate,
+    form_id: str, payload: schemas.FormUpdate,
     db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user),
 ):
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
@@ -114,7 +114,7 @@ def update_form(
 
 
 @router.delete("/{form_id}")
-def delete_form(form_id: uuid.UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_form(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form tidak ditemukan")
@@ -126,7 +126,7 @@ def delete_form(form_id: uuid.UUID, db: Session = Depends(get_db), current_user:
 
 
 @router.post("/{form_id}/generate-qr")
-def generate_qr(form_id: uuid.UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Generate QR code dari link publik form, simpan sebagai file static, update qr_code_url."""
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
     if not form:
