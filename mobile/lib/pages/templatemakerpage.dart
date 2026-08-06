@@ -202,7 +202,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               const SizedBox(width: 16),
               const Text("Wajib diisi", style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(width: 8),
-              Switch(value: true, onChanged: (v) {}, activeColor: const Color(0xFF0F52BA)),
+              Switch(value: true, onChanged: (v) {}, activeThumbColor: const Color(0xFF0F52BA)),
               const SizedBox(width: 8),
               const Icon(Icons.more_vert, color: Colors.black54),
             ],
@@ -341,7 +341,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha:0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -393,7 +393,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   ],
                 ),
               ),
-              Switch(value: true, onChanged: (v){}, activeColor: const Color(0xFF0F52BA)),
+              Switch(value: true, onChanged: (v){}, activeThumbColor: const Color(0xFF0F52BA)),
             ],
           ),
           const SizedBox(height: 24),
@@ -475,7 +475,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(fontSize: 14)),
-        Switch(value: value, onChanged: (v){}, activeColor: const Color(0xFF0F52BA)),
+        Switch(value: value, onChanged: (v){}, activeThumbColor: const Color(0xFF0F52BA)),
       ],
     );
   }
@@ -533,7 +533,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   ],
                 ),
               ),
-              Switch(value: true, onChanged: (v){}, activeColor: const Color(0xFF0F52BA)),
+              Switch(value: true, onChanged: (v){}, activeThumbColor: const Color(0xFF0F52BA)),
             ],
           ),
           const SizedBox(height: 16),
@@ -645,7 +645,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   Text("Set a time limit for form completion", style: TextStyle(fontSize: 12, color: Colors.black54)),
                 ],
               ),
-              Switch(value: true, onChanged: (v){}, activeColor: const Color(0xFF2563EB)),
+              Switch(value: true, onChanged: (v){}, activeThumbColor: const Color(0xFF2563EB)),
             ],
           ),
           const SizedBox(height: 24),

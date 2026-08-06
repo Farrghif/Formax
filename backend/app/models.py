@@ -3,16 +3,16 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (
-    Column, String, Text, Boolean, Integer, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint
+    Column, String, Text, Boolean, Integer, ForeignKey, DateTime, Enum, CheckConstraint, UniqueConstraint, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from .database import Base
 
 
 def gen_uuid():
-    return uuid.uuid4()
+    return str(uuid.uuid4())
+
 
 
 # ============================================================
@@ -39,7 +39,7 @@ class FormStatus(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
@@ -57,8 +57,8 @@ class User(Base):
 class Template(Base):
     __tablename__ = "templates"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     is_system = Column(Boolean, default=False)
@@ -75,9 +75,9 @@ class Template(Base):
 class Form(Base):
     __tablename__ = "forms"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    template_id = Column(UUID(as_uuid=True), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(String(36), ForeignKey("templates.id", ondelete="SET NULL"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     status = Column(Enum(FormStatus), default=FormStatus.draft)
@@ -109,15 +109,15 @@ class Question(Base):
         CheckConstraint("form_id IS NOT NULL OR template_id IS NOT NULL", name="ck_form_or_template"),
     )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    form_id = Column(UUID(as_uuid=True), ForeignKey("forms.id", ondelete="CASCADE"), nullable=True)
-    template_id = Column(UUID(as_uuid=True), ForeignKey("templates.id", ondelete="CASCADE"), nullable=True)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    form_id = Column(String(36), ForeignKey("forms.id", ondelete="CASCADE"), nullable=True)
+    template_id = Column(String(36), ForeignKey("templates.id", ondelete="CASCADE"), nullable=True)
     type = Column(Enum(QuestionType), nullable=False)
     label = Column(String, nullable=False)
     placeholder = Column(String, nullable=True)
     is_required = Column(Boolean, default=False)
     order_index = Column(Integer, nullable=False, default=0)
-    settings = Column(JSONB, default=dict)
+    settings = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     form = relationship("Form", back_populates="questions")
@@ -132,8 +132,8 @@ class Question(Base):
 class QuestionOption(Base):
     __tablename__ = "question_options"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    question_id = Column(String(36), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
     label = Column(String, nullable=False)
     value = Column(String, nullable=True)
     order_index = Column(Integer, default=0)
@@ -150,9 +150,9 @@ class Submission(Base):
         UniqueConstraint("form_id", "user_id", name="uq_one_submission_per_user_per_form"),
     )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    form_id = Column(UUID(as_uuid=True), ForeignKey("forms.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # wajib login
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    form_id = Column(String(36), ForeignKey("forms.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # wajib login
 
     started_at = Column(DateTime, default=datetime.utcnow)
     is_auto_submitted = Column(Boolean, default=False)
@@ -172,11 +172,11 @@ class Answer(Base):
         UniqueConstraint("submission_id", "question_id", name="uq_one_answer_per_question"),
     )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
-    submission_id = Column(UUID(as_uuid=True), ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
-    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    submission_id = Column(String(36), ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(String(36), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
     answer_text = Column(Text, nullable=True)
-    answer_options = Column(JSONB, nullable=True)
+    answer_options = Column(JSON, nullable=True)
     file_url = Column(String, nullable=True)
     answered_at = Column(DateTime, default=datetime.utcnow)
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'login_page.dart';
 import 'templatemakerpage.dart';
 
 class FormTemplate {
@@ -41,7 +40,7 @@ class _HomePageState extends State<HomePage> {
             ...templates.map((t) => Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: _buildTemplateCard(t.title, t.subtitle),
-            )).toList(),
+            )),
           ],
         ),
       ),
@@ -134,7 +133,7 @@ class _HomePageState extends State<HomePage> {
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -352,7 +351,7 @@ class _HomePageState extends State<HomePage> {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: const Color(0XFFB4C5D4).withOpacity(0.11),
+                color: const Color(0XFFB4C5D4).withValues(alpha: 0.11),
                 blurRadius: 40,
                 spreadRadius: 0.0
               )

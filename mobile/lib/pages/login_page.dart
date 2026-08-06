@@ -254,25 +254,22 @@ class _LoginPageState extends State<LoginPage> {
                                     result = await ApiService.register(fullName, email, password);
                                   }
 
+                                  if (!context.mounted) return;
                                   setState(() {
                                     _isLoading = false;
                                   });
 
                                   if (result['success'] == true) {
-                                    if (mounted) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const HomePage(),
-                                        ),
-                                      );
-                                    }
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const HomePage(),
+                                      ),
+                                    );
                                   } else {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(result['message'] ?? 'An error occurred')),
-                                      );
-                                    }
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(result['message'] ?? 'An error occurred')),
+                                    );
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
