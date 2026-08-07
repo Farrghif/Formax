@@ -369,7 +369,7 @@ class _HomePageState extends State<HomePage> {
                   icon: const Icon(Icons.logout, color: Color(0xFF9CA3AF)),
                   onPressed: () async {
                     await ApiService.removeToken();
-                    if (!context.mounted) return;
+                    if (!mounted) return;
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
