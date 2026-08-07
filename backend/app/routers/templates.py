@@ -1,4 +1,3 @@
-import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -54,7 +53,7 @@ def create_template(
 
 
 @router.get("/{template_id}", response_model=schemas.TemplateOut)
-def get_template(template_id: uuid.UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def get_template(template_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     template = db.query(models.Template).filter(models.Template.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template tidak ditemukan")
@@ -65,7 +64,7 @@ def get_template(template_id: uuid.UUID, db: Session = Depends(get_db), current_
 
 @router.patch("/{template_id}", response_model=schemas.TemplateOut)
 def update_template(
-    template_id: uuid.UUID,
+    template_id: str,
     payload: schemas.TemplateUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -78,7 +77,7 @@ def update_template(
     if template.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(template, key, value)
 
     db.commit()
@@ -87,7 +86,7 @@ def update_template(
 
 
 @router.delete("/{template_id}")
-def delete_template(template_id: uuid.UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_template(template_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     template = db.query(models.Template).filter(models.Template.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template tidak ditemukan")
@@ -98,3 +97,4 @@ def delete_template(template_id: uuid.UUID, db: Session = Depends(get_db), curre
     db.delete(template)
     db.commit()
     return {"message": "Template dihapus"}
+

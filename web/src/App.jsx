@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
+import FormBuilderPage from './pages/FormBuilderPage';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -18,6 +19,22 @@ function App() {
           element={
             <PrivateRoute>
               <DashboardPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/form-builder"
+          element={
+            <PrivateRoute>
+              <FormBuilderPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/form-builder/:formId"
+          element={
+            <PrivateRoute>
+              <FormBuilderPage />
             </PrivateRoute>
           }
         />

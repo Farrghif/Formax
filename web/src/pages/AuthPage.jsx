@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, signup } from '../api/auth';
+import { login, signup, sendOtp } from '../api/auth';
 import '../styles/auth.css';
 
 export default function AuthPage() {
@@ -9,6 +9,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
 
   // Login state
   const [loginData, setLoginData] = useState({ email: '', password: '', remember: false });
@@ -43,12 +45,23 @@ export default function AuthPage() {
       setError('Password minimal 6 karakter');
       return;
     }
+
     setLoading(true);
     try {
+      if (!otpStep) {
+        // Step 1: kirim OTP ke email
+        await sendOtp(registerData.email);
+        setOtpStep(true);
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: signup dengan OTP
       const res = await signup({
         full_name: registerData.full_name,
         email: registerData.email,
         password: registerData.password,
+        otp: otpCode,
       });
       localStorage.setItem('token', res.access_token);
       navigate('/dashboard');
@@ -63,6 +76,8 @@ export default function AuthPage() {
     setTab(t);
     setError('');
     setShowPass(false);
+    setOtpStep(false);
+    setOtpCode('');
   };
 
   return (
@@ -232,6 +247,22 @@ export default function AuthPage() {
                 </button>
               </div>
             </div>
+            {otpStep && (
+              <div className="form-group">
+                <label htmlFor="reg-otp">Kode OTP<span className="required">*</span></label>
+                <input
+                  id="reg-otp"
+                  type="text"
+                  placeholder="Masukkan 6 digit kode OTP"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  maxLength={6}
+                  required
+                  autoComplete="one-time-code"
+                />
+                <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Kode OTP telah dikirim ke email Anda.</p>
+              </div>
+            )}
             <div className="form-check">
               <input
                 id="reg-remember"
@@ -242,7 +273,7 @@ export default function AuthPage() {
               <label htmlFor="reg-remember">Remember me</label>
             </div>
             <button id="btn-register" type="submit" className="auth-btn" disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Register'}
+              {loading ? <span className="spinner" /> : otpStep ? 'Verifikasi & Register' : 'Kirim OTP'}
             </button>
             <p className="auth-footer">
               Already have an account?{' '}

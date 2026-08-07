@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 from typing import List
 
@@ -61,7 +60,7 @@ def join_form(
 
 @router.put("/submissions/{submission_id}/answers", response_model=schemas.AnswerOut)
 def save_answer(
-    submission_id: uuid.UUID,
+    submission_id: str,
     payload: schemas.AnswerSave,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -85,7 +84,7 @@ def save_answer(
 
     answer = (
         db.query(models.Answer)
-        .filter(models.Answer.submission_id == submission_id, models.Answer.question_id == payload.question_id)
+        .filter(models.Answer.submission_id == submission_id, models.Answer.question_id == str(payload.question_id))
         .first()
     )
     if answer:
@@ -106,7 +105,7 @@ def save_answer(
 
 @router.get("/submissions/{submission_id}/progress", response_model=schemas.ProgressOut)
 def get_progress(
-    submission_id: uuid.UUID,
+    submission_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -124,7 +123,7 @@ def get_progress(
 
 @router.post("/submissions/{submission_id}/submit", response_model=schemas.SubmissionOut)
 def submit_final(
-    submission_id: uuid.UUID,
+    submission_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -150,7 +149,7 @@ def submit_final(
 
 @router.get("/forms/{form_id}/submissions", response_model=List[schemas.SubmissionOut])
 def list_submissions_for_form(
-    form_id: uuid.UUID,
+    form_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -162,3 +161,4 @@ def list_submissions_for_form(
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
     return db.query(models.Submission).filter(models.Submission.form_id == form_id).all()
+

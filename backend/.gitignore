@@ -1,1 +1,10 @@
+# Python cache & environment
+__pycache__/
+*.py[cod]
+*$py.class
 .env
+
+# Node.js dependencies & builds
+node_modules/
+dist/
+build/

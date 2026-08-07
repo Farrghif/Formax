@@ -1,6 +1,3 @@
-import uuid
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -12,7 +9,7 @@ router = APIRouter(prefix="", tags=["questions"])
 
 @router.post("/forms/{form_id}/questions", response_model=schemas.QuestionOut)
 def create_question_in_form(
-    form_id: uuid.UUID,
+    form_id: str,
     payload: schemas.QuestionCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -39,7 +36,7 @@ def create_question_in_form(
 
 @router.post("/templates/{template_id}/questions", response_model=schemas.QuestionOut)
 def create_question_in_template(
-    template_id: uuid.UUID,
+    template_id: str,
     payload: schemas.QuestionCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -68,7 +65,7 @@ def create_question_in_template(
 
 @router.patch("/questions/{question_id}", response_model=schemas.QuestionOut)
 def update_question(
-    question_id: uuid.UUID,
+    question_id: str,
     payload: schemas.QuestionUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -86,7 +83,7 @@ def update_question(
         if not template or template.is_system or template.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(question, key, value)
 
     db.commit()
@@ -96,7 +93,7 @@ def update_question(
 
 @router.delete("/questions/{question_id}")
 def delete_question(
-    question_id: uuid.UUID,
+    question_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -120,7 +117,7 @@ def delete_question(
 
 @router.post("/questions/{question_id}/options", response_model=schemas.QuestionOptionOut)
 def create_option(
-    question_id: uuid.UUID,
+    question_id: str,
     payload: schemas.QuestionOptionCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -148,7 +145,7 @@ def create_option(
 
 @router.patch("/options/{option_id}", response_model=schemas.QuestionOptionOut)
 def update_option(
-    option_id: uuid.UUID,
+    option_id: str,
     payload: schemas.QuestionOptionUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -167,7 +164,7 @@ def update_option(
         if not template or template.is_system or template.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(option, key, value)
 
     db.commit()
@@ -177,7 +174,7 @@ def update_option(
 
 @router.delete("/options/{option_id}")
 def delete_option(
-    option_id: uuid.UUID,
+    option_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -198,3 +195,4 @@ def delete_option(
     db.delete(option)
     db.commit()
     return {"message": "Opsi dihapus"}
+

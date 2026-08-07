@@ -5,9 +5,16 @@ from fastapi.staticfiles import StaticFiles
 from .database import Base, engine
 from .routers import auth, templates, forms, submissions, uploads, export, questions
 
+from sqlalchemy import text
+
 # Buat semua tabel otomatis kalau belum ada (development).
-# Untuk production sebaiknya pakai Alembic migration, bukan create_all.
 Base.metadata.create_all(bind=engine)
+
+# Auto-migrate: pastikan kolom banner_url ada di tabel forms
+with engine.connect() as conn:
+    conn.execute(text("ALTER TABLE forms ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
+    conn.commit()
+
 
 app = FastAPI(title="Form Maker API", version="2.0.0")
 
