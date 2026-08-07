@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -85,7 +83,7 @@ def update_question(
         if not template or template.is_system or template.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(question, key, value)
 
     db.commit()
@@ -166,7 +164,7 @@ def update_option(
         if not template or template.is_system or template.owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(option, key, value)
 
     db.commit()

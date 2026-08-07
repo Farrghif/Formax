@@ -13,6 +13,11 @@ class SignUpRequest(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    otp: str
+
+
+class SendOTPRequest(BaseModel):
+    email: EmailStr
 
 
 class LoginRequest(BaseModel):

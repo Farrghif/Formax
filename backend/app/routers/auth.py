@@ -1,14 +1,52 @@
-from fastapi import APIRouter, Depends, HTTPException
+import random
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, security
 from ..deps import get_db, get_current_user
+from ..utils.mail import send_otp_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.post("/send-otp")
+def send_otp(payload: schemas.SendOTPRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    existing = db.query(models.User).filter(models.User.email == str(payload.email)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+
+    otp_code = str(random.randint(100000, 999999))
+
+    verification = models.EmailVerification(
+        email=str(payload.email),
+        otp_code=otp_code,
+        expires_at=datetime.utcnow() + timedelta(minutes=5)
+    )
+    db.add(verification)
+    db.commit()
+
+    background_tasks.add_task(send_otp_email, str(payload.email), otp_code)
+
+    return {"message": "OTP berhasil dikirim"}
+
+
 @router.post("/signup", response_model=schemas.TokenResponse)
 def signup(payload: schemas.SignUpRequest, db: Session = Depends(get_db)):
+    otp_record = (
+        db.query(models.EmailVerification)
+        .filter(models.EmailVerification.email == str(payload.email))
+        .filter(models.EmailVerification.otp_code == payload.otp)
+        .first()
+    )
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="OTP tidak valid")
+    
+    if otp_record.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP sudah kedaluwarsa")
+    
+    db.query(models.EmailVerification).filter(models.EmailVerification.email == str(payload.email)).delete()
+
     existing = db.query(models.User).filter(models.User.email == str(payload.email)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email sudah terdaftar")

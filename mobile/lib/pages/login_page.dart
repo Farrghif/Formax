@@ -13,15 +13,20 @@ class _LoginPageState extends State<LoginPage> {
   bool isLogin = true;
   bool _isLoading = false;
 
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController fullNameController = TextEditingController();
+  final TextEditingController loginEmailController = TextEditingController();
+  final TextEditingController loginPasswordController = TextEditingController();
+  
+  final TextEditingController registerEmailController = TextEditingController();
+  final TextEditingController registerPasswordController = TextEditingController();
+  final TextEditingController registerFullNameController = TextEditingController();
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    fullNameController.dispose();
+    loginEmailController.dispose();
+    loginPasswordController.dispose();
+    registerEmailController.dispose();
+    registerPasswordController.dispose();
+    registerFullNameController.dispose();
     super.dispose();
   }
 
@@ -152,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                       if (!isLogin) ...[
                         _buildLabel('Full Name*'),
                         _buildTextField(
-                          controller: fullNameController,
+                          controller: registerFullNameController,
                           hint: 'Enter your full name',
                         ),
                         const SizedBox(height: 14),
@@ -160,7 +165,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       _buildLabel('Email Address*'),
                       _buildTextField(
-                        controller: emailController,
+                        controller: isLogin ? loginEmailController : registerEmailController,
                         hint: 'Enter your email address',
                       ),
 
@@ -168,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       _buildLabel('Password*'),
                       _buildTextField(
-                        controller: passwordController,
+                        controller: isLogin ? loginPasswordController : registerPasswordController,
                         hint: 'Enter your password',
                         obscureText: true,
                       ),
@@ -202,8 +207,8 @@ class _LoginPageState extends State<LoginPage> {
                                     _isLoading = true;
                                   });
 
-                                  final email = emailController.text.trim();
-                                  final password = passwordController.text.trim();
+                                  final email = isLogin ? loginEmailController.text.trim() : registerEmailController.text.trim();
+                                  final password = isLogin ? loginPasswordController.text.trim() : registerPasswordController.text.trim();
 
                                   // Validasi format email dengan Regex sederhana
                                   final bool emailValid = 
@@ -237,11 +242,11 @@ class _LoginPageState extends State<LoginPage> {
                                     return;
                                   }
 
-                                  Map<String, dynamic> result;
+                                  Map<String, dynamic>? result;
                                   if (isLogin) {
                                     result = await ApiService.login(email, password);
                                   } else {
-                                    final fullName = fullNameController.text.trim();
+                                    final fullName = registerFullNameController.text.trim();
                                     if (fullName.isEmpty) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Full name cannot be empty')),
@@ -251,8 +256,64 @@ class _LoginPageState extends State<LoginPage> {
                                       });
                                       return;
                                     }
-                                    result = await ApiService.register(fullName, email, password);
+                                    
+                                    final otpResult = await ApiService.sendOtp(email);
+                                    if (otpResult['success'] == true) {
+                                      if (!context.mounted) return;
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      
+                                      final otpCode = await showDialog<String>(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) {
+                                          final TextEditingController otpController = TextEditingController();
+                                          return AlertDialog(
+                                            title: const Text('Verifikasi Email'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text('Masukkan 6 digit kode OTP yang dikirim ke email Anda.'),
+                                                const SizedBox(height: 10),
+                                                TextField(
+                                                  controller: otpController,
+                                                  keyboardType: TextInputType.number,
+                                                  maxLength: 6,
+                                                  decoration: const InputDecoration(
+                                                    hintText: 'Kode OTP',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: const Text('Batal'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(context, otpController.text.trim()),
+                                                child: const Text('Verifikasi'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+
+                                      if (otpCode != null && otpCode.isNotEmpty) {
+                                        setState(() {
+                                          _isLoading = true;
+                                        });
+                                        result = await ApiService.register(fullName, email, password, otpCode);
+                                      } else {
+                                        return;
+                                      }
+                                    } else {
+                                      result = otpResult;
+                                    }
                                   }
+
+                                  if (result == null) return;
 
                                   if (!context.mounted) return;
                                   setState(() {

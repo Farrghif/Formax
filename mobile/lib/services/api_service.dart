@@ -51,8 +51,30 @@ class ApiService {
     }
   }
 
+  // Fungsi Request OTP
+  static Future<Map<String, dynamic>> sendOtp(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/send-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['detail'] ?? 'Failed to send OTP'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Fungsi Register (Signup)
-  static Future<Map<String, dynamic>> register(String fullName, String email, String password) async {
+  static Future<Map<String, dynamic>> register(String fullName, String email, String password, String otp) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/signup'),
@@ -61,6 +83,7 @@ class ApiService {
           'full_name': fullName,
           'email': email,
           'password': password,
+          'otp': otp,
         }),
       );
 

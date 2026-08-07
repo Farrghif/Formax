@@ -77,7 +77,7 @@ def update_template(
     if template.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(template, key, value)
 
     db.commit()

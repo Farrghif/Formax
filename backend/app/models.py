@@ -182,3 +182,17 @@ class Answer(Base):
 
     submission = relationship("Submission", back_populates="answers")
     question = relationship("Question", back_populates="answers")
+
+
+# ============================================================
+# 8. EMAIL VERIFICATIONS (OTP)
+# ============================================================
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    email = Column(String, nullable=False, index=True)
+    otp_code = Column(String(6), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+

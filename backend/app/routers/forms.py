@@ -1,6 +1,4 @@
-import io
 import os
-import uuid
 from typing import List
 
 import qrcode
@@ -106,7 +104,7 @@ def update_form(
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(form, key, value)
     db.commit()
     db.refresh(form)

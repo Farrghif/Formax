@@ -1,8 +1,24 @@
 const BASE_URL = 'http://localhost:8000';
 
 /**
- * Signup / Register user baru
- * @param {{ full_name: string, email: string, password: string }} data
+ * Kirim OTP ke email (wajib sebelum signup)
+ * @param {string} email
+ */
+export async function sendOtp(email) {
+  const res = await fetch(`${BASE_URL}/auth/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.detail || 'Gagal mengirim OTP');
+  return json;
+}
+
+/**
+ * Signup / Register user baru (wajib sertakan OTP)
+ * @param {{ full_name: string, email: string, password: string, otp: string }} data
  */
 export async function signup(data) {
   const res = await fetch(`${BASE_URL}/auth/signup`, {

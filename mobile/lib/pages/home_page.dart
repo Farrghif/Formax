@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
+
 class FormTemplate {
   final String title;
   final String subtitle;
@@ -54,10 +55,12 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildCreateNewTemplateBtn(),
             const SizedBox(height: 16),
-            ...templates.map((t) => Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTemplateCard(t.title, t.subtitle),
-            )),
+            ...templates.map(
+              (t) => Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildTemplateCard(t.title, t.subtitle),
+              ),
+            ),
           ],
         ),
       ),
@@ -71,8 +74,14 @@ class _HomePageState extends State<HomePage> {
         selectedItemColor: const Color(0xFF1E66D0),
         unselectedItemColor: const Color(0xFF9CA3AF),
         showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
@@ -122,9 +131,16 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFB4C5D4), width: 1.2),
+                  border: Border.all(
+                    color: const Color(0xFFB4C5D4),
+                    width: 1.2,
+                  ),
                 ),
-                child: const Icon(Icons.add, color: Color(0xFFB4C5D4), size: 20),
+                child: const Icon(
+                  Icons.add,
+                  color: Color(0xFFB4C5D4),
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -166,9 +182,7 @@ class _HomePageState extends State<HomePage> {
               color: Color(0xFFFAFAFA),
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
-            child: Center(
-              child: _buildDocumentPlaceholder(),
-            ),
+            child: Center(child: _buildDocumentPlaceholder()),
           ),
           // Info Area
           Padding(
@@ -219,15 +233,50 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 8, width: 45, decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(2))),
+          Container(
+            height: 8,
+            width: 45,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDBEAFE),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(height: 10),
-          Container(height: 4, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(2))),
+          Container(
+            height: 4,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(height: 6),
-          Container(height: 4, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(2))),
+          Container(
+            height: 4,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(height: 6),
-          Container(height: 4, width: 30, decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(2))),
+          Container(
+            height: 4,
+            width: 30,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const Spacer(),
-          Container(height: 8, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(2))),
+          Container(
+            height: 8,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ],
       ),
     );
@@ -241,7 +290,12 @@ class _HomePageState extends State<HomePage> {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 20),
+            padding: const EdgeInsets.only(
+              top: 50,
+              left: 24,
+              right: 24,
+              bottom: 20,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -318,7 +372,9 @@ class _HomePageState extends State<HomePage> {
                     if (!context.mounted) return;
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      MaterialPageRoute(
+                        builder: (context) => const LoginPage(),
+                      ),
                       (route) => false,
                     );
                   },
@@ -354,7 +410,9 @@ class _HomePageState extends State<HomePage> {
           children: [
             Icon(
               icon,
-              color: isSelected ? const Color(0xFF1E66D0) : const Color(0xFF6B7280),
+              color: isSelected
+                  ? const Color(0xFF1E66D0)
+                  : const Color(0xFF6B7280),
             ),
             const SizedBox(width: 16),
             Text(
@@ -362,7 +420,9 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? const Color(0xFF1E66D0) : const Color(0xFF4B5563),
+                color: isSelected
+                    ? const Color(0xFF1E66D0)
+                    : const Color(0xFF4B5563),
               ),
             ),
           ],
@@ -381,9 +441,9 @@ class _HomePageState extends State<HomePage> {
               BoxShadow(
                 color: const Color(0XFFB4C5D4).withValues(alpha: 0.11),
                 blurRadius: 40,
-                spreadRadius: 0.0
-              )
-            ]
+                spreadRadius: 0.0,
+              ),
+            ],
           ),
           child: TextField(
             decoration: InputDecoration(
@@ -411,11 +471,11 @@ class _HomePageState extends State<HomePage> {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(55),
-                borderSide: BorderSide.none
+                borderSide: BorderSide.none,
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }
@@ -442,7 +502,7 @@ class _HomePageState extends State<HomePage> {
               fontSize: 12,
               fontWeight: FontWeight.w400,
             ),
-          )
+          ),
         ],
       ),
       backgroundColor: const Color(0xFFB4C5D4),
