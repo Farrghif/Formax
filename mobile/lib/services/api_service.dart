@@ -127,4 +127,32 @@ class ApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  // Fungsi Create Template
+  static Future<Map<String, dynamic>> createTemplate(Map<String, dynamic> payload) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'No token found'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/templates'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['detail'] ?? 'Failed to create template'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

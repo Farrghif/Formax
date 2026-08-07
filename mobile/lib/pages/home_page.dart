@@ -38,7 +38,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<FormTemplate> templates = [
-    FormTemplate(title: "Quizz", subtitle: "Updated 2 days ago"),
+    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago"),
     FormTemplate(title: "Ujian", subtitle: "Updated 1 week ago"),
     FormTemplate(title: "Angket Classmeet", subtitle: "Updated 1 month ago"),
   ];
@@ -46,6 +46,13 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0: // Dashboard
+        return const Center(
+          child: Text(
+            "Halaman Dashboard",
+            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
+          ),
+        );
+      case 1: // Template
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -59,13 +66,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ],
-          ),
-        );
-      case 1: // Template
-        return const Center(
-          child: Text(
-            "Belum ada template",
-            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
           ),
         );
       case 2: // History

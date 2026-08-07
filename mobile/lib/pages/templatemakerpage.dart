@@ -1,5 +1,25 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import 'home_page.dart'; 
+
+class QuestionOptionData {
+  String label;
+  QuestionOptionData({required this.label});
+}
+
+class QuestionData {
+  String type; // 'text', 'single_choice', 'checkbox', 'dropdown', 'date', 'file_upload'
+  String label;
+  bool isRequired;
+  List<QuestionOptionData> options;
+
+  QuestionData({
+    required this.type,
+    required this.label,
+    this.isRequired = false,
+    List<QuestionOptionData>? options,
+  }) : options = options ?? [];
+}
 
 class TemplateMakerPage extends StatefulWidget {
   const TemplateMakerPage({super.key});
@@ -9,22 +29,74 @@ class TemplateMakerPage extends StatefulWidget {
 }
 
 class _TemplateMakerPageState extends State<TemplateMakerPage> {
-  final TextEditingController _titleController = TextEditingController(text: "Ujian Tengah Semester");
+  final TextEditingController _titleController = TextEditingController(text: "Form Tanpa Judul");
+  final TextEditingController _descController = TextEditingController();
+
+  final List<QuestionData> _questions = [
+    QuestionData(
+      type: 'single_choice',
+      label: 'Pertanyaan Tanpa Judul',
+      options: [QuestionOptionData(label: 'Opsi 1')],
+    )
+  ];
+
+  bool _isSaving = false;
 
   @override
   void dispose() {
     _titleController.dispose();
+    _descController.dispose();
     super.dispose();
   }
 
-  void _saveAndReturn() {
-    Navigator.pop(
-      context,
-      FormTemplate(
-        title: _titleController.text.isNotEmpty ? _titleController.text : "Untitled Form",
-        subtitle: "Updated just now",
-      ),
-    );
+  void _saveAndReturn() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    
+    // Construct payload
+    List<Map<String, dynamic>> questionPayload = [];
+    for (int i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+      List<Map<String, dynamic>> opts = [];
+      for (int j = 0; j < q.options.length; j++) {
+        opts.add({
+          "label": q.options[j].label,
+          "order_index": j,
+        });
+      }
+      questionPayload.add({
+        "type": q.type,
+        "label": q.label,
+        "is_required": q.isRequired,
+        "order_index": i,
+        "options": opts,
+      });
+    }
+
+    final payload = {
+      "title": _titleController.text.isNotEmpty ? _titleController.text : "Form Tanpa Judul",
+      "description": _descController.text,
+      "questions": questionPayload,
+    };
+
+    final res = await ApiService.createTemplate(payload);
+    setState(() => _isSaving = false);
+
+    if (res['success'] == true) {
+      if (mounted) {
+        Navigator.pop(
+          context,
+          FormTemplate(
+            title: payload["title"] as String,
+            subtitle: "Baru saja diperbarui",
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal menyimpan: ${res['message']}")));
+      }
+    }
   }
 
   @override
@@ -32,7 +104,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFE8F0FE), // Light blue background
+        backgroundColor: const Color(0xFFE8F0FE), 
         appBar: AppBar(
           backgroundColor: const Color(0xFFE8F0FE),
           elevation: 0,
@@ -48,8 +120,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0, top: 8.0, bottom: 8.0),
               child: ElevatedButton.icon(
-                onPressed: _saveAndReturn,
-                icon: const Icon(Icons.save, size: 18),
+                onPressed: _isSaving ? null : _saveAndReturn,
+                icon: _isSaving 
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.save, size: 18),
                 label: const Text("Simpan"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0F52BA),
@@ -89,14 +163,15 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         children: [
           _buildTitleCard(),
           const SizedBox(height: 16),
-          _buildMultipleChoiceCard(),
-          const SizedBox(height: 16),
-          _buildRequiredMultipleChoiceCard(),
-          const SizedBox(height: 16),
-          _buildShortAnswerCard(),
-          const SizedBox(height: 16),
-          _buildParagraphCard(),
-          const SizedBox(height: 80), // padding for FAB
+          ..._questions.asMap().entries.map((entry) {
+            int index = entry.key;
+            QuestionData q = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: _buildDynamicQuestionCard(index, q),
+            );
+          }),
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -108,7 +183,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: const Border(
-          top: BorderSide(color: Color(0xFF0F52BA), width: 8), // Blue top bar
+          top: BorderSide(color: Color(0xFF0F52BA), width: 8), 
         ),
       ),
       padding: const EdgeInsets.all(24.0),
@@ -119,28 +194,36 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             controller: _titleController,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
+              hintText: "Judul Formulir",
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            "Evaluasi materi pertemuan 1-7 mata pelajaran Geografi.",
-            style: TextStyle(fontSize: 14, color: Colors.black54),
+          TextField(
+            controller: _descController,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            decoration: const InputDecoration(
+              hintText: "Deskripsi formulir",
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            maxLines: null,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMultipleChoiceCard() {
+  Widget _buildDynamicQuestionCard(int index, QuestionData q) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: const Border(
-          left: BorderSide(color: Color(0xFF0F52BA), width: 4), // Active blue left bar
+          left: BorderSide(color: Color(0xFF0F52BA), width: 4),
         ),
       ),
       padding: const EdgeInsets.all(20),
@@ -149,62 +232,176 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         children: [
           const Center(child: Icon(Icons.drag_indicator, color: Colors.black26)),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text("Ibu kota Indonesia adalah?", style: TextStyle(fontSize: 16)),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: TextEditingController(text: q.label)
+                    ..selection = TextSelection.collapsed(offset: q.label.length),
+                  onChanged: (val) => q.label = val,
+                  decoration: InputDecoration(
+                    hintText: "Pertanyaan",
+                    filled: true,
+                    fillColor: const Color(0xFFF3F4F6),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: q.type,
+                      items: const [
+                        DropdownMenuItem(value: 'text', child: Text("Teks")),
+                        DropdownMenuItem(value: 'single_choice', child: Text("Pilihan Ganda")),
+                        DropdownMenuItem(value: 'checkbox', child: Text("Kotak Centang")),
+                        DropdownMenuItem(value: 'dropdown', child: Text("Dropdown")),
+                        DropdownMenuItem(value: 'date', child: Text("Tanggal")),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            q.type = val;
+                            if ((val == 'single_choice' || val == 'checkbox' || val == 'dropdown') && q.options.isEmpty) {
+                              q.options.add(QuestionOptionData(label: 'Opsi 1'));
+                            }
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(4),
+          if (q.type == 'single_choice' || q.type == 'checkbox' || q.type == 'dropdown')
+            ...q.options.asMap().entries.map((optEntry) {
+              int optIndex = optEntry.key;
+              QuestionOptionData opt = optEntry.value;
+              IconData icon = Icons.radio_button_unchecked;
+              if (q.type == 'checkbox') icon = Icons.check_box_outline_blank;
+              if (q.type == 'dropdown') icon = Icons.format_list_numbered;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    Icon(icon, color: Colors.black54),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: TextEditingController(text: opt.label)
+                          ..selection = TextSelection.collapsed(offset: opt.label.length),
+                        onChanged: (val) => opt.label = val,
+                        decoration: const InputDecoration(
+                          hintText: "Opsi",
+                          border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () {
+                        setState(() {
+                          q.options.removeAt(optIndex);
+                        });
+                      },
+                    )
+                  ],
+                ),
+              );
+            }),
+          if (q.type == 'single_choice' || q.type == 'checkbox' || q.type == 'dropdown')
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(
+                    q.type == 'checkbox' ? Icons.check_box_outline_blank : Icons.radio_button_unchecked, 
+                    color: Colors.black54
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        q.options.add(QuestionOptionData(label: 'Opsi ${q.options.length + 1}'));
+                      });
+                    },
+                    child: const Text("Tambah opsi", style: TextStyle(color: Colors.black54)),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              children: const [
-                Icon(Icons.radio_button_checked, color: Color(0xFF0F52BA)),
-                SizedBox(width: 12),
-                Text("Pilihan Ganda"),
-                Spacer(),
-                Icon(Icons.arrow_drop_down),
-              ],
+          
+          if (q.type == 'text')
+            const TextField(
+              enabled: false,
+              decoration: InputDecoration(
+                hintText: "Teks jawaban (Jawaban Singkat / Paragraf)",
+                hintStyle: TextStyle(color: Colors.black26),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _buildOption(Icons.radio_button_unchecked, "Jakarta"),
-          _buildOption(Icons.radio_button_unchecked, "Bandung"),
-          _buildOption(Icons.radio_button_unchecked, "Surabaya"),
-          _buildOption(Icons.radio_button_unchecked, "Medan"),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              children: const [
-                Icon(Icons.radio_button_unchecked, color: Colors.black54),
-                SizedBox(width: 12),
-                Text("Tambah opsi ", style: TextStyle(color: Colors.black54)),
-                Text("atau tambahkan \"Lainnya\"", style: TextStyle(color: Color(0xFF0F52BA), fontWeight: FontWeight.bold)),
-              ],
+          if (q.type == 'date')
+            const TextField(
+              enabled: false,
+              decoration: InputDecoration(
+                hintText: "Bulan, hari, tahun",
+                hintStyle: TextStyle(color: Colors.black26),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                suffixIcon: Icon(Icons.calendar_today, color: Colors.black26),
+              ),
             ),
-          ),
+          
           const Divider(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              const Icon(Icons.copy, color: Colors.black54),
-              const SizedBox(width: 16),
-              const Icon(Icons.delete_outline, color: Colors.black54),
-              const SizedBox(width: 16),
+              IconButton(
+                icon: const Icon(Icons.copy, color: Colors.black54),
+                onPressed: () {
+                  setState(() {
+                    _questions.insert(index + 1, QuestionData(
+                      type: q.type,
+                      label: q.label,
+                      isRequired: q.isRequired,
+                      options: q.options.map((o) => QuestionOptionData(label: o.label)).toList(),
+                    ));
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.black54),
+                onPressed: () {
+                  setState(() {
+                    _questions.removeAt(index);
+                  });
+                },
+              ),
               Container(width: 1, height: 20, color: Colors.black12),
               const SizedBox(width: 16),
               const Text("Wajib diisi", style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(width: 8),
-              Switch(value: true, onChanged: (v) {}, activeThumbColor: const Color(0xFF0F52BA)),
-              const SizedBox(width: 8),
-              const Icon(Icons.more_vert, color: Colors.black54),
+              Switch(
+                value: q.isRequired, 
+                onChanged: (v) {
+                  setState(() {
+                    q.isRequired = v;
+                  });
+                }, 
+                activeThumbColor: const Color(0xFF0F52BA)
+              ),
             ],
           )
         ],
@@ -212,145 +409,24 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     );
   }
 
-  Widget _buildRequiredMultipleChoiceCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RichText(
-            text: const TextSpan(
-              text: "Berapa jumlah provinsi di Indonesia saat ini? ",
-              style: TextStyle(fontSize: 16, color: Colors.black87),
-              children: [
-                TextSpan(text: "*", style: TextStyle(color: Colors.red)),
-              ]
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildOption(Icons.radio_button_unchecked, "34"),
-          _buildOption(Icons.radio_button_unchecked, "36"),
-          _buildOption(Icons.radio_button_unchecked, "37"),
-          _buildOption(Icons.radio_button_unchecked, "38"),
-          const SizedBox(height: 16),
-          const Text("* Wajib diisi", style: TextStyle(color: Colors.red, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShortAnswerCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Jelaskan secara singkat mengenai letak astronomis Indonesia dan dampaknya terhadap iklim.", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 16),
-          const TextField(
-            enabled: false,
-            decoration: InputDecoration(
-              hintText: "Ketik jawaban Anda di sini...",
-              hintStyle: TextStyle(color: Colors.black26),
-              border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildParagraphCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Menurut pendapat Anda, apa tantangan terbesar dalam pembangunan infrastruktur di daerah terpencil?", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Align(
-              alignment: Alignment.topLeft,
-              child: Text("Jawaban teks panjang...", style: TextStyle(color: Colors.black26)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOption(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.black54),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFAB() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildFabItem(Icons.text_fields),
-        const SizedBox(height: 12),
-        _buildFabItem(Icons.image_outlined),
-        const SizedBox(height: 12),
-        _buildFabItem(Icons.videocam_outlined),
-        const SizedBox(height: 12),
-        _buildFabItem(Icons.view_agenda_outlined),
-        const SizedBox(height: 16),
-        FloatingActionButton(
-          onPressed: () {},
-          backgroundColor: const Color(0xFF1E66D0),
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, color: Colors.white, size: 30),
-        ),
-      ],
+    return FloatingActionButton(
+      onPressed: () {
+        setState(() {
+          _questions.add(QuestionData(
+            type: 'single_choice',
+            label: 'Pertanyaan',
+            options: [QuestionOptionData(label: 'Opsi 1')],
+          ));
+        });
+      },
+      backgroundColor: const Color(0xFF1E66D0),
+      shape: const CircleBorder(),
+      child: const Icon(Icons.add, color: Colors.white, size: 30),
     );
   }
 
-  Widget _buildFabItem(IconData icon) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: Colors.black54, size: 20),
-    );
-  }
-
+  // --- SETELAN TAB ---
   Widget _buildSetelanTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -402,39 +478,6 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
           _buildRadioOption(true, "Langsung setelah setiap pengiriman"),
           const SizedBox(height: 8),
           _buildRadioOptionWithSubtitle(false, "Nanti, setelah peninjauan manual", "Aktifkan Respons -> Kumpulkan alamat email"),
-          const SizedBox(height: 24),
-          const Text("SETELAN RESPONDEN", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
-          const SizedBox(height: 12),
-          _buildSwitchOption("Pertanyaan tak terjawab", true),
-          const SizedBox(height: 12),
-          _buildSwitchOption("Jawaban yang benar", true),
-          const SizedBox(height: 12),
-          _buildSwitchOption("Nilai poin", true),
-          const SizedBox(height: 24),
-          const Text("DEFAULT KUIS GLOBAL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Nilai poin pertanyaan default", style: TextStyle(fontSize: 14)),
-              Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black26),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text("0", style: TextStyle(fontSize: 14)),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text("poin", style: TextStyle(fontSize: 14)),
-                ],
-              )
-            ],
-          )
         ],
       ),
     );
@@ -499,47 +542,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text("Mengelola cara respons dikumpulkan dan dilindungi", style: TextStyle(fontSize: 14, color: Colors.black54)),
-          const SizedBox(height: 24),
-          const Text("Mengirim salinan jawaban responden", style: TextStyle(fontSize: 14)),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F4FA),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.black12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text("Nonaktif", style: TextStyle(color: Color(0xFF4B5563))),
-                SizedBox(width: 4),
-                Icon(Icons.expand_more, color: Color(0xFF4B5563), size: 18),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text("Batasi ke 1 jawaban", style: TextStyle(fontSize: 14)),
-                    SizedBox(height: 2),
-                    Text("Responden akan diwajibkan untuk login", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                  ],
-                ),
-              ),
-              Switch(value: true, onChanged: (v){}, activeThumbColor: const Color(0xFF0F52BA)),
-            ],
-          ),
+          const Text("Mengelola cara respons dikumpulkan", style: TextStyle(fontSize: 14, color: Colors.black54)),
           const SizedBox(height: 16),
-          _buildSwitchOption("Sembunyikan jawaban", false),
-          const SizedBox(height: 16),
-          _buildSwitchOption("Isi Form lebih dari 1 kali", false),
+          _buildSwitchOption("Batasi ke 1 jawaban", true),
         ],
       ),
     );
@@ -564,34 +569,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ],
           ),
           const SizedBox(height: 16),
-          const Text("Pertanyaan default", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          const Text("Setelan diterapkan untuk semua pertanyaan", style: TextStyle(fontSize: 12, color: Colors.black54)),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Text("Buat pertanyaan wajib diisi secara default", style: TextStyle(fontSize: 14)),
-              ),
-              Switch(value: false, onChanged: (v){}),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Timer", style: TextStyle(fontSize: 14)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text("Edit", style: TextStyle(color: Color(0xFF0F52BA), fontWeight: FontWeight.bold)),
-              )
-            ],
-          ),
+          _buildSwitchOption("Buat pertanyaan wajib diisi secara default", false),
         ],
       ),
     );
@@ -625,100 +603,11 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   children: const [
                     Text("Form Timer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                     SizedBox(height: 2),
-                    Text("Manage constraints and timing for this form", style: TextStyle(fontSize: 14, color: Colors.black54)),
+                    Text("Manage constraints and timing", style: TextStyle(fontSize: 14, color: Colors.black54)),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, color: Colors.black12),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text("Enable Timer", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  SizedBox(height: 2),
-                  Text("Set a time limit for form completion", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                ],
-              ),
-              Switch(value: true, onChanged: (v){}, activeThumbColor: const Color(0xFF2563EB)),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Text("Select Timer Mode", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Expanded(child: Text("Start when respondent opens the form", style: TextStyle(fontSize: 14, color: Colors.black87))),
-                Icon(Icons.expand_more, color: Colors.black54),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text("Duration", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: const [
-                Text("1 hari", style: TextStyle(fontSize: 16, color: Colors.black87)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text("The form will auto-submit and lock once the timer runs out. Respondents will see a countdown display at the top of the page.", style: TextStyle(fontSize: 12, color: Color(0xFF1D4ED8), height: 1.5)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text("Save Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton(
-              onPressed: () {},
-              child: const Text("Discard Changes", style: TextStyle(fontSize: 16, color: Colors.black54)),
-            ),
           ),
         ],
       ),
