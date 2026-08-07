@@ -43,27 +43,50 @@ class _HomePageState extends State<HomePage> {
     FormTemplate(title: "Angket Classmeet", subtitle: "Updated 1 month ago"),
   ];
 
+  Widget _buildBody() {
+    switch (_selectedIndex) {
+      case 0: // Dashboard
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildCreateNewTemplateBtn(),
+              const SizedBox(height: 16),
+              ...templates.map(
+                (t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: _buildTemplateCard(t.title, t.subtitle),
+                ),
+              ),
+            ],
+          ),
+        );
+      case 1: // Template
+        return const Center(
+          child: Text(
+            "Belum ada template",
+            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
+          ),
+        );
+      case 2: // History
+        return const Center(
+          child: Text(
+            "Belum ada riwayat",
+            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
+          ),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: appBar(),
       endDrawer: _buildEndDrawer(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildCreateNewTemplateBtn(),
-            const SizedBox(height: 16),
-            ...templates.map(
-              (t) => Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: _buildTemplateCard(t.title, t.subtitle),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
