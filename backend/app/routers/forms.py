@@ -43,6 +43,7 @@ def create_form(
         title=payload.title,
         description=payload.description,
         slug=payload.slug,
+        banner_url=payload.banner_url,
         start_date=payload.start_date,
         end_date=payload.end_date,
         join_token=security.generate_join_token() if payload.use_join_token else None,
@@ -51,6 +52,9 @@ def create_form(
     db.flush()
 
     if payload.template_id:
+        template = db.query(models.Template).filter(models.Template.id == str(payload.template_id)).first()
+        if not form.banner_url and template and template.banner_url:
+            form.banner_url = template.banner_url  # salin banner template sebagai default
         # copy questions dari template ke form ini (snapshot, bukan reference)
         template_questions = (
             db.query(models.Question)

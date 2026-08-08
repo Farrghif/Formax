@@ -10,9 +10,10 @@ from sqlalchemy import text
 # Buat semua tabel otomatis kalau belum ada (development).
 Base.metadata.create_all(bind=engine)
 
-# Auto-migrate: pastikan kolom banner_url ada di tabel forms
+# Auto-migrate: pastikan kolom banner_url ada di tabel forms & templates
 with engine.connect() as conn:
     conn.execute(text("ALTER TABLE forms ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
+    conn.execute(text("ALTER TABLE templates ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
     # Auto-migrate: kunci jawaban di question_options
     conn.execute(text("ALTER TABLE question_options ADD COLUMN IF NOT EXISTS is_correct BOOLEAN;"))
     # Backfill: opsi lama yang belum punya nilai dianggap bukan jawaban benar

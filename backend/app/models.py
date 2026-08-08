@@ -61,6 +61,7 @@ class Template(Base):
     owner_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    banner_url = Column(String, nullable=True)
     is_system = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -85,6 +86,7 @@ class Form(Base):
     slug = Column(String, unique=True, nullable=False, index=True)
     join_token = Column(String, unique=True, nullable=True)   # buat ujian bareng, opsional
     qr_code_url = Column(String, nullable=True)
+    banner_url = Column(String, nullable=True)
 
     accept_responses = Column(Boolean, default=True)
 

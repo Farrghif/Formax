@@ -3,6 +3,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -53,7 +54,23 @@ def join_form(
 
     submission = models.Submission(form_id=form.id, user_id=current_user.id)
     db.add(submission)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Race: dua request join (double click / double effect) sama-sama lolos pengecekan
+        # "sudah ada submission?" sebelum ada yang commit. Constraint unik menolak INSERT
+        # kedua — kembalikan submission yang sudah terlanjur dibuat.
+        db.rollback()
+        existing = (
+            db.query(models.Submission)
+            .filter(models.Submission.form_id == form.id, models.Submission.user_id == current_user.id)
+            .first()
+        )
+        if existing:
+            if existing.submitted_at is not None:
+                raise HTTPException(status_code=400, detail="Kamu sudah submit form ini sebelumnya")
+            return existing
+        raise
     db.refresh(submission)
     return submission
 

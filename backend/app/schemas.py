@@ -113,12 +113,14 @@ class QuestionOut(BaseModel):
 class TemplateCreate(BaseModel):
     title: str
     description: Optional[str] = None
+    banner_url: Optional[str] = None
     questions: List[QuestionCreate] = []
 
 
 class TemplateUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    banner_url: Optional[str] = None
 
 
 class TemplateOut(BaseModel):
@@ -126,6 +128,7 @@ class TemplateOut(BaseModel):
     owner_id: Optional[uuid.UUID]
     title: str
     description: Optional[str]
+    banner_url: Optional[str]
     is_system: bool
     created_at: datetime
     questions: List[QuestionOut] = []
@@ -142,6 +145,7 @@ class FormCreate(BaseModel):
     description: Optional[str] = None
     template_id: Optional[uuid.UUID] = None
     slug: str
+    banner_url: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     use_join_token: bool = False        # kalau true, server generate token acak buat ujian bareng
@@ -153,6 +157,7 @@ class FormUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[FormStatus] = None
     accept_responses: Optional[bool] = None
+    banner_url: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -163,6 +168,7 @@ class FormOut(BaseModel):
     template_id: Optional[uuid.UUID]
     title: str
     description: Optional[str]
+    banner_url: Optional[str]
     status: FormStatus
     slug: str
     join_token: Optional[str]
@@ -182,6 +188,7 @@ class FormListOut(BaseModel):
     title: str
     status: FormStatus
     slug: str
+    banner_url: Optional[str] = None
     created_at: datetime
     total_submissions: int = 0   # dihitung on-the-fly, buat halaman History
 

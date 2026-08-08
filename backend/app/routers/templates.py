@@ -32,7 +32,12 @@ def create_template(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    template = models.Template(owner_id=current_user.id, title=payload.title, description=payload.description)
+    template = models.Template(
+        owner_id=current_user.id,
+        title=payload.title,
+        description=payload.description,
+        banner_url=payload.banner_url,
+    )
     db.add(template)
     db.flush()
 
