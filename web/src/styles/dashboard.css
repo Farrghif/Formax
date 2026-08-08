@@ -570,6 +570,122 @@
   background: #fef2f2;
 }
 
+/* History card: posisi relative agar tombol menu titik tiga bisa absolute */
+.history-card {
+  position: relative;
+}
+
+.history-card .history-card-menu {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.history-card .history-card-menu:hover {
+  background: #ffffff;
+}
+
+/* ============ Confirm Delete Modal ============ */
+.db-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: dbModalFadeIn 0.2s ease-out;
+}
+
+@keyframes dbModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.db-modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: dbModalPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dbModalPop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.db-modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.db-modal-icon.danger {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.db-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.db-modal-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #64748b;
+  margin: 0 0 24px;
+  word-break: break-word;
+}
+
+.db-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.db-btn-cancel,
+.db-btn-danger {
+  flex: 1;
+  max-width: 160px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.db-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.db-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.db-btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.db-btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
 /* Status badges */
 .db-status {
   display: inline-flex;
