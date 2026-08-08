@@ -549,11 +549,15 @@ export default function DashboardPage() {
                   {templates.map((tpl) => (
                     <div key={tpl.id} className="db-recent-card" onClick={() => handleTemplateClick(tpl)}>
                       <div className="db-recent-preview">
-                        <div className="db-preview-doc">
-                          <div className="db-preview-line db-line-wide" />
-                          <div className="db-preview-line db-line-mid" />
-                          <div className="db-preview-line db-line-short" />
-                        </div>
+                        {tpl.banner_url ? (
+                          <img src={tpl.banner_url} alt={tpl.title} className="db-recent-banner" />
+                        ) : (
+                          <div className="db-preview-doc">
+                            <div className="db-preview-line db-line-wide" />
+                            <div className="db-preview-line db-line-mid" />
+                            <div className="db-preview-line db-line-short" />
+                          </div>
+                        )}
                       </div>
                       <div className="db-recent-footer">
                         <div>

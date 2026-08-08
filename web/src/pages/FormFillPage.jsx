@@ -42,6 +42,8 @@ export default function FormFillPage() {
 
   // File uploading state
   const [uploadingFiles, setUploadingFiles] = useState({});
+  // Guard agar joinForm tidak dipanggil ganda (double effect / double click)
+  const joiningRef = useRef(false);
 
   // 1. Initial Load & Auth Check
   useEffect(() => {
@@ -61,6 +63,8 @@ export default function FormFillPage() {
 
       // Try auto joining form (if no join token required or user already joined)
       try {
+        if (joiningRef.current) return;
+        joiningRef.current = true;
         const sub = await joinForm(token, slug);
         setSubmissionId(sub.id);
         if (sub.submitted_at) {
@@ -85,6 +89,8 @@ export default function FormFillPage() {
         } else {
           setErrorMsg(err.message || 'Gagal memulai form');
         }
+      } finally {
+        joiningRef.current = false;
       }
     } catch (err) {
       setErrorMsg(err.message || 'Form tidak ditemukan atau belum dipublikasikan');
@@ -642,6 +648,11 @@ export default function FormFillPage() {
 
         {/* Right Column: Questions Form Content */}
         <section className="form-content-area">
+          {form?.banner_url && (
+            <div className="form-fill-banner">
+              <img src={form.banner_url} alt="Banner form" className="form-fill-banner-img" />
+            </div>
+          )}
           <div className="form-header-details">
             <h2 className="form-title">{form?.title}</h2>
             {form?.description && (

@@ -139,6 +139,7 @@ export default function FormBuilderPage() {
               ...prev,
               title: tpl.title || '',
               description: tpl.description || '',
+              banner_url: tpl.banner_url || null,
             }));
             setQuestions(
               (tpl.questions || [])
@@ -291,6 +292,7 @@ export default function FormBuilderPage() {
           id: created.id,
           slug: created.slug,
           join_token: created.join_token,
+          banner_url: created.banner_url || prev.banner_url,
         }));
 
         let savedQuestions = (created.questions || []).sort((a, b) => a.order_index - b.order_index);
@@ -352,6 +354,7 @@ export default function FormBuilderPage() {
       await createTemplate(token, {
         title: formData.title,
         description: formData.description,
+        banner_url: formData.banner_url,
         questions: questions.map((q, idx) => ({
           type: q.type,
           label: q.label,
