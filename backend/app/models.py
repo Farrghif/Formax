@@ -137,6 +137,7 @@ class QuestionOption(Base):
     label = Column(String, nullable=False)
     value = Column(String, nullable=True)
     order_index = Column(Integer, default=0)
+    is_correct = Column(Boolean, default=False)  # kunci jawaban (1 opsi benar per soal pilihan)
 
     question = relationship("Question", back_populates="options")
 

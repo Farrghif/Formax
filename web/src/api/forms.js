@@ -71,3 +71,34 @@ export async function generateQR(token, formId) {
   });
   return readJsonResponse(res, 'Gagal generate QR');
 }
+
+/**
+ * Get daftar submission untuk form tertentu (Owner only)
+ */
+export async function getFormSubmissions(token, formId) {
+  const res = await fetch(`${API_BASE_URL}/forms/${formId}/submissions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return readJsonResponse(res, 'Gagal mengambil hasil respons');
+}
+
+/**
+ * Ekspor jawaban form ke file Excel (.xlsx)
+ */
+export async function exportSubmissions(token, formId, formSlug = 'form') {
+  const res = await fetch(`${API_BASE_URL}/forms/${formId}/export`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error('Gagal mengekspor data ke Excel');
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${formSlug}-hasil.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}

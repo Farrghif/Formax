@@ -108,6 +108,36 @@
   transform: none;
 }
 
+.fb-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fb-template-btn {
+  padding: 9px 18px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fb-template-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.fb-template-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .fb-back-btn {
   width: 36px;
   height: 36px;
@@ -442,6 +472,32 @@
 .fb-option-delete:hover {
   background: #fef2f2;
   color: #ef4444;
+}
+
+.fb-correct-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.fb-correct-btn:hover {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.fb-correct-btn.active {
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
 }
 
 .fb-add-option-row {

@@ -66,7 +66,7 @@ def create_form(
             db.add(new_q)
             db.flush()
             for opt in tq.options:
-                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index))
+                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
     else:
         for q in payload.questions:
             new_q = models.Question(
@@ -76,9 +76,10 @@ def create_form(
             db.add(new_q)
             db.flush()
             for opt in q.options:
-                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index))
+                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
 
     db.commit()
+    db.expire_all()
     db.refresh(form)
     return form
 
@@ -132,7 +133,8 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
-    public_url = f"{BASE_URL}/f/{form.slug}"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    public_url = f"{frontend_url}/f/{form.slug}"
     img = qrcode.make(public_url)
 
     os.makedirs(QR_DIR, exist_ok=True)

@@ -27,7 +27,7 @@ def create_question_in_form(
     db.flush()
 
     for opt in payload.options:
-        db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index))
+        db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
 
     db.commit()
     db.refresh(question)
@@ -56,7 +56,7 @@ def create_question_in_template(
     db.flush()
 
     for opt in payload.options:
-        db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index))
+        db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
 
     db.commit()
     db.refresh(question)
@@ -136,7 +136,7 @@ def create_option(
             raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
     option = models.QuestionOption(question_id=question.id, label=payload.label, value=payload.value,
-                                   order_index=payload.order_index)
+                                   order_index=payload.order_index, is_correct=payload.is_correct)
     db.add(option)
     db.commit()
     db.refresh(option)

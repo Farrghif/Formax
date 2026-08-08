@@ -4,7 +4,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { getMe, logout } from '../api/auth';
 import { createForm, getForm, updateForm, generateQR } from '../api/forms';
-import { getTemplate } from '../api/templates';
+import { getTemplate, createTemplate } from '../api/templates';
 import { uploadFile } from '../api/uploads';
 import { API_BASE_URL } from '../api/config';
 import {
@@ -16,6 +16,7 @@ import {
   deleteOption,
 } from '../api/questions';
 import '../styles/form-builder.css';
+import logoForm4x from '../assets/logo_form4x.png';
 
 const QUESTION_TYPES = [
   { value: 'text', label: 'Teks' },
@@ -55,6 +56,7 @@ export default function FormBuilderPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('soal');
   const [activeQuestion, setActiveQuestion] = useState(null);
@@ -154,6 +156,7 @@ export default function FormBuilderPage() {
                     label: o.label,
                     value: o.value || '',
                     order_index: oidx,
+                    is_correct: o.is_correct || false,
                   })),
                 }))
             );
@@ -214,12 +217,14 @@ export default function FormBuilderPage() {
                   label: opt.label,
                   value: opt.value,
                   order_index: opt.order_index,
+                  is_correct: opt.is_correct || false,
                 });
               } else if (!opt.id) {
                 const newOpt = await createOption(token, q.id, {
                   label: opt.label,
                   value: opt.value || '',
                   order_index: opt.order_index,
+                  is_correct: opt.is_correct || false,
                 });
                 opt.id = newOpt.id;
                 opt._saved = true;
@@ -238,6 +243,7 @@ export default function FormBuilderPage() {
                 label: o.label,
                 value: o.value || '',
                 order_index: o.order_index,
+                is_correct: o.is_correct || false,
               })),
             });
             q.id = newQ.id;
@@ -274,6 +280,7 @@ export default function FormBuilderPage() {
                   label: o.label,
                   value: o.value || '',
                   order_index: oidx,
+                  is_correct: o.is_correct || false,
                 })),
               })),
         };
@@ -285,24 +292,86 @@ export default function FormBuilderPage() {
           slug: created.slug,
           join_token: created.join_token,
         }));
+
+        let savedQuestions = (created.questions || []).sort((a, b) => a.order_index - b.order_index);
+
+        // Fallback: If backend returned no questions but local questions existed, save them explicitly
+        if (savedQuestions.length === 0 && questions.length > 0) {
+          const newSaved = [];
+          for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+            const newQ = await createQuestionInForm(token, created.id, {
+              type: q.type,
+              label: q.label || 'Pertanyaan Tanpa Judul',
+              placeholder: q.placeholder || '',
+              is_required: q.is_required,
+              order_index: i,
+              settings: q.settings || {},
+              options: (q.options || []).map((o, oidx) => ({
+                label: o.label || `Opsi ${oidx + 1}`,
+                value: o.value || '',
+                order_index: oidx,
+                is_correct: o.is_correct || false,
+              })),
+            });
+            newSaved.push(newQ);
+          }
+          savedQuestions = newSaved;
+        }
+
         setQuestions(
-          (created.questions || [])
-            .sort((a, b) => a.order_index - b.order_index)
-            .map((q) => ({
-              ...q,
-              _saved: true,
-              options: (q.options || []).map((o) => ({ ...o, _saved: true })),
-            }))
+          savedQuestions.map((q) => ({
+            ...q,
+            _saved: true,
+            options: (q.options || []).map((o) => ({ ...o, _saved: true })),
+          }))
         );
 
         // Update URL to edit mode without reloading
         window.history.replaceState(null, '', `/form-builder/${created.id}`);
-        showToast('Form berhasil dibuat!', 'success');
+        showToast('Form berhasil disimpan!', 'success');
       }
     } catch (err) {
       showToast(err.message || 'Gagal menyimpan form', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ============================================================
+  // SAVE AS NEW TEMPLATE
+  // ============================================================
+  const handleSaveAsTemplate = async () => {
+    if (!formData.title.trim()) {
+      showToast('Judul template tidak boleh kosong', 'error');
+      return;
+    }
+
+    setTemplateSaving(true);
+    try {
+      await createTemplate(token, {
+        title: formData.title,
+        description: formData.description,
+        questions: questions.map((q, idx) => ({
+          type: q.type,
+          label: q.label,
+          placeholder: q.placeholder || '',
+          is_required: q.is_required,
+          order_index: idx,
+          settings: q.settings || {},
+          options: (q.options || []).map((o, oidx) => ({
+            label: o.label,
+            value: o.value || '',
+            order_index: oidx,
+            is_correct: o.is_correct || false,
+          })),
+        })),
+      });
+      showToast('Template berhasil disimpan! Muncul di Dashboard > Template', 'success');
+    } catch (err) {
+      showToast(err.message || 'Gagal menyimpan template', 'error');
+    } finally {
+      setTemplateSaving(false);
     }
   };
 
@@ -319,7 +388,7 @@ export default function FormBuilderPage() {
       order_index: questions.length,
       settings: {},
       options: [
-        { _tempId: `temp-opt-${Date.now()}-0`, label: 'Opsi 1', value: '', order_index: 0 },
+        { _tempId: `temp-opt-${Date.now()}-0`, label: 'Opsi 1', value: '', order_index: 0, is_correct: false },
       ],
     };
     setQuestions((prev) => [...prev, newQ]);
@@ -376,6 +445,7 @@ export default function FormBuilderPage() {
                   label: `Opsi ${q.options.length + 1}`,
                   value: '',
                   order_index: q.options.length,
+                  is_correct: false,
                 },
               ],
             }
@@ -415,8 +485,27 @@ export default function FormBuilderPage() {
     );
   };
 
+  // Tandai SATU opsi sebagai jawaban benar (kunci jawaban). Klik lagi = hapus kunci.
+  const markCorrectOption = (qIndex, oIndex) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex
+          ? {
+              ...q,
+              _saved: false,
+              options: q.options.map((o, j) => ({
+                ...o,
+                is_correct: j === oIndex ? !o.is_correct : false,
+                _saved: false,
+              })),
+            }
+          : q
+      )
+    );
+  };
+
   const getPublicLink = () => {
-    return `${API_BASE_URL}/f/${formData.slug}`;
+    return `${window.location.origin}/f/${formData.slug}`;
   };
 
   const handleCopyLink = () => {
@@ -473,6 +562,8 @@ export default function FormBuilderPage() {
 
   const hasOptions = (type) => ['single_choice', 'checkbox', 'dropdown'].includes(type);
 
+  const supportsCorrectAnswer = (type) => ['single_choice', 'dropdown'].includes(type);
+
   const getOptionIndicator = (type) => {
     if (type === 'single_choice') return 'fb-option-radio';
     if (type === 'checkbox') return 'fb-option-checkbox';
@@ -494,16 +585,7 @@ export default function FormBuilderPage() {
       <aside className="db-sidebar">
         <div className="db-logo">
           <div className="db-logo-icon">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-              <rect width="36" height="36" rx="8" fill="url(#logo-grad-fb)" />
-              <text x="7" y="25" fontFamily="Inter, sans-serif" fontWeight="800" fontSize="18" fill="#fff">F4</text>
-              <defs>
-                <linearGradient id="logo-grad-fb" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#3b82f6" />
-                  <stop offset="1" stopColor="#1d4ed8" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src={logoForm4x} alt="Form4x logo" className="db-logo-img" />
           </div>
           <div className="db-logo-text">
             <span className="db-logo-name">Form4x</span>
@@ -572,9 +654,14 @@ export default function FormBuilderPage() {
             </button>
           </div>
 
-          <button className="fb-save-btn" onClick={handleSave} disabled={saving}>
-            {saving ? 'Menyimpan...' : 'Simpan Draf'}
-          </button>
+          <div className="fb-topbar-actions">
+            <button className="fb-template-btn" onClick={handleSaveAsTemplate} disabled={templateSaving} title="Simpan soal-soal ini sebagai template baru">
+              {templateSaving ? 'Menyimpan...' : 'Simpan sebagai Template'}
+            </button>
+            <button className="fb-save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Menyimpan...' : 'Simpan Draf'}
+            </button>
+          </div>
         </header>
 
         {/* Content */}
@@ -681,7 +768,7 @@ export default function FormBuilderPage() {
                             const updates = { type: newType };
                             // Add default option if switching to choice type and has no options
                             if (hasOptions(newType) && (!q.options || q.options.length === 0)) {
-                              updates.options = [{ _tempId: `temp-opt-${Date.now()}`, label: 'Opsi 1', value: '', order_index: 0 }];
+                              updates.options = [{ _tempId: `temp-opt-${Date.now()}`, label: 'Opsi 1', value: '', order_index: 0, is_correct: false }];
                             }
                             updateQuestionLocal(qIdx, updates);
                           }}
@@ -708,6 +795,18 @@ export default function FormBuilderPage() {
                                 onChange={(e) => updateOptionLocal(qIdx, oIdx, { label: e.target.value })}
                                 placeholder={`Opsi ${oIdx + 1}`}
                               />
+                              {supportsCorrectAnswer(q.type) && (
+                                <button
+                                  className={`fb-correct-btn ${opt.is_correct ? 'active' : ''}`}
+                                  onClick={() => markCorrectOption(qIdx, oIdx)}
+                                  title={opt.is_correct ? 'Jawaban benar (klik untuk hapus)' : 'Tandai sebagai jawaban benar'}
+                                  aria-label="Tandai sebagai jawaban benar"
+                                >
+                                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                </button>
+                              )}
                               {q.options.length > 1 && (
                                 <button
                                   className="fb-option-delete"
@@ -744,6 +843,7 @@ export default function FormBuilderPage() {
                                               label: 'Lainnya',
                                               value: '__other__',
                                               order_index: qq.options.length,
+                                              is_correct: false,
                                             },
                                           ],
                                         }
@@ -910,7 +1010,7 @@ export default function FormBuilderPage() {
                     disabled={!!formData.id}
                   />
                   <p className="fb-slug-preview">
-                    Link: {API_BASE_URL}/f/{formData.slug || 'slug-form-anda'}
+                    Link: {window.location.origin}/f/{formData.slug || 'slug-form-anda'}
                   </p>
                 </div>
 

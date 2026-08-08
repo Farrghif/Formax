@@ -54,12 +54,14 @@ class QuestionOptionCreate(BaseModel):
     label: str
     value: Optional[str] = None
     order_index: int = 0
+    is_correct: bool = False
 
 
 class QuestionOptionUpdate(BaseModel):
     label: Optional[str] = None
     value: Optional[str] = None
     order_index: Optional[int] = None
+    is_correct: Optional[bool] = None
 
 
 class QuestionOptionOut(QuestionOptionCreate):
@@ -230,6 +232,7 @@ class SubmissionOut(BaseModel):
     id: uuid.UUID
     form_id: uuid.UUID
     user_id: uuid.UUID
+    user: Optional[UserOut] = None
     started_at: datetime
     is_auto_submitted: bool
     submitted_at: Optional[datetime]

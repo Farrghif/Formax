@@ -13,6 +13,10 @@ Base.metadata.create_all(bind=engine)
 # Auto-migrate: pastikan kolom banner_url ada di tabel forms
 with engine.connect() as conn:
     conn.execute(text("ALTER TABLE forms ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
+    # Auto-migrate: kunci jawaban di question_options
+    conn.execute(text("ALTER TABLE question_options ADD COLUMN IF NOT EXISTS is_correct BOOLEAN;"))
+    # Backfill: opsi lama yang belum punya nilai dianggap bukan jawaban benar
+    conn.execute(text("UPDATE question_options SET is_correct = FALSE WHERE is_correct IS NULL;"))
     conn.commit()
 
 

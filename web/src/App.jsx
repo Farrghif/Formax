@@ -1,11 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import FormBuilderPage from './pages/FormBuilderPage';
+import FormFillPage from './pages/FormFillPage';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/auth" replace />;
+  const location = useLocation();
+
+  if (!token) {
+    const redirectUrl = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/auth?redirect=${redirectUrl}`} replace />;
+  }
+
+  return children;
 }
 
 function App() {
@@ -35,6 +43,23 @@ function App() {
           element={
             <PrivateRoute>
               <FormBuilderPage />
+            </PrivateRoute>
+          }
+        />
+        {/* Public Form Filler Routes */}
+        <Route
+          path="/f/:slug"
+          element={
+            <PrivateRoute>
+              <FormFillPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/forms/public/:slug"
+          element={
+            <PrivateRoute>
+              <FormFillPage />
             </PrivateRoute>
           }
         />

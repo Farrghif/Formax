@@ -45,9 +45,10 @@ def create_template(
         db.add(question)
         db.flush()
         for opt in q.options:
-            db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index))
+            db.add(models.QuestionOption(question_id=question.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
 
     db.commit()
+    db.expire_all()
     db.refresh(template)
     return template
 
