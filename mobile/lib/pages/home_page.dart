@@ -46,12 +46,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0: // Dashboard
-        return const Center(
-          child: Text(
-            "Halaman Dashboard",
-            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
-          ),
-        );
+        return _buildDashboardTab();
       case 1: // Template
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -78,6 +73,134 @@ class _HomePageState extends State<HomePage> {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildDashboardTab() {
+    final List<Map<String, dynamic>> projects = [
+      {"title": "Formax", "status": "Active", "icon": Icons.edit},
+      {"title": "CMS design stuff", "status": "Draft", "icon": Icons.edit},
+      {"title": "CMS design stuff - Page 1", "status": "Archived", "icon": Icons.play_arrow},
+      {"title": "Website SMK 10", "status": "Active", "icon": Icons.edit},
+    ];
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16.0),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16.0,
+        mainAxisSpacing: 16.0,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: projects.length,
+      itemBuilder: (context, index) {
+        final project = projects[index];
+        return _buildProjectCard(project);
+      },
+    );
+  }
+
+  Widget _buildProjectCard(Map<String, dynamic> project) {
+    Color statusBgColor;
+    Color statusTextColor;
+    
+    switch (project["status"]) {
+      case "Active":
+        statusBgColor = const Color(0xFFD1FAE5);
+        statusTextColor = const Color(0xFF10B981);
+        break;
+      case "Draft":
+        statusBgColor = const Color(0xFFFEF3C7);
+        statusTextColor = const Color(0xFFD97706);
+        break;
+      case "Archived":
+        statusBgColor = const Color(0xFFF3F4F6);
+        statusTextColor = const Color(0xFF4B5563);
+        break;
+      default:
+        statusBgColor = Colors.grey.shade200;
+        statusTextColor = Colors.grey.shade700;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Dark Thumbnail Section
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF333333),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: project["icon"] == Icons.play_arrow 
+                          ? Colors.transparent 
+                          : const Color(0xFF2563EB),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      project["icon"],
+                      color: project["icon"] == Icons.play_arrow 
+                          ? Colors.white54 
+                          : Colors.white,
+                      size: project["icon"] == Icons.play_arrow ? 36 : 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Text and Status Badge
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  project["title"],
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    project["status"],
+                    style: TextStyle(
+                      color: statusTextColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
