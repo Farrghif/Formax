@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
+import 'result_page.dart';
+import '../data/mock_data.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> historyItems = [
-      {"title": "Quizz", "icon": Icons.insert_drive_file_outlined},
-      {"title": "Ujian", "icon": Icons.assignment_outlined},
-      {"title": "Angket Classmeet", "icon": Icons.insert_chart_outlined},
-    ];
+    final historyItems = MockData.historyItems;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -37,14 +35,14 @@ class HistoryPage extends StatelessWidget {
           // History Cards
           ...historyItems.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: _buildHistoryCard(item["title"], item["icon"]),
+            child: _buildHistoryCard(context, item["title"], item["icon"]),
           )),
         ],
       ),
     );
   }
 
-  Widget _buildHistoryCard(String title, IconData iconData) {
+  Widget _buildHistoryCard(BuildContext context, String title, IconData iconData) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -89,7 +87,14 @@ class HistoryPage extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ResultPage(formTitle: title),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,

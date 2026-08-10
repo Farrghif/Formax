@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'home_page.dart'; 
+import '../models/form_template.dart'; 
 
 class QuestionOptionData {
   String label;
@@ -517,7 +517,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 14)),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
         Switch(value: value, onChanged: (v){}, activeThumbColor: const Color(0xFF0F52BA)),
       ],
     );

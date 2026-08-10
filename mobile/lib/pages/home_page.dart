@@ -4,12 +4,11 @@ import '../services/api_service.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
 import 'historypage.dart';
-class FormTemplate {
-  final String title;
-  final String subtitle;
+import 'result_page.dart';
 
-  FormTemplate({required this.title, required this.subtitle});
-}
+import '../data/mock_data.dart';
+import '../widgets/project_card.dart';
+import '../widgets/template_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,11 +36,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  List<FormTemplate> templates = [
-    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago"),
-    FormTemplate(title: "Ujian", subtitle: "Updated 1 week ago"),
-    FormTemplate(title: "Angket Classmeet", subtitle: "Updated 1 month ago"),
-  ];
+
 
   Widget _buildBody() {
     switch (_selectedIndex) {
@@ -57,12 +52,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDashboardTab() {
-    final List<Map<String, dynamic>> projects = [
-      {"title": "Formax", "status": "Active", "icon": Icons.edit},
-      {"title": "CMS design stuff", "status": "Draft", "icon": Icons.edit},
-      {"title": "CMS design stuff - Page 1", "status": "Archived", "icon": Icons.play_arrow},
-      {"title": "Website SMK 10", "status": "Active", "icon": Icons.edit},
-    ];
+    final projects = MockData.dashboardProjects;
 
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
@@ -75,112 +65,18 @@ class _HomePageState extends State<HomePage> {
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
-        return _buildProjectCard(project);
-      },
-    );
-  }
-
-  Widget _buildProjectCard(Map<String, dynamic> project) {
-    Color statusBgColor;
-    Color statusTextColor;
-    
-    switch (project["status"]) {
-      case "Active":
-        statusBgColor = const Color(0xFFD1FAE5);
-        statusTextColor = const Color(0xFF10B981);
-        break;
-      case "Draft":
-        statusBgColor = const Color(0xFFFEF3C7);
-        statusTextColor = const Color(0xFFD97706);
-        break;
-      case "Archived":
-        statusBgColor = const Color(0xFFF3F4F6);
-        statusTextColor = const Color(0xFF4B5563);
-        break;
-      default:
-        statusBgColor = Colors.grey.shade200;
-        statusTextColor = Colors.grey.shade700;
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dark Thumbnail Section
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF333333),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: project["icon"] == Icons.play_arrow 
-                          ? Colors.transparent 
-                          : const Color(0xFF2563EB),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      project["icon"],
-                      color: project["icon"] == Icons.play_arrow 
-                          ? Colors.white54 
-                          : Colors.white,
-                      size: project["icon"] == Icons.play_arrow ? 36 : 20,
-                    ),
-                  ),
-                ),
+        return ProjectCard(
+          project: project,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ResultPage(formTitle: project.title),
               ),
-            ),
-          ),
-          // Text and Status Badge
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  project["title"],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: statusBgColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    project["status"],
-                    style: TextStyle(
-                      color: statusTextColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-              ],
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -228,63 +124,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-
   Widget _buildTemplateTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Built-in Templates Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Built-in Templates",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(50, 30),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  "View All",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2563EB),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Horizontal List of Built-in Templates
-          SizedBox(
-            height: 140,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildBuiltInTemplateCard("Blank Form", "Start from scratch", true),
-                const SizedBox(width: 12),
-                _buildBuiltInTemplateCard("Attendance Form", "Event or class tracking", false),
-                const SizedBox(width: 12),
-                _buildBuiltInTemplateCard("Feedback Form", "Gather user feedback", false),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          // My Templates Header
           const Text(
-            "My Templates",
+            "Built-in Templates",
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -292,290 +139,67 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildCreateNewTemplateBtn(),
-          const SizedBox(height: 16),
-          ...templates.map(
-            (t) => Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTemplateCard(t.title, t.subtitle),
+          // Horizontal List of Built-in Templates
+          SizedBox(
+            height: 180, // Set height for the cards
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: MockData.builtInTemplates.length,
+              itemBuilder: (context, index) {
+                final template = MockData.builtInTemplates[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: TemplateCard(template: template, isBuiltIn: true),
+                );
+              },
             ),
           ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 32),
 
-  Widget _buildBuiltInTemplateCard(String title, String subtitle, bool isBlank) {
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCE4FB),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
-              ),
-              child: Center(
-                child: isBlank 
-                  ? _buildDocumentPlaceholder()
-                  : _buildListPlaceholder(),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF6B7280),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListPlaceholder() {
-    return Container(
-      width: 60,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFFD1D5DB)),
-      ),
-      padding: const EdgeInsets.all(6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          // Section Title: My Templates
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFC7D2FE), shape: BoxShape.circle)),
-              const SizedBox(width: 4),
-              Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFC7D2FE), shape: BoxShape.circle)),
-              const SizedBox(width: 4),
-              Container(width: 24, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCreateNewTemplateBtn() {
-    return CustomPaint(
-      painter: DashedRectPainter(
-        color: const Color(0xFFB4C5D4),
-        strokeWidth: 1.5,
-        dashWidth: 6,
-        dashSpace: 4,
-      ),
-      child: InkWell(
-        onTap: () async {
-          final newTemplate = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TemplateMakerPage()),
-          );
-          if (newTemplate != null && newTemplate is FormTemplate) {
-            setState(() {
-              templates.insert(0, newTemplate);
-            });
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFB4C5D4),
-                    width: 1.2,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Color(0xFFB4C5D4),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(height: 12),
               const Text(
-                "Create New Template",
+                "My Templates",
                 style: TextStyle(
-                  color: Color(0xFF8BA3B8),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add, color: Color(0xFF2563EB)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TemplateMakerPage()),
+                  );
+                },
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTemplateCard(String title, String subtitle) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Placeholder Image Area
-          Container(
-            height: 120,
-            decoration: const BoxDecoration(
-              color: Color(0xFFDCE4FB),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16.0,
+              mainAxisSpacing: 16.0,
+              childAspectRatio: 0.85,
             ),
-            child: Center(child: _buildDocumentPlaceholder()),
-          ),
-          // Info Area
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
-                ),
-                const Icon(Icons.more_vert, color: Color(0xFF9CA3AF)),
-              ],
-            ),
+            itemCount: MockData.builtInTemplates.length,
+            itemBuilder: (context, index) {
+              final template = MockData.builtInTemplates[index];
+              return TemplateCard(template: template, isBuiltIn: false);
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentPlaceholder() {
-    return Container(
-      width: 80,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 8,
-            width: 45,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDBEAFE),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 4,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            height: 4,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            height: 4,
-            width: 30,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const Spacer(),
-          Container(
-            height: 8,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildEndDrawer() {
     return Drawer(
