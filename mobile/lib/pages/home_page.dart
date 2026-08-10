@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
-
+import 'historypage.dart';
 class FormTemplate {
   final String title;
   final String subtitle;
@@ -48,28 +48,9 @@ class _HomePageState extends State<HomePage> {
       case 0: // Dashboard
         return _buildDashboardTab();
       case 1: // Template
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildCreateNewTemplateBtn(),
-              const SizedBox(height: 16),
-              ...templates.map(
-                (t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _buildTemplateCard(t.title, t.subtitle),
-                ),
-              ),
-            ],
-          ),
-        );
+        return _buildTemplateTab();
       case 2: // History
-        return const Center(
-          child: Text(
-            "Belum ada riwayat",
-            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
-          ),
-        );
+        return const HistoryPage();
       default:
         return const SizedBox.shrink();
     }
@@ -247,6 +228,174 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+
+
+  Widget _buildTemplateTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Built-in Templates Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Built-in Templates",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              TextButton(
+                onPressed: () {},
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(50, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  "View All",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Horizontal List of Built-in Templates
+          SizedBox(
+            height: 140,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildBuiltInTemplateCard("Blank Form", "Start from scratch", true),
+                const SizedBox(width: 12),
+                _buildBuiltInTemplateCard("Attendance Form", "Event or class tracking", false),
+                const SizedBox(width: 12),
+                _buildBuiltInTemplateCard("Feedback Form", "Gather user feedback", false),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // My Templates Header
+          const Text(
+            "My Templates",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildCreateNewTemplateBtn(),
+          const SizedBox(height: 16),
+          ...templates.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: _buildTemplateCard(t.title, t.subtitle),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBuiltInTemplateCard(String title, String subtitle, bool isBlank) {
+    return Container(
+      width: 160,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFDCE4FB),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+              ),
+              child: Center(
+                child: isBlank 
+                  ? _buildDocumentPlaceholder()
+                  : _buildListPlaceholder(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF6B7280),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListPlaceholder() {
+    return Container(
+      width: 60,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFFD1D5DB)),
+      ),
+      padding: const EdgeInsets.all(6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFC7D2FE), shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              Container(width: 32, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFC7D2FE), shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              Container(width: 24, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCreateNewTemplateBtn() {
     return CustomPaint(
       painter: DashedRectPainter(
@@ -325,7 +474,7 @@ class _HomePageState extends State<HomePage> {
           Container(
             height: 120,
             decoration: const BoxDecoration(
-              color: Color(0xFFFAFAFA),
+              color: Color(0xFFDCE4FB),
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Center(child: _buildDocumentPlaceholder()),
