@@ -12,6 +12,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool isLogin = true;
   bool _isLoading = false;
+  bool _rememberMe = true; // State untuk remember me
 
   final TextEditingController loginEmailController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
@@ -183,8 +184,14 @@ class _LoginPageState extends State<LoginPage> {
                       Row(
                         children: [
                           Checkbox(
-                            value: true,
-                            onChanged: (value) {},
+                            value: _rememberMe,
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _rememberMe = value;
+                                });
+                              }
+                            },
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
@@ -244,7 +251,7 @@ class _LoginPageState extends State<LoginPage> {
 
                                   Map<String, dynamic>? result;
                                   if (isLogin) {
-                                    result = await ApiService.login(email, password);
+                                    result = await ApiService.login(email, password, rememberMe: _rememberMe);
                                   } else {
                                     final fullName = registerFullNameController.text.trim();
                                     if (fullName.isEmpty) {

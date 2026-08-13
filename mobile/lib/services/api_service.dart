@@ -7,26 +7,37 @@ class ApiService {
   // Jika menggunakan real device, ganti dengan IP lokal komputer host (misal: 192.168.1.xxx)
   static const String baseUrl = 'http://10.0.2.2:8000';
 
-  // Menyimpan token ke SharedPreferences
-  static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('access_token', token);
+  static String? _sessionToken;
+
+  // Menyimpan token. Jika rememberMe false, token hanya disimpan di memori.
+  static Future<void> saveToken(String token, {bool rememberMe = true}) async {
+    _sessionToken = token;
+    if (rememberMe) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', token);
+    } else {
+      // Pastikan token lama di storage dihapus jika user memilih tidak di-remember
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('access_token');
+    }
   }
 
-  // Mengambil token dari SharedPreferences
+  // Mengambil token (prioritaskan dari memori)
   static Future<String?> getToken() async {
+    if (_sessionToken != null) return _sessionToken;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
   }
 
   // Menghapus token (Logout)
   static Future<void> removeToken() async {
+    _sessionToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
   }
 
   // Fungsi Login
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = true}) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -40,7 +51,7 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         if (data.containsKey('access_token')) {
-          await saveToken(data['access_token']);
+          await saveToken(data['access_token'], rememberMe: rememberMe);
         }
         return {'success': true, 'data': data};
       } else {
