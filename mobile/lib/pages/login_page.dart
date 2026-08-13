@@ -16,10 +16,12 @@ class _LoginPageState extends State<LoginPage> {
 
   final TextEditingController loginEmailController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
-  
+
   final TextEditingController registerEmailController = TextEditingController();
-  final TextEditingController registerPasswordController = TextEditingController();
-  final TextEditingController registerFullNameController = TextEditingController();
+  final TextEditingController registerPasswordController =
+      TextEditingController();
+  final TextEditingController registerFullNameController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -57,16 +59,12 @@ class _LoginPageState extends State<LoginPage> {
             //   ),
             // ),
 
-
             // Bottom image
             Align(
               alignment: Alignment.bottomCenter,
-              child: Image.asset(
-                'assets/images/bawahloginregister.png',
-              ),
+              child: Image.asset('assets/images/bawahloginregister.png'),
             ),
 
-            
             // Main content
             Center(
               child: SingleChildScrollView(
@@ -81,18 +79,14 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: 
-                    
-                    [
+                    children: [
                       const SizedBox(height: 10),
 
                       // Logo
                       Align(
-                       alignment: Alignment.topCenter,
-                      child: Image.asset(
-                            'assets/icons/logoForm4x.png',
-                              ),
-                           ),
+                        alignment: Alignment.topCenter,
+                        child: Image.asset('assets/icons/logoForm4x.png'),
+                      ),
 
                       const SizedBox(height: 20),
 
@@ -109,7 +103,9 @@ class _LoginPageState extends State<LoginPage> {
                               child: GestureDetector(
                                 onTap: () => setState(() => isLogin = true),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: isLogin
                                         ? const Color(0xFF1E66D0)
@@ -120,7 +116,9 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Text(
                                     'Login',
                                     style: TextStyle(
-                                      color: isLogin ? Colors.white : Colors.black87,
+                                      color: isLogin
+                                          ? Colors.white
+                                          : Colors.black87,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -131,7 +129,9 @@ class _LoginPageState extends State<LoginPage> {
                               child: GestureDetector(
                                 onTap: () => setState(() => isLogin = false),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: !isLogin
                                         ? const Color(0xFF1E66D0)
@@ -142,7 +142,9 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Text(
                                     'Register',
                                     style: TextStyle(
-                                      color: !isLogin ? Colors.white : Colors.black87,
+                                      color: !isLogin
+                                          ? Colors.white
+                                          : Colors.black87,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -166,7 +168,9 @@ class _LoginPageState extends State<LoginPage> {
 
                       _buildLabel('Email Address*'),
                       _buildTextField(
-                        controller: isLogin ? loginEmailController : registerEmailController,
+                        controller: isLogin
+                            ? loginEmailController
+                            : registerEmailController,
                         hint: 'Enter your email address',
                       ),
 
@@ -174,7 +178,9 @@ class _LoginPageState extends State<LoginPage> {
 
                       _buildLabel('Password*'),
                       _buildTextField(
-                        controller: isLogin ? loginPasswordController : registerPasswordController,
+                        controller: isLogin
+                            ? loginPasswordController
+                            : registerPasswordController,
                         hint: 'Enter your password',
                         obscureText: true,
                       ),
@@ -193,7 +199,8 @@ class _LoginPageState extends State<LoginPage> {
                               }
                             },
                             visualDensity: VisualDensity.compact,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                           ),
                           const Text(
                             'Remember me',
@@ -214,22 +221,35 @@ class _LoginPageState extends State<LoginPage> {
                                     _isLoading = true;
                                   });
 
-                                  final email = isLogin ? loginEmailController.text.trim() : registerEmailController.text.trim();
-                                  final password = isLogin ? loginPasswordController.text.trim() : registerPasswordController.text.trim();
+                                  final email = isLogin
+                                      ? loginEmailController.text.trim()
+                                      : registerEmailController.text.trim();
+                                  final password = isLogin
+                                      ? loginPasswordController.text.trim()
+                                      : registerPasswordController.text.trim();
 
                                   // Validasi format email dengan Regex sederhana
-                                  final bool emailValid = 
-                                      RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(email);
+                                  final bool emailValid = RegExp(
+                                    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+                                  ).hasMatch(email);
 
                                   if (email.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Email tidak boleh kosong!')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Email tidak boleh kosong!',
+                                        ),
+                                      ),
                                     );
                                     setState(() => _isLoading = false);
                                     return;
                                   } else if (!emailValid) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Format email tidak valid!')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Format email tidak valid!',
+                                        ),
+                                      ),
                                     );
                                     setState(() => _isLoading = false);
                                     return;
@@ -237,13 +257,21 @@ class _LoginPageState extends State<LoginPage> {
 
                                   if (password.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Password tidak boleh kosong!')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Password tidak boleh kosong!',
+                                        ),
+                                      ),
                                     );
                                     setState(() => _isLoading = false);
                                     return;
                                   } else if (password.length < 6) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Password minimal 6 karakter!')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Password minimal 6 karakter!',
+                                        ),
+                                      ),
                                     );
                                     setState(() => _isLoading = false);
                                     return;
@@ -251,55 +279,81 @@ class _LoginPageState extends State<LoginPage> {
 
                                   Map<String, dynamic>? result;
                                   if (isLogin) {
-                                    result = await ApiService.login(email, password, rememberMe: _rememberMe);
+                                    result = await ApiService.login(
+                                      email,
+                                      password,
+                                      rememberMe: _rememberMe,
+                                    );
                                   } else {
-                                    final fullName = registerFullNameController.text.trim();
+                                    final fullName = registerFullNameController
+                                        .text
+                                        .trim();
                                     if (fullName.isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Full name cannot be empty')),
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Full name cannot be empty',
+                                          ),
+                                        ),
                                       );
                                       setState(() {
                                         _isLoading = false;
                                       });
                                       return;
                                     }
-                                    
-                                    final otpResult = await ApiService.sendOtp(email);
+
+                                    final otpResult = await ApiService.sendOtp(
+                                      email,
+                                    );
                                     if (otpResult['success'] == true) {
                                       if (!context.mounted) return;
                                       setState(() {
                                         _isLoading = false;
                                       });
-                                      
+
                                       final otpCode = await showDialog<String>(
                                         context: context,
                                         barrierDismissible: false,
                                         builder: (context) {
-                                          final TextEditingController otpController = TextEditingController();
+                                          final TextEditingController
+                                          otpController =
+                                              TextEditingController();
                                           return AlertDialog(
-                                            title: const Text('Verifikasi Email'),
+                                            title: const Text(
+                                              'Verifikasi Email',
+                                            ),
                                             content: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Text('Masukkan 6 digit kode OTP yang dikirim ke email Anda.'),
+                                                const Text(
+                                                  'Masukkan 6 digit kode OTP yang dikirim ke email Anda.',
+                                                ),
                                                 const SizedBox(height: 10),
                                                 TextField(
                                                   controller: otpController,
-                                                  keyboardType: TextInputType.number,
+                                                  keyboardType:
+                                                      TextInputType.number,
                                                   maxLength: 6,
-                                                  decoration: const InputDecoration(
-                                                    hintText: 'Kode OTP',
-                                                  ),
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        hintText: 'Kode OTP',
+                                                      ),
                                                 ),
                                               ],
                                             ),
                                             actions: [
                                               TextButton(
-                                                onPressed: () => Navigator.pop(context),
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
                                                 child: const Text('Batal'),
                                               ),
                                               ElevatedButton(
-                                                onPressed: () => Navigator.pop(context, otpController.text.trim()),
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  otpController.text.trim(),
+                                                ),
                                                 child: const Text('Verifikasi'),
                                               ),
                                             ],
@@ -307,11 +361,17 @@ class _LoginPageState extends State<LoginPage> {
                                         },
                                       );
 
-                                      if (otpCode != null && otpCode.isNotEmpty) {
+                                      if (otpCode != null &&
+                                          otpCode.isNotEmpty) {
                                         setState(() {
                                           _isLoading = true;
                                         });
-                                        result = await ApiService.register(fullName, email, password, otpCode);
+                                        result = await ApiService.register(
+                                          fullName,
+                                          email,
+                                          password,
+                                          otpCode,
+                                        );
                                       } else {
                                         return;
                                       }
@@ -319,8 +379,6 @@ class _LoginPageState extends State<LoginPage> {
                                       result = otpResult;
                                     }
                                   }
-
-
 
                                   if (!context.mounted) return;
                                   setState(() {
@@ -336,7 +394,12 @@ class _LoginPageState extends State<LoginPage> {
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(result['message'] ?? 'An error occurred')),
+                                      SnackBar(
+                                        content: Text(
+                                          result['message'] ??
+                                              'An error occurred',
+                                        ),
+                                      ),
                                     );
                                   }
                                 },
@@ -359,7 +422,6 @@ class _LoginPageState extends State<LoginPage> {
                                 )
                               : Text(isLogin ? 'Login' : 'Register'),
                         ),
-
                       ),
 
                       const SizedBox(height: 12),
@@ -368,7 +430,9 @@ class _LoginPageState extends State<LoginPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            isLogin ? "No account? " : "Already have an account? ",
+                            isLogin
+                                ? "No account? "
+                                : "Already have an account? ",
                             style: const TextStyle(fontSize: 12),
                           ),
                           GestureDetector(
@@ -402,10 +466,7 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -423,9 +484,7 @@ class _LoginPageState extends State<LoginPage> {
         hintText: hint,
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 12,

@@ -70,19 +70,26 @@ class _HistoryPageState extends State<HistoryPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('History',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827))),
+        const Text(
+          'History',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF111827),
+          ),
+        ),
         const SizedBox(height: 4),
-        const Text('Lihat hasil jawaban formulir yang sudah dipublikasikan.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+        const Text(
+          'Lihat hasil jawaban formulir yang sudah dipublikasikan.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+        ),
         const SizedBox(height: 20),
-        ...forms.map((form) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _buildHistoryCard(form),
-            )),
+        ...forms.map(
+          (form) => Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _buildHistoryCard(form),
+          ),
+        ),
       ],
     );
   }
@@ -120,22 +127,27 @@ class _HistoryPageState extends State<HistoryPage> {
                 end: Alignment.bottomRight,
               ),
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(11)),
+                top: Radius.circular(11),
+              ),
             ),
             child: Stack(
               children: [
                 const Center(
-                  child: Icon(Icons.description_outlined,
-                      size: 40, color: Colors.white38),
+                  child: Icon(
+                    Icons.description_outlined,
+                    size: 40,
+                    color: Colors.white38,
+                  ),
                 ),
                 if (isHighlighted)
                   const Positioned(
                     top: 8,
                     right: 8,
                     child: Chip(
-                      label: Text('Baru!',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.white)),
+                      label: Text(
+                        'Baru!',
+                        style: TextStyle(fontSize: 11, color: Colors.white),
+                      ),
                       backgroundColor: Color(0xFF059669),
                       padding: EdgeInsets.zero,
                     ),
@@ -149,29 +161,46 @@ class _HistoryPageState extends State<HistoryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(form.title,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  form.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.people_outline,
-                        size: 14, color: Color(0xFF6B7280)),
+                    const Icon(
+                      Icons.people_outline,
+                      size: 14,
+                      color: Color(0xFF6B7280),
+                    ),
                     const SizedBox(width: 4),
-                    Text('${form.totalSubmissions} responden',
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF6B7280))),
+                    Text(
+                      '${form.totalSubmissions} responden',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.calendar_today_outlined,
-                        size: 14, color: Color(0xFF6B7280)),
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 14,
+                      color: Color(0xFF6B7280),
+                    ),
                     const SizedBox(width: 4),
-                    Text(_formatDate(form.createdAt),
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF6B7280))),
+                    Text(
+                      _formatDate(form.createdAt),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -182,18 +211,19 @@ class _HistoryPageState extends State<HistoryPage> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content:
-                                  Text('Mengekspor ke spreadsheet...')),
+                            content: Text('Mengekspor ke spreadsheet...'),
+                          ),
                         );
                       },
-                      icon: const Icon(Icons.table_chart_outlined,
-                          size: 14),
+                      icon: const Icon(Icons.table_chart_outlined, size: 14),
                       label: const Text('Export'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF059669),
                         side: const BorderSide(color: Color(0xFF059669)),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         textStyle: const TextStyle(fontSize: 12),
                       ),
                     ),
@@ -212,17 +242,19 @@ class _HistoryPageState extends State<HistoryPage> {
                             ),
                           );
                         },
-                        icon: const Icon(Icons.visibility_outlined,
-                            size: 14),
+                        icon: const Icon(Icons.visibility_outlined, size: 14),
                         label: const Text('Lihat Hasil'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E40AF),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           textStyle: const TextStyle(fontSize: 12),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
@@ -242,22 +274,29 @@ class _HistoryPageState extends State<HistoryPage> {
       children: [
         const SizedBox(height: 40),
         const Center(
-          child: Icon(Icons.history_toggle_off,
-              size: 72, color: Colors.black12),
+          child: Icon(
+            Icons.history_toggle_off,
+            size: 72,
+            color: Colors.black12,
+          ),
         ),
         const SizedBox(height: 16),
         const Center(
-          child: Text('Belum ada formulir',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black38)),
+          child: Text(
+            'Belum ada formulir',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black38,
+            ),
+          ),
         ),
         const Center(
           child: Text(
-              'Publikasikan formulir dari tab Template\nuntuk melihatnya di sini.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.black26)),
+            'Publikasikan formulir dari tab Template\nuntuk melihatnya di sini.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Colors.black26),
+          ),
         ),
       ],
     );
@@ -270,17 +309,17 @@ class _HistoryPageState extends State<HistoryPage> {
         children: [
           const Icon(Icons.wifi_off, size: 48, color: Colors.black26),
           const SizedBox(height: 12),
-          const Text('Tidak dapat memuat data',
-              style: TextStyle(fontSize: 15, color: Colors.black45)),
-          const SizedBox(height: 4),
-          Text(error,
-              style:
-                  const TextStyle(fontSize: 12, color: Colors.black26)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _refresh,
-            child: const Text('Coba Lagi'),
+          const Text(
+            'Tidak dapat memuat data',
+            style: TextStyle(fontSize: 15, color: Colors.black45),
           ),
+          const SizedBox(height: 4),
+          Text(
+            error,
+            style: const TextStyle(fontSize: 12, color: Colors.black26),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _refresh, child: const Text('Coba Lagi')),
         ],
       ),
     );

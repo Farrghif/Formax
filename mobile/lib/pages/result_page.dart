@@ -11,11 +11,7 @@ class ResultPage extends StatefulWidget {
   final String formId;
   final String formTitle;
 
-  const ResultPage({
-    super.key,
-    required this.formId,
-    required this.formTitle,
-  });
+  const ResultPage({super.key, required this.formId, required this.formTitle});
 
   @override
   State<ResultPage> createState() => _ResultPageState();
@@ -55,25 +51,30 @@ class _ResultPageState extends State<ResultPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.formTitle,
-                style: const TextStyle(
-                    color: Color(0xFF111827),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-            const Text('Hasil Respons',
-                style: TextStyle(
-                    color: Color(0xFF6B7280), fontSize: 12)),
+            Text(
+              widget.formTitle,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const Text(
+              'Hasil Respons',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_chart_outlined,
-                color: Color(0xFF059669)),
+            icon: const Icon(
+              Icons.table_chart_outlined,
+              color: Color(0xFF059669),
+            ),
             tooltip: 'Export ke Spreadsheet',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Mengekspor ke spreadsheet...')),
+                const SnackBar(content: Text('Mengekspor ke spreadsheet...')),
               );
             },
           ),
@@ -109,11 +110,14 @@ class _ResultPageState extends State<ResultPage> {
           // Summary card
           _buildSummaryCard(submissions.length),
           const SizedBox(height: 24),
-          const Text('Siapa yang Mengisi Ini',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Siapa yang Mengisi Ini',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 12),
           if (submissions.isEmpty)
             _buildEmptyState()
@@ -140,22 +144,30 @@ class _ResultPageState extends State<ResultPage> {
             children: [
               Icon(Icons.people, color: Color(0xFF1E40AF), size: 20),
               SizedBox(width: 8),
-              Text('Total Respons',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151))),
+              Text(
+                'Total Respons',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('$count',
-              style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827))),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 4),
-          const Text('responden',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+          const Text(
+            'responden',
+            style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          ),
         ],
       ),
     );
@@ -217,26 +229,36 @@ class _ResultPageState extends State<ResultPage> {
             CircleAvatar(
               radius: 20,
               backgroundColor: const Color(0xFF1E40AF),
-              child: Text(initial,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(sub.respondentName,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827))),
+                  Text(
+                    sub.respondentName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(timeStr,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF6B7280))),
+                  Text(
+                    timeStr,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -251,8 +273,7 @@ class _ResultPageState extends State<ResultPage> {
 
   Widget _buildMethodChip(bool isAuto) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE0E7FF),
         borderRadius: BorderRadius.circular(12),
@@ -270,9 +291,10 @@ class _ResultPageState extends State<ResultPage> {
           Text(
             isAuto ? 'Otomatis' : 'Manual',
             style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF4F46E5)),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF4F46E5),
+            ),
           ),
         ],
       ),
@@ -287,11 +309,15 @@ class _ResultPageState extends State<ResultPage> {
         children: [
           Icon(Icons.inbox_outlined, size: 56, color: Colors.black12),
           SizedBox(height: 12),
-          Text('Belum ada respons',
-              style: TextStyle(fontSize: 14, color: Colors.black38)),
-          Text('Bagikan link form untuk mulai menerima jawaban.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.black26)),
+          Text(
+            'Belum ada respons',
+            style: TextStyle(fontSize: 14, color: Colors.black38),
+          ),
+          Text(
+            'Bagikan link form untuk mulai menerima jawaban.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.black26),
+          ),
         ],
       ),
     );
@@ -304,15 +330,19 @@ class _ResultPageState extends State<ResultPage> {
         children: [
           const Icon(Icons.cloud_off, size: 48, color: Colors.black26),
           const SizedBox(height: 12),
-          const Text('Tidak dapat memuat respons',
-              style: TextStyle(fontSize: 14, color: Colors.black45)),
+          const Text(
+            'Tidak dapat memuat respons',
+            style: TextStyle(fontSize: 14, color: Colors.black45),
+          ),
           const SizedBox(height: 4),
-          Text(error,
-              style: const TextStyle(fontSize: 11, color: Colors.black26)),
+          Text(
+            error,
+            style: const TextStyle(fontSize: 11, color: Colors.black26),
+          ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => setState(
-                () => _submissionsFuture = _fetchSubmissions()),
+            onPressed: () =>
+                setState(() => _submissionsFuture = _fetchSubmissions()),
             child: const Text('Coba Lagi'),
           ),
         ],

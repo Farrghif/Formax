@@ -535,10 +535,12 @@ class _HomePageState extends State<HomePage> {
             future: ApiService.getMyTemplates(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: CircularProgressIndicator(),
-                ));
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
               }
 
               List<FormTemplate> myTemplates = [];
@@ -577,7 +579,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 itemCount: myTemplates.length,
                 itemBuilder: (context, index) {
-                  return TemplateCard(template: myTemplates[index], isBuiltIn: false);
+                  return TemplateCard(
+                    template: myTemplates[index],
+                    isBuiltIn: false,
+                  );
                 },
               );
             },
@@ -628,11 +633,17 @@ class _HomePageState extends State<HomePage> {
           }, _selectedIndex == 0),
           _drawerItem(Icons.link, 'Join with Link', () {
             Navigator.pop(context);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinLinkPage()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const JoinLinkPage()),
+            );
           }, false),
           _drawerItem(Icons.qr_code_scanner, 'Scan QR', () {
             Navigator.pop(context);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanQRPage()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ScanQRPage()),
+            );
           }, false),
           const Spacer(),
           const Divider(height: 1),
@@ -676,7 +687,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _drawerItem(IconData icon, String title, VoidCallback onTap, bool isSelected) {
+  Widget _drawerItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap,
+    bool isSelected,
+  ) {
     return InkWell(
       onTap: onTap,
       child: Container(

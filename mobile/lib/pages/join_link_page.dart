@@ -35,7 +35,10 @@ class _JoinLinkPageState extends State<JoinLinkPage> {
     if (result['success'] == true) {
       final slug = result['data']['slug'] ?? '';
       if (mounted && slug.isNotEmpty) {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => FillFormPage(slug: slug)));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => FillFormPage(slug: slug)),
+        );
       } else {
         setState(() => _errorText = 'Form tidak ditemukan');
       }
@@ -49,7 +52,10 @@ class _JoinLinkPageState extends State<JoinLinkPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFFB4C5D4),
-        title: const Text('Gabung dengan Link', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Gabung dengan Link',
+          style: TextStyle(color: Colors.white),
+        ),
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -77,8 +83,21 @@ class _JoinLinkPageState extends State<JoinLinkPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Gabung', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Gabung',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],

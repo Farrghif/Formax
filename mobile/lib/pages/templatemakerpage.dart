@@ -26,10 +26,14 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
   void initState() {
     super.initState();
     if (widget.initialTemplate != null) {
-      _titleController = TextEditingController(text: widget.initialTemplate!.title);
-      _descController = TextEditingController(text: widget.initialTemplate!.subtitle);
+      _titleController = TextEditingController(
+        text: widget.initialTemplate!.title,
+      );
+      _descController = TextEditingController(
+        text: widget.initialTemplate!.subtitle,
+      );
       _questions = [];
-      
+
       final qJson = widget.initialTemplate!.questionsJson;
       if (qJson != null && qJson.isNotEmpty) {
         for (var q in qJson) {
@@ -46,23 +50,27 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             return QuestionOptionData(label: opt['label'] ?? 'Opsi');
           }).toList();
 
-          _questions.add(QuestionData(
-            type: type,
-            label: q['label'] ?? 'Pertanyaan',
-            hintText: q['placeholder'] ?? '',
-            hintStyle: const TextStyle(color: Colors.grey),
-            isRequired: q['is_required'] ?? false,
-            options: options,
-          ));
+          _questions.add(
+            QuestionData(
+              type: type,
+              label: q['label'] ?? 'Pertanyaan',
+              hintText: q['placeholder'] ?? '',
+              hintStyle: const TextStyle(color: Colors.grey),
+              isRequired: q['is_required'] ?? false,
+              options: options,
+            ),
+          );
         }
       }
-      
+
       if (_questions.isEmpty) {
-        _questions.add(QuestionData(
-          type: QuestionType.multipleChoice,
-          label: 'Pertanyaan Tanpa Judul',
-          options: [QuestionOptionData(label: 'Opsi 1')],
-        ));
+        _questions.add(
+          QuestionData(
+            type: QuestionType.multipleChoice,
+            label: 'Pertanyaan Tanpa Judul',
+            options: [QuestionOptionData(label: 'Opsi 1')],
+          ),
+        );
       }
     } else {
       _titleController = TextEditingController(text: 'Form Tanpa Judul');
@@ -97,7 +105,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
 
   bool _enableTimer = true;
   String _timerMode = 'Start when respondent opens the form';
-  final TextEditingController _durationCtrl = TextEditingController(text: '1 hari');
+  final TextEditingController _durationCtrl = TextEditingController(
+    text: '1 hari',
+  );
 
   @override
   void dispose() {
@@ -188,7 +198,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       if (qrRes['success'] == true) {
         final shareLink = qrRes['data']['share_link'] as String;
         String qrUrl = qrRes['data']['qr_code_url'] as String;
-        
+
         // Ganti localhost dengan IP emulator (10.0.2.2) agar gambar bisa dimuat
         if (qrUrl.contains('localhost')) {
           qrUrl = qrUrl.replaceAll('localhost', '10.0.2.2');
@@ -282,9 +292,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFE8F0FE),
         appBar: _buildAppBar(),
-        body: TabBarView(
-          children: [_buildSoalTab(), _buildSetelanTab()],
-        ),
+        body: TabBarView(children: [_buildSoalTab(), _buildSetelanTab()]),
         floatingActionButton: _buildFAB(),
       ),
     );
@@ -313,9 +321,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               foregroundColor: const Color(0xFF0F52BA),
               side: const BorderSide(color: Color(0xFF0F52BA)),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
             ),
           ),
         ),
@@ -328,7 +336,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   )
                 : const Icon(Icons.send, size: 16),
             label: const Text('Publish'),
@@ -336,9 +346,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               backgroundColor: const Color(0xFF0F52BA),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
             ),
           ),
         ),
@@ -348,7 +358,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         unselectedLabelColor: Colors.black54,
         indicatorColor: Color(0xFF0F52BA),
         indicatorWeight: 3,
-        tabs: [Tab(text: 'Soal'), Tab(text: 'Setelan')],
+        tabs: [
+          Tab(text: 'Soal'),
+          Tab(text: 'Setelan'),
+        ],
       ),
     );
   }
@@ -376,11 +389,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         if (q.type == QuestionType.pageBreak) {
           return _buildPageBreakCard(qIndex, key: ValueKey('pb_$qIndex'));
         }
-        return _buildQuestionCard(
-          qIndex,
-          q,
-          key: ValueKey('q_$qIndex'),
-        );
+        return _buildQuestionCard(qIndex, q, key: ValueKey('q_$qIndex'));
       },
     );
   }
@@ -401,8 +410,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
           children: [
             TextField(
               controller: _titleController,
-              style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
                 hintText: 'Judul Form',
                 hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
@@ -441,21 +449,28 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            const Icon(Icons.view_day_outlined,
-                color: Color(0xFF4F46E5), size: 18),
+            const Icon(
+              Icons.view_day_outlined,
+              color: Color(0xFF4F46E5),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
                 'Pemisah Halaman (Section Break)',
                 style: TextStyle(
-                    color: Color(0xFF4F46E5),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13),
+                  color: Color(0xFF4F46E5),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: Color(0xFF6B7280), size: 20),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFF6B7280),
+                size: 20,
+              ),
               onPressed: () => setState(() => _questions.removeAt(index)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -484,15 +499,19 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.drag_indicator,
-                    color: Colors.black26, size: 20),
+                const Icon(
+                  Icons.drag_indicator,
+                  color: Colors.black26,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   flex: 2,
                   child: TextField(
                     controller: TextEditingController(text: q.label)
                       ..selection = TextSelection.collapsed(
-                          offset: q.label.length),
+                        offset: q.label.length,
+                      ),
                     onChanged: (v) => q.label = v,
                     style: const TextStyle(fontSize: 15),
                     decoration: InputDecoration(
@@ -515,7 +534,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                     borderRadius: BorderRadius.circular(6),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 12),
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(6),
@@ -568,13 +589,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 18),
                   tooltip: 'Hapus',
-                  onPressed: () =>
-                      setState(() => _questions.removeAt(index)),
+                  onPressed: () => setState(() => _questions.removeAt(index)),
                 ),
                 const Spacer(),
-                const Text('Wajib',
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.black54)),
+                const Text(
+                  'Wajib',
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
                 const SizedBox(width: 4),
                 Switch(
                   value: q.isRequired,
@@ -623,28 +644,30 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     }
   }
 
-  Widget _previewTextField(String hint,
-      {int maxLines = 1, IconData? icon}) {
+  Widget _previewTextField(String hint, {int maxLines = 1, IconData? icon}) {
     return TextField(
       enabled: false,
       maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
-        prefixIcon:
-            icon != null ? Icon(icon, size: 18, color: Colors.black38) : null,
+        prefixIcon: icon != null
+            ? Icon(icon, size: 18, color: Colors.black38)
+            : null,
         border: const UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.black26),
         ),
         isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       ),
     );
   }
 
-  Widget _buildOptionsList(int qIndex, QuestionData q,
-      {required bool isRadio}) {
+  Widget _buildOptionsList(
+    int qIndex,
+    QuestionData q, {
+    required bool isRadio,
+  }) {
     return Column(
       children: [
         ...q.options.asMap().entries.map((entry) {
@@ -660,19 +683,19 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    controller:
-                        TextEditingController(text: opt.label)
-                          ..selection = TextSelection.collapsed(
-                              offset: opt.label.length),
+                    controller: TextEditingController(text: opt.label)
+                      ..selection = TextSelection.collapsed(
+                        offset: opt.label.length,
+                      ),
                     onChanged: (v) => opt.label = v,
                     style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
                       hintText: 'Opsi',
                       border: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black12)),
+                        borderSide: BorderSide(color: Colors.black12),
+                      ),
                       isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 4),
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
                     ),
                   ),
                 ),
@@ -692,14 +715,23 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         }),
         TextButton.icon(
           onPressed: () => setState(
-              () => q.options.add(QuestionOptionData(label: 'Opsi baru'))),
+            () => q.options.add(QuestionOptionData(label: 'Opsi baru')),
+          ),
           icon: isRadio
-              ? const Icon(Icons.radio_button_unchecked,
-                  size: 16, color: Colors.black38)
-              : const Icon(Icons.check_box_outline_blank,
-                  size: 16, color: Colors.black38),
-          label: const Text('Tambah opsi',
-              style: TextStyle(fontSize: 13, color: Colors.black54)),
+              ? const Icon(
+                  Icons.radio_button_unchecked,
+                  size: 16,
+                  color: Colors.black38,
+                )
+              : const Icon(
+                  Icons.check_box_outline_blank,
+                  size: 16,
+                  color: Colors.black38,
+                ),
+          label: const Text(
+            'Tambah opsi',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
           style: TextButton.styleFrom(padding: EdgeInsets.zero),
         ),
       ],
@@ -711,8 +743,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.black12),
             borderRadius: BorderRadius.circular(4),
@@ -722,8 +753,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               Expanded(
                 child: Text(
                   q.options.isEmpty ? 'Pilih...' : q.options.first.label,
-                  style:
-                      const TextStyle(fontSize: 13, color: Colors.black38),
+                  style: const TextStyle(fontSize: 13, color: Colors.black38),
                 ),
               ),
               const Icon(Icons.arrow_drop_down, color: Colors.black38),
@@ -742,7 +772,8 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 child: TextField(
                   controller: TextEditingController(text: opt.label)
                     ..selection = TextSelection.collapsed(
-                        offset: opt.label.length),
+                      offset: opt.label.length,
+                    ),
                   onChanged: (v) => opt.label = v,
                   style: const TextStyle(fontSize: 13),
                   decoration: const InputDecoration(
@@ -768,10 +799,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         }),
         TextButton.icon(
           onPressed: () => setState(
-              () => q.options.add(QuestionOptionData(label: 'Opsi baru'))),
+            () => q.options.add(QuestionOptionData(label: 'Opsi baru')),
+          ),
           icon: const Icon(Icons.add, size: 16, color: Colors.black38),
-          label: const Text('Tambah opsi',
-              style: TextStyle(fontSize: 13, color: Colors.black54)),
+          label: const Text(
+            'Tambah opsi',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
           style: TextButton.styleFrom(padding: EdgeInsets.zero),
         ),
       ],
@@ -790,9 +824,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         children: [
           Icon(Icons.upload_file_outlined, color: Color(0xFF0F52BA)),
           SizedBox(width: 8),
-          Text('Upload File',
-              style:
-                  TextStyle(color: Color(0xFF0F52BA), fontWeight: FontWeight.w500)),
+          Text(
+            'Upload File',
+            style: TextStyle(
+              color: Color(0xFF0F52BA),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -811,7 +849,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               child: DropdownButton<int>(
                 value: q.scaleMin,
                 isDense: true,
-                items: [0, 1].map((v) => DropdownMenuItem(value: v, child: Text('$v'))).toList(),
+                items: [0, 1]
+                    .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
+                    .toList(),
                 onChanged: (v) => setState(() => q.scaleMin = v ?? 1),
               ),
             ),
@@ -839,10 +879,15 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             (i) => Flexible(
               child: Column(
                 children: [
-                  const Icon(Icons.radio_button_unchecked,
-                      size: 20, color: Colors.black38),
-                  Text('${q.scaleMin + i}',
-                      style: const TextStyle(fontSize: 11)),
+                  const Icon(
+                    Icons.radio_button_unchecked,
+                    size: 20,
+                    color: Colors.black38,
+                  ),
+                  Text(
+                    '${q.scaleMin + i}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -864,8 +909,11 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     );
   }
 
-  Widget _buildGridPreview(int qIndex, QuestionData q,
-      {required bool isRadio}) {
+  Widget _buildGridPreview(
+    int qIndex,
+    QuestionData q, {
+    required bool isRadio,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -873,11 +921,18 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         Row(
           children: [
             const SizedBox(width: 80),
-            ...q.options.map((o) => Expanded(
-                  child: Text(o.label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                )),
+            ...q.options.map(
+              (o) => Expanded(
+                child: Text(
+                  o.label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         // Rows
@@ -887,16 +942,20 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             children: [
               SizedBox(
                 width: 80,
-                child: Text(rowEntry.value,
-                    style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  rowEntry.value,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
-              ...q.options.map((_) => Expanded(
-                    child: Center(
-                      child: isRadio
-                          ? const Icon(Icons.radio_button_unchecked, size: 18)
-                          : const Icon(Icons.check_box_outline_blank, size: 18),
-                    ),
-                  )),
+              ...q.options.map(
+                (_) => Expanded(
+                  child: Center(
+                    child: isRadio
+                        ? const Icon(Icons.radio_button_unchecked, size: 18)
+                        : const Icon(Icons.check_box_outline_blank, size: 18),
+                  ),
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.close, size: 14),
                 padding: EdgeInsets.zero,
@@ -912,7 +971,8 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         }),
         TextButton.icon(
           onPressed: () => setState(
-              () => q.rowLabels.add('Baris ${q.rowLabels.length + 1}')),
+            () => q.rowLabels.add('Baris ${q.rowLabels.length + 1}'),
+          ),
           icon: const Icon(Icons.add, size: 14),
           label: const Text('Tambah baris', style: TextStyle(fontSize: 12)),
           style: TextButton.styleFrom(padding: EdgeInsets.zero),
@@ -920,28 +980,33 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         const Divider(height: 12),
         Row(
           children: [
-            ...q.options.asMap().entries.map((e) => Expanded(
-                  child: TextField(
-                    controller: TextEditingController(text: e.value.label)
-                      ..selection = TextSelection.collapsed(
-                          offset: e.value.label.length),
-                    onChanged: (v) => e.value.label = v,
-                    style: const TextStyle(fontSize: 11),
-                    decoration: InputDecoration(
-                      hintText: 'Kolom ${e.key + 1}',
-                      isDense: true,
-                      border: const UnderlineInputBorder(),
-                      contentPadding: EdgeInsets.zero,
+            ...q.options.asMap().entries.map(
+              (e) => Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: e.value.label)
+                    ..selection = TextSelection.collapsed(
+                      offset: e.value.label.length,
                     ),
+                  onChanged: (v) => e.value.label = v,
+                  style: const TextStyle(fontSize: 11),
+                  decoration: InputDecoration(
+                    hintText: 'Kolom ${e.key + 1}',
+                    isDense: true,
+                    border: const UnderlineInputBorder(),
+                    contentPadding: EdgeInsets.zero,
                   ),
-                )),
+                ),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.add, size: 16),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              onPressed: () => setState(() =>
-                  q.options.add(QuestionOptionData(
-                      label: 'Kolom ${q.options.length + 1}'))),
+              onPressed: () => setState(
+                () => q.options.add(
+                  QuestionOptionData(label: 'Kolom ${q.options.length + 1}'),
+                ),
+              ),
             ),
           ],
         ),
@@ -1012,16 +1077,19 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Jadikan ini sebagai kuis',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87)),
+                      Text(
+                        'Jadikan ini sebagai kuis',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
                       SizedBox(height: 4),
                       Text(
-                          'Menetapkan pertanyaan dan nilai poin, serta menyediakan masukan secara otomatis',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.black54)),
+                        'Menetapkan pertanyaan dan nilai poin, serta menyediakan masukan secara otomatis',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
                     ],
                   ),
                 ),
@@ -1035,47 +1103,72 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ),
             if (_isQuiz) ...[
               const SizedBox(height: 24),
-              const Text('RILIS NILAI',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54)),
+              const Text(
+                'RILIS NILAI',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
               const SizedBox(height: 8),
-              _buildRadioOption('Langsung setelah setiap pengiriman', 'langsung',
-                  _releaseGrade, (v) => setState(() => _releaseGrade = v.toString())),
               _buildRadioOption(
-                  'Nanti, setelah peninjauan manual\nAktifkan Respons -> Kumpulkan alamat email',
-                  'nanti',
-                  _releaseGrade,
-                  (v) => setState(() => _releaseGrade = v.toString())),
+                'Langsung setelah setiap pengiriman',
+                'langsung',
+                _releaseGrade,
+                (v) => setState(() => _releaseGrade = v.toString()),
+              ),
+              _buildRadioOption(
+                'Nanti, setelah peninjauan manual\nAktifkan Respons -> Kumpulkan alamat email',
+                'nanti',
+                _releaseGrade,
+                (v) => setState(() => _releaseGrade = v.toString()),
+              ),
               const SizedBox(height: 24),
-              const Text('SETELAN RESPONDEN',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54)),
+              const Text(
+                'SETELAN RESPONDEN',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
               const SizedBox(height: 8),
-              _settingsSwitchRow('Pertanyaan tak terjawab', _missedQuestions,
-                  (v) => setState(() => _missedQuestions = v)),
+              _settingsSwitchRow(
+                'Pertanyaan tak terjawab',
+                _missedQuestions,
+                (v) => setState(() => _missedQuestions = v),
+              ),
               const SizedBox(height: 12),
-              _settingsSwitchRow('Jawaban yang benar', _correctAnswers,
-                  (v) => setState(() => _correctAnswers = v)),
+              _settingsSwitchRow(
+                'Jawaban yang benar',
+                _correctAnswers,
+                (v) => setState(() => _correctAnswers = v),
+              ),
               const SizedBox(height: 12),
-              _settingsSwitchRow('Nilai poin', _pointValues,
-                  (v) => setState(() => _pointValues = v)),
+              _settingsSwitchRow(
+                'Nilai poin',
+                _pointValues,
+                (v) => setState(() => _pointValues = v),
+              ),
               const SizedBox(height: 24),
-              const Text('DEFAULT KUIS GLOBAL',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54)),
+              const Text(
+                'DEFAULT KUIS GLOBAL',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   const Expanded(
-                      child: Text('Nilai poin pertanyaan default',
-                          style:
-                              TextStyle(fontSize: 14, color: Colors.black87))),
+                    child: Text(
+                      'Nilai poin pertanyaan default',
+                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                  ),
                   Container(
                     width: 60,
                     height: 36,
@@ -1088,15 +1181,18 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                       controller: TextEditingController(text: '0'),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text('poin',
-                      style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  const Text(
+                    'poin',
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
                 ],
               ),
             ],
@@ -1106,8 +1202,12 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     );
   }
 
-  Widget _buildRadioOption(String title, String value, String groupValue,
-      ValueChanged onChanged) {
+  Widget _buildRadioOption(
+    String title,
+    String value,
+    String groupValue,
+    ValueChanged onChanged,
+  ) {
     return InkWell(
       onTap: () => onChanged(value),
       child: Padding(
@@ -1130,9 +1230,11 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ),
             const SizedBox(width: 12),
             Expanded(
-                child: Text(title,
-                    style:
-                        const TextStyle(fontSize: 13, color: Colors.black87))),
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+            ),
           ],
         ),
       ),
@@ -1147,14 +1249,18 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          title: const Text('Jawaban',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87)),
+          title: const Text(
+            'Jawaban',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           subtitle: const Text(
-              'Mengelola cara respons dikumpulkan dan dilindungi',
-              style: TextStyle(fontSize: 13, color: Colors.black54)),
+            'Mengelola cara respons dikumpulkan dan dilindungi',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           children: [
@@ -1162,8 +1268,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Mengirim salinan jawaban responden',
-                  style: TextStyle(fontSize: 14, color: Colors.black87)),
+              child: Text(
+                'Mengirim salinan jawaban responden',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
             ),
             const SizedBox(height: 8),
             Align(
@@ -1180,10 +1288,15 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                     value: _sendCopy,
                     isExpanded: false,
                     items: ['Nonaktif', 'Aktif']
-                        .map((e) => DropdownMenuItem(
+                        .map(
+                          (e) => DropdownMenuItem(
                             value: e,
-                            child: Text(e,
-                                style: const TextStyle(fontSize: 14))))
+                            child: Text(
+                              e,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _sendCopy = v!),
                   ),
@@ -1191,15 +1304,24 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _settingsSwitchRow('Batasi ke 1 jawaban', _limitOneResponse,
-                (v) => setState(() => _limitOneResponse = v),
-                subtitle: 'Responden akan diwajibkan untuk login'),
+            _settingsSwitchRow(
+              'Batasi ke 1 jawaban',
+              _limitOneResponse,
+              (v) => setState(() => _limitOneResponse = v),
+              subtitle: 'Responden akan diwajibkan untuk login',
+            ),
             const SizedBox(height: 16),
-            _settingsSwitchRow('Sembunyikan jawaban', _hideResponses,
-                (v) => setState(() => _hideResponses = v)),
+            _settingsSwitchRow(
+              'Sembunyikan jawaban',
+              _hideResponses,
+              (v) => setState(() => _hideResponses = v),
+            ),
             const SizedBox(height: 16),
-            _settingsSwitchRow('Isi Form lebih dari 1 kali', _allowMultipleEdits,
-                (v) => setState(() => _allowMultipleEdits = v)),
+            _settingsSwitchRow(
+              'Isi Form lebih dari 1 kali',
+              _allowMultipleEdits,
+              (v) => setState(() => _allowMultipleEdits = v),
+            ),
           ],
         ),
       ),
@@ -1214,11 +1336,14 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          title: const Text('Default',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87)),
+          title: const Text(
+            'Default',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           children: [
@@ -1226,22 +1351,28 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Pertanyaan default',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
+              child: Text(
+                'Pertanyaan default',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
             ),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Setelan diterapkan untuk semua pertanyaan',
-                  style: TextStyle(fontSize: 12, color: Colors.black54)),
+              child: Text(
+                'Setelan diterapkan untuk semua pertanyaan',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
             ),
             const SizedBox(height: 12),
             _settingsSwitchRow(
-                'Buat pertanyaan wajib diisi secara default',
-                _requireQuestionDefault,
-                (v) => setState(() => _requireQuestionDefault = v)),
+              'Buat pertanyaan wajib diisi secara default',
+              _requireQuestionDefault,
+              (v) => setState(() => _requireQuestionDefault = v),
+            ),
           ],
         ),
       ),
@@ -1249,21 +1380,27 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
   }
 
   Widget _settingsSwitchRow(
-      String label, bool value, ValueChanged<bool> onChanged,
-      {String? subtitle}) {
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    String? subtitle,
+  }) {
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 14, color: Colors.black87)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.black54)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
               ],
             ],
           ),
@@ -1305,15 +1442,19 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Form Timer',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87)),
+                      Text(
+                        'Form Timer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text('Manage constraints and timing for this form',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.black54)),
+                      Text(
+                        'Manage constraints and timing for this form',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
                     ],
                   ),
                 ),
@@ -1328,14 +1469,18 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Enable Timer',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87)),
-                      Text('Set a time limit for form completion',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.black54)),
+                      Text(
+                        'Enable Timer',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        'Set a time limit for form completion',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
                     ],
                   ),
                 ),
@@ -1348,49 +1493,65 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               ],
             ),
             const SizedBox(height: 20),
-            const Text('Select Timer Mode',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+            const Text(
+              'Select Timer Mode',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black12),
-                  borderRadius: BorderRadius.circular(6)),
+                border: Border.all(color: Colors.black12),
+                borderRadius: BorderRadius.circular(6),
+              ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _timerMode,
                   isExpanded: true,
-                  items: [
-                    'Start when respondent opens the form',
-                    'Start at a specific date and time'
-                  ]
-                      .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e,
-                              style: const TextStyle(fontSize: 14))))
-                      .toList(),
+                  items:
+                      [
+                            'Start when respondent opens the form',
+                            'Start at a specific date and time',
+                          ]
+                          .map(
+                            (e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(
+                                e,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (v) => setState(() => _timerMode = v!),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Duration',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+            const Text(
+              'Duration',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _durationCtrl,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: Colors.black12)),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 isDense: true,
               ),
             ),
@@ -1398,22 +1559,23 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
-                  borderRadius: BorderRadius.circular(6)),
+                color: const Color(0xFFEFF6FF),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+                borderRadius: BorderRadius.circular(6),
+              ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline,
-                      color: Color(0xFF2563EB), size: 18),
+                  Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 18),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'The form will auto-submit and lock once the timer runs out. Respondents will see a countdown display at the top of the page.',
                       style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF1D4ED8),
-                          height: 1.4),
+                        fontSize: 12,
+                        color: Color(0xFF1D4ED8),
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -1422,26 +1584,28 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Settings Saved')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Settings Saved')));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Save Settings',
-                  style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Save Settings',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
-                 // Discard changes logic here if needed
+                // Discard changes logic here if needed
               },
               style: TextButton.styleFrom(foregroundColor: Colors.black54),
               child: const Text('Discard Changes'),
@@ -1465,7 +1629,11 @@ class _QuestionTypePickerSheet extends StatelessWidget {
     final types = [
       (QuestionType.shortAnswer, Icons.short_text, 'Jawaban Singkat'),
       (QuestionType.paragraph, Icons.subject, 'Paragraf'),
-      (QuestionType.multipleChoice, Icons.radio_button_checked, 'Pilihan Ganda'),
+      (
+        QuestionType.multipleChoice,
+        Icons.radio_button_checked,
+        'Pilihan Ganda',
+      ),
       (QuestionType.checkboxes, Icons.check_box, 'Kotak Centang'),
       (QuestionType.dropdown, Icons.arrow_drop_down_circle, 'Dropdown'),
       (QuestionType.fileUpload, Icons.upload_file, 'Upload File'),
@@ -1496,9 +1664,10 @@ class _QuestionTypePickerSheet extends StatelessWidget {
           ),
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Pilih Tipe Pertanyaan',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Pilih Tipe Pertanyaan',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
           const Divider(height: 1),
           GridView.builder(
@@ -1532,9 +1701,11 @@ class _QuestionTypePickerSheet extends StatelessWidget {
                     children: [
                       Icon(icon, size: 20, color: const Color(0xFF0F52BA)),
                       const SizedBox(height: 4),
-                      Text(label,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 10)),
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ],
                   ),
                 ),
@@ -1576,9 +1747,10 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Kirim formulir',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w400)),
+                const Text(
+                  'Kirim formulir',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.black54),
                   onPressed: () => Navigator.pop(context),
@@ -1586,10 +1758,14 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text('Kirim melalui',
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600,
-                    color: Colors.black87)),
+            const Text(
+              'Kirim melalui',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1604,8 +1780,10 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal',
-                    style: TextStyle(color: Colors.black54)),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(color: Colors.black54),
+                ),
               ),
             ),
           ],
@@ -1624,13 +1802,15 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
         decoration: BoxDecoration(
           border: isSelected
               ? const Border(
-                  bottom: BorderSide(color: Color(0xFF0F52BA), width: 3))
+                  bottom: BorderSide(color: Color(0xFF0F52BA), width: 3),
+                )
               : null,
         ),
-        child: Icon(icon,
-            color:
-                isSelected ? const Color(0xFF0F52BA) : Colors.black38,
-            size: 22),
+        child: Icon(
+          icon,
+          color: isSelected ? const Color(0xFF0F52BA) : Colors.black38,
+          size: 22,
+        ),
       ),
     );
   }
@@ -1655,14 +1835,17 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
           child: TextButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: widget.link));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tautan disalin!')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Tautan disalin!')));
             },
-            child: const Text('Salin',
-                style: TextStyle(
-                    color: Color(0xFF0F52BA),
-                    fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Salin',
+              style: TextStyle(
+                color: Color(0xFF0F52BA),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ],

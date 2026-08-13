@@ -10,6 +10,7 @@ class DetailResponsePage extends StatelessWidget {
   final String time;
   final bool isAuto;
   final String formTitle;
+
   /// List jawaban dari API atau mock: [{'question': '...', 'answer': '...'}]
   final List<Map<String, String>> answers;
 
@@ -24,10 +25,13 @@ class DetailResponsePage extends StatelessWidget {
   });
 
   String _capitalizeWords(String text) {
-    return text.split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return text
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
   }
 
   @override
@@ -74,14 +78,16 @@ class DetailResponsePage extends StatelessWidget {
             if (answers.isEmpty)
               _buildEmptyAnswers()
             else
-              ...answers.asMap().entries.map((entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildAnswerCard(
-                      entry.key + 1,
-                      entry.value['question'] ?? '',
-                      entry.value['answer'] ?? '',
-                    ),
-                  )),
+              ...answers.asMap().entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildAnswerCard(
+                    entry.key + 1,
+                    entry.value['question'] ?? '',
+                    entry.value['answer'] ?? '',
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -105,9 +111,10 @@ class DetailResponsePage extends StatelessWidget {
             child: Text(
               displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -128,12 +135,12 @@ class DetailResponsePage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.access_time,
-                  size: 15, color: Color(0xFF6B7280)),
+              const Icon(Icons.access_time, size: 15, color: Color(0xFF6B7280)),
               const SizedBox(width: 5),
-              Text(time,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF374151))),
+              Text(
+                time,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+              ),
               const SizedBox(width: 14),
               _buildMethodChip(),
             ],
@@ -199,11 +206,14 @@ class DetailResponsePage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Center(
-                    child: Text('$number',
-                        style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E40AF))),
+                    child: Text(
+                      '$number',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E40AF),
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -248,11 +258,12 @@ class DetailResponsePage extends StatelessWidget {
       alignment: Alignment.center,
       child: const Column(
         children: [
-          Icon(Icons.question_answer_outlined,
-              size: 40, color: Colors.black12),
+          Icon(Icons.question_answer_outlined, size: 40, color: Colors.black12),
           SizedBox(height: 8),
-          Text('Tidak ada jawaban tersimpan',
-              style: TextStyle(fontSize: 13, color: Colors.black38)),
+          Text(
+            'Tidak ada jawaban tersimpan',
+            style: TextStyle(fontSize: 13, color: Colors.black38),
+          ),
         ],
       ),
     );
