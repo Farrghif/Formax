@@ -9,28 +9,75 @@ import '../models/form_template.dart';
 import '../services/api_service.dart';
 
 class TemplateMakerPage extends StatefulWidget {
-  const TemplateMakerPage({super.key});
+  final FormTemplate? initialTemplate;
+
+  const TemplateMakerPage({super.key, this.initialTemplate});
 
   @override
   State<TemplateMakerPage> createState() => _TemplateMakerPageState();
 }
 
 class _TemplateMakerPageState extends State<TemplateMakerPage> {
-  final TextEditingController _titleController =
-      TextEditingController(text: 'Form Tanpa Judul');
-  final TextEditingController _descController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _descController;
+  late List<QuestionData> _questions;
 
-  final List<QuestionData> _questions = [
-    QuestionData(
-      type: QuestionType.multipleChoice,
-      label: 'Pertanyaan Tanpa Judul',
-      hintText: 'halo',
-      hintStyle: TextStyle(color: Colors.grey),
-      options: [QuestionOptionData(label: 'Opsi 1')],
-    ),
-  ];
-  
-  
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialTemplate != null) {
+      _titleController = TextEditingController(text: widget.initialTemplate!.title);
+      _descController = TextEditingController(text: widget.initialTemplate!.subtitle);
+      _questions = [];
+      
+      final qJson = widget.initialTemplate!.questionsJson;
+      if (qJson != null && qJson.isNotEmpty) {
+        for (var q in qJson) {
+          final typeStr = q['type'] as String? ?? 'text';
+          QuestionType type = QuestionType.shortAnswer;
+          if (typeStr == 'single_choice') type = QuestionType.multipleChoice;
+          if (typeStr == 'checkbox') type = QuestionType.checkboxes;
+          if (typeStr == 'dropdown') type = QuestionType.dropdown;
+          if (typeStr == 'file_upload') type = QuestionType.fileUpload;
+          if (typeStr == 'date') type = QuestionType.date;
+
+          final optionsList = (q['options'] as List<dynamic>?) ?? [];
+          final options = optionsList.map((opt) {
+            return QuestionOptionData(label: opt['label'] ?? 'Opsi');
+          }).toList();
+
+          _questions.add(QuestionData(
+            type: type,
+            label: q['label'] ?? 'Pertanyaan',
+            hintText: q['placeholder'] ?? '',
+            hintStyle: const TextStyle(color: Colors.grey),
+            isRequired: q['is_required'] ?? false,
+            options: options,
+          ));
+        }
+      }
+      
+      if (_questions.isEmpty) {
+        _questions.add(QuestionData(
+          type: QuestionType.multipleChoice,
+          label: 'Pertanyaan Tanpa Judul',
+          options: [QuestionOptionData(label: 'Opsi 1')],
+        ));
+      }
+    } else {
+      _titleController = TextEditingController(text: 'Form Tanpa Judul');
+      _descController = TextEditingController();
+      _questions = [
+        QuestionData(
+          type: QuestionType.multipleChoice,
+          label: 'Pertanyaan Tanpa Judul',
+          hintText: 'halo',
+          hintStyle: const TextStyle(color: Colors.grey),
+          options: [QuestionOptionData(label: 'Opsi 1')],
+        ),
+      ];
+    }
+  }
 
   bool _isSaving = false;
 
@@ -140,7 +187,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
 
       if (qrRes['success'] == true) {
         final shareLink = qrRes['data']['share_link'] as String;
-        final qrUrl = qrRes['data']['qr_code_url'] as String;
+        String qrUrl = qrRes['data']['qr_code_url'] as String;
+        
+        // Ganti localhost dengan IP emulator (10.0.2.2) agar gambar bisa dimuat
+        if (qrUrl.contains('localhost')) {
+          qrUrl = qrUrl.replaceAll('localhost', '10.0.2.2');
+        }
+
         if (mounted) _showShareDialog(shareLink, qrUrl);
       } else {
         if (mounted) {

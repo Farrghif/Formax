@@ -155,6 +155,27 @@ class ApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  // Fungsi Get My Templates
+  static Future<Map<String, dynamic>> getMyTemplates() async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/templates/mine'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Fungsi Create Form
   static Future<Map<String, dynamic>> createForm(Map<String, dynamic> payload) async {
     try {
@@ -235,19 +256,40 @@ class ApiService {
   // Fungsi Validate Form Link (untuk Join with Link)
   static Future<Map<String, dynamic>> validateFormLink(String link) async {
     try {
-      final token = await getToken();
-      if (token == null) return {'success': false, 'message': 'No token found'};
+      String slug = link.trim();
+      
+      // Jika link berupa URL lengkap (misal http://localhost:5173/f/slug-123), ekstrak slug-nya
+      if (slug.contains('http') || slug.contains('/f/')) {
+        try {
+          final uri = Uri.parse(slug);
+          final pathSegments = uri.pathSegments;
+          if (pathSegments.contains('f')) {
+            final index = pathSegments.indexOf('f');
+            if (index + 1 < pathSegments.length) {
+              slug = pathSegments[index + 1];
+            }
+          } else if (pathSegments.isNotEmpty) {
+            slug = pathSegments.last;
+          }
+        } catch (_) {}
+      }
 
+      final token = await getToken();
+
+      // Gunakan endpoint get_form_by_slug yang sudah ada di backend
       final response = await http.get(
-        Uri.parse('$baseUrl/forms/validate?link=${Uri.encodeComponent(link)}'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        Uri.parse('$baseUrl/forms/public/$slug'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token'
+        },
       );
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        return {'success': true, 'data': data};
+        return {'success': true, 'data': {'slug': slug, ...data}};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Invalid form link'};
+        return {'success': false, 'message': data['detail'] ?? 'Form tidak ditemukan'};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};

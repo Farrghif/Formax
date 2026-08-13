@@ -18,7 +18,7 @@ class TemplateCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const TemplateMakerPage()),
+          MaterialPageRoute(builder: (context) => TemplateMakerPage(initialTemplate: template)),
         );
       },
       child: Container(

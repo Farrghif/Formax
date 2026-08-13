@@ -514,6 +514,7 @@ class _HomePageState extends State<HomePage> {
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
+                    setState(() {}); // Refresh FutureBuilder
                   }
                 },
                 icon: const Icon(Icons.add, size: 16),
@@ -530,19 +531,55 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: MockData.builtInTemplates.length,
-            itemBuilder: (context, index) {
-              final t = MockData.builtInTemplates[index];
-              return TemplateCard(template: t, isBuiltIn: false);
+          FutureBuilder<Map<String, dynamic>>(
+            future: ApiService.getMyTemplates(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ));
+              }
+
+              List<FormTemplate> myTemplates = [];
+              if (snapshot.data?['success'] == true) {
+                final rawList = snapshot.data!['data'] as List<dynamic>;
+                myTemplates = rawList.map((e) {
+                  return FormTemplate(
+                    title: e['title'] ?? 'Tanpa Judul',
+                    subtitle: e['description'] ?? 'Template kustom',
+                    id: e['id'],
+                    questionsJson: e['questions'],
+                  );
+                }).toList();
+              }
+
+              if (myTemplates.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'Belum ada template yang disimpan.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                ),
+                itemCount: myTemplates.length,
+                itemBuilder: (context, index) {
+                  return TemplateCard(template: myTemplates[index], isBuiltIn: false);
+                },
+              );
             },
           ),
         ],
