@@ -12,6 +12,8 @@ import '../widgets/template_card.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
 import 'historypage.dart';
+import 'join_link_page.dart';
+import 'scan_qr_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -54,7 +56,7 @@ class _HomePageState extends State<HomePage> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF1E40AF),
+      backgroundColor: const Color(0xFFB4C5D4),
       foregroundColor: Colors.white,
       centerTitle: false,
       leading: GestureDetector(
@@ -64,8 +66,14 @@ class _HomePageState extends State<HomePage> {
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.only(left: 10, right: 5),
-            child: SvgPicture.asset('assets/icons/pP.svg',
-                height: 28, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+            child: SvgPicture.asset(
+              'assets/icons/pP.svg',
+              height: 28,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
+            ),
           ),
         ),
       ),
@@ -73,13 +81,18 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Form4x',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold)),
-          Text('Tempat membuat Form terlengkap',
-              style: TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(
+            'Form4x',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'Tempat membuat Form terlengkap',
+            style: TextStyle(color: Colors.white70, fontSize: 11),
+          ),
         ],
       ),
       actions: [
@@ -119,12 +132,14 @@ class _HomePageState extends State<HomePage> {
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
       onTap: (i) => setState(() => _selectedIndex = i),
-      selectedItemColor: const Color(0xFF1E40AF),
-      unselectedItemColor: Colors.grey,
+      selectedItemColor: const Color(0xFF3B82F6),
+      unselectedItemColor: const Color(0xFF94A3B8),
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
-      selectedLabelStyle:
-          const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+      selectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
+      ),
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.grid_view_rounded),
@@ -189,15 +204,17 @@ class _HomePageState extends State<HomePage> {
               // Recently created forms
               Row(
                 children: [
-                  const Text('Formulir Terbaru',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827))),
+                  const Text(
+                    'Formulir Terbaru',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () =>
-                        setState(() => _selectedIndex = 2),
+                    onPressed: () => setState(() => _selectedIndex = 2),
                     child: const Text('Lihat semua'),
                   ),
                 ],
@@ -207,17 +224,16 @@ class _HomePageState extends State<HomePage> {
                 _buildEmptyState(
                   icon: Icons.article_outlined,
                   title: 'Belum ada formulir',
-                  subtitle:
-                      'Buat formulir pertamamu dari tab Template',
+                  subtitle: 'Buat formulir pertamamu dari tab Template',
                 )
               else
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: forms.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) =>
-                      _buildFormCard(forms[index]),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) => _buildFormCard(forms[index]),
                 ),
             ],
           ),
@@ -232,7 +248,7 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+          colors: [Color(0xFFB4C5D4), Color.fromARGB(255, 141, 184, 253)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -244,11 +260,14 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Halo, $_fullName! 👋',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  'Halo, $_fullName! 👋',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 const Text(
                   'Buat formulir baru hari ini?',
@@ -263,19 +282,27 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF1E40AF),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     textStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.assignment_turned_in_outlined,
-              size: 64, color: Colors.white24),
+          const Icon(
+            Icons.assignment_turned_in_outlined,
+            size: 64,
+            color: Colors.white24,
+          ),
         ],
       ),
     );
@@ -290,8 +317,10 @@ class _HomePageState extends State<HomePage> {
             builder: (_) => Scaffold(
               backgroundColor: const Color(0xFFF9FAFB),
               appBar: AppBar(
-                title: const Text('Detail Form',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                title: const Text(
+                  'Detail Form',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black87,
                 elevation: 0.5,
@@ -325,26 +354,34 @@ class _HomePageState extends State<HomePage> {
                 color: const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.description_outlined,
-                  color: Color(0xFF1E40AF), size: 22),
+              child: const Icon(
+                Icons.description_outlined,
+                color: Color(0xFF1E40AF),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(form.title,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    form.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 3),
                   Text(
                     '${form.totalSubmissions} responden · ${_formatDate(form.createdAt)}',
                     style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF6B7280)),
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
                 ],
               ),
@@ -363,9 +400,7 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isPublished
-            ? const Color(0xFFD1FAE5)
-            : const Color(0xFFFEF3C7),
+        color: isPublished ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -381,10 +416,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildEmptyState(
-      {required IconData icon,
-      required String title,
-      required String subtitle}) {
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40),
       alignment: Alignment.center,
@@ -392,14 +428,19 @@ class _HomePageState extends State<HomePage> {
         children: [
           Icon(icon, size: 56, color: Colors.black12),
           const SizedBox(height: 12),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black45)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black45,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.black38)),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.black38),
+          ),
         ],
       ),
     );
@@ -422,11 +463,14 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Template Bawaan',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Template Bawaan',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 180,
@@ -446,24 +490,27 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Template Saya',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827))),
+              const Text(
+                'Template Saya',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111827),
+                ),
+              ),
               FilledButton.icon(
                 onPressed: () async {
                   final result = await Navigator.push<FormTemplate>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const TemplateMakerPage()),
+                      builder: (_) => const TemplateMakerPage(),
+                    ),
                   );
                   if (result != null) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            '${result.title} berhasil disimpan!'),
+                        content: Text('${result.title} berhasil disimpan!'),
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
@@ -474,7 +521,9 @@ class _HomePageState extends State<HomePage> {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF1E40AF),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -484,8 +533,7 @@ class _HomePageState extends State<HomePage> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
@@ -511,16 +559,23 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: [
           Padding(
-            padding:
-                const EdgeInsets.only(top: 52, left: 20, right: 20, bottom: 16),
+            padding: const EdgeInsets.only(
+              top: 52,
+              left: 20,
+              right: 20,
+              bottom: 16,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Form4x',
-                    style: TextStyle(
-                        color: Color(0xFF1E40AF),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
+                const Text(
+                  'Form4x',
+                  style: TextStyle(
+                    color: Color(0xFF1E40AF),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.close, color: Color(0xFF6B7280)),
@@ -530,9 +585,18 @@ class _HomePageState extends State<HomePage> {
           ),
           const Divider(height: 1),
           const SizedBox(height: 8),
-          _drawerItem(Icons.grid_view_rounded, 'Dashboard', 0),
-          _drawerItem(Icons.description_outlined, 'Template', 1),
-          _drawerItem(Icons.history_rounded, 'History', 2),
+          _drawerItem(Icons.grid_view_rounded, 'Dashboard', () {
+            setState(() => _selectedIndex = 0);
+            Navigator.pop(context);
+          }, _selectedIndex == 0),
+          _drawerItem(Icons.link, 'Join with Link', () {
+            Navigator.pop(context);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinLinkPage()));
+          }, false),
+          _drawerItem(Icons.qr_code_scanner, 'Scan QR', () {
+            Navigator.pop(context);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanQRPage()));
+          }, false),
           const Spacer(),
           const Divider(height: 1),
           Padding(
@@ -546,15 +610,17 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(_fullName,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF374151))),
+                  child: Text(
+                    _fullName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout,
-                      color: Color(0xFF9CA3AF)),
+                  icon: const Icon(Icons.logout, color: Color(0xFF9CA3AF)),
                   onPressed: () async {
                     await ApiService.removeToken();
                     if (!mounted) return;
@@ -573,45 +639,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _drawerItem(IconData icon, String title, int index) {
-    final isSelected = _selectedIndex == index;
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap, bool isSelected) {
     return InkWell(
-      onTap: () {
-        setState(() => _selectedIndex = index);
-        Navigator.pop(context);
-      },
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFEFF6FF)
-              : Colors.transparent,
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
           border: Border(
             right: BorderSide(
-              color: isSelected
-                  ? const Color(0xFF1E40AF)
-                  : Colors.transparent,
+              color: isSelected ? const Color(0xFF1E40AF) : Colors.transparent,
               width: 3,
             ),
           ),
         ),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon,
+            Icon(
+              icon,
+              color: isSelected
+                  ? const Color(0xFF1E40AF)
+                  : const Color(0xFF6B7280),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
                     ? const Color(0xFF1E40AF)
-                    : const Color(0xFF6B7280)),
-            const SizedBox(width: 14),
-            Text(title,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: isSelected
-                        ? const Color(0xFF1E40AF)
-                        : const Color(0xFF4B5563))),
+                    : const Color(0xFF4B5563),
+              ),
+            ),
           ],
         ),
       ),

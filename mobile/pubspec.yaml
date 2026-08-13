@@ -37,6 +37,7 @@ dependencies:
   flutter_svg: ^2.3.0
   http: ^1.2.0
   shared_preferences: ^2.2.3
+  mobile_scanner: ^7.4.0
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +69,7 @@ flutter:
     - assets/icons/baseline_menu_24.xml
     - assets/images/
     - assets/icons/
+    - assets/icons/logoses.svg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

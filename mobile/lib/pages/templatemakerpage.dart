@@ -24,9 +24,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     QuestionData(
       type: QuestionType.multipleChoice,
       label: 'Pertanyaan Tanpa Judul',
+      hintText: 'halo',
+      hintStyle: TextStyle(color: Colors.grey),
       options: [QuestionOptionData(label: 'Opsi 1')],
     ),
   ];
+  
+  
 
   bool _isSaving = false;
 
@@ -347,7 +351,8 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               style: const TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
-                hintText: 'Judul Formulir',
+                hintText: 'Judul Form',
+                hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -359,6 +364,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               style: const TextStyle(fontSize: 14, color: Colors.black54),
               decoration: const InputDecoration(
                 hintText: 'Deskripsi formulir (opsional)',
+                hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,

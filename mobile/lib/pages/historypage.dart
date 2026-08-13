@@ -95,7 +95,7 @@ class _HistoryPageState extends State<HistoryPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isHighlighted
-              ? const Color(0xFF1E40AF)
+              ? const Color(0xFFB4C5D4)
               : const Color(0xFFE5E7EB),
           width: isHighlighted ? 2 : 1,
         ),

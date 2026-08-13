@@ -231,6 +231,30 @@ class ApiService {
   }
 
   // Fungsi Get Form Submissions (untuk Result Page)
+
+  // Fungsi Validate Form Link (untuk Join with Link)
+  static Future<Map<String, dynamic>> validateFormLink(String link) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/forms/validate?link=${Uri.encodeComponent(link)}'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['detail'] ?? 'Invalid form link'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Fungsi Get Form Submissions (untuk Result Page)
   static Future<Map<String, dynamic>> getFormSubmissions(String formId) async {
     try {
       final token = await getToken();

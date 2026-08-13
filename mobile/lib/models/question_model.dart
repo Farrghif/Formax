@@ -1,5 +1,6 @@
 // lib/models/question_model.dart
 // Model untuk tipe pertanyaan, data pertanyaan, dan opsi pertanyaan.
+import 'package:flutter/material.dart';
 
 enum QuestionType {
   shortAnswer,
@@ -72,6 +73,8 @@ class QuestionOptionData {
 class QuestionData {
   QuestionType type;
   String label;
+  String? hintText;
+  TextStyle? hintStyle;
   bool isRequired;
   List<QuestionOptionData> options;
   // For grid types: row labels
@@ -83,6 +86,8 @@ class QuestionData {
   QuestionData({
     required this.type,
     this.label = 'Pertanyaan',
+    this.hintText,
+    this.hintStyle,
     this.isRequired = false,
     List<QuestionOptionData>? options,
     List<String>? rowLabels,
