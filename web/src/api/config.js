@@ -6,7 +6,7 @@ export async function readJsonResponse(res, fallbackMessage) {
   try {
     json = await res.json();
   } catch {
-    json = null;
+    // Ignore JSON parse error, json remains null
   }
 
   if (!res.ok) {

@@ -51,53 +51,54 @@ export default function FormFillPage() {
       navigate(`/auth?redirect=/f/${slug}`);
       return;
     }
-    loadForm();
-  }, [slug, token]);
 
-  const loadForm = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg('');
-      const formData = await getPublicFormBySlug(token, slug);
-      setForm(formData);
-
-      // Try auto joining form (if no join token required or user already joined)
+    const loadForm = async () => {
       try {
-        if (joiningRef.current) return;
-        joiningRef.current = true;
-        const sub = await joinForm(token, slug);
-        setSubmissionId(sub.id);
-        if (sub.submitted_at) {
-          setIsSubmitted(true);
-        }
-        // Load existing answers if any
-        if (sub.answers && Array.isArray(sub.answers)) {
-          const initialAnswers = {};
-          sub.answers.forEach((ans) => {
-            initialAnswers[ans.question_id] = {
-              answer_text: ans.answer_text || '',
-              answer_options: ans.answer_options || [],
-              file_url: ans.file_url || null,
-            };
-          });
-          setAnswers(initialAnswers);
+        setLoading(true);
+        setErrorMsg('');
+        const formData = await getPublicFormBySlug(token, slug);
+        setForm(formData);
+
+        // Try auto joining form (if no join token required or user already joined)
+        try {
+          if (joiningRef.current) return;
+          joiningRef.current = true;
+          const sub = await joinForm(token, slug);
+          setSubmissionId(sub.id);
+          if (sub.submitted_at) {
+            setIsSubmitted(true);
+          }
+          // Load existing answers if any
+          if (sub.answers && Array.isArray(sub.answers)) {
+            const initialAnswers = {};
+            sub.answers.forEach((ans) => {
+              initialAnswers[ans.question_id] = {
+                answer_text: ans.answer_text || '',
+                answer_options: ans.answer_options || [],
+                file_url: ans.file_url || null,
+              };
+            });
+            setAnswers(initialAnswers);
+          }
+        } catch (err) {
+          // If error mentions token required, show join token modal
+          if (formData.join_token || (err.message && err.message.toLowerCase().includes('token'))) {
+            setShowJoinModal(true);
+          } else {
+            setErrorMsg(err.message || 'Gagal memulai form');
+          }
+        } finally {
+          joiningRef.current = false;
         }
       } catch (err) {
-        // If error mentions token required, show join token modal
-        if (formData.join_token || (err.message && err.message.toLowerCase().includes('token'))) {
-          setShowJoinModal(true);
-        } else {
-          setErrorMsg(err.message || 'Gagal memulai form');
-        }
+        setErrorMsg(err.message || 'Form tidak ditemukan atau belum dipublikasikan');
       } finally {
-        joiningRef.current = false;
+        setLoading(false);
       }
-    } catch (err) {
-      setErrorMsg(err.message || 'Form tidak ditemukan atau belum dipublikasikan');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadForm();
+  }, [slug, token, navigate]);
 
   // Handle manual join with token
   const handleJoinWithToken = async (e) => {
@@ -126,6 +127,21 @@ export default function FormFillPage() {
     }
   };
 
+  // Handle Final Submit
+  const handleFinalSubmit = async () => {
+    if (!submissionId) return;
+    try {
+      setIsSubmitting(true);
+      await submitFinal(token, submissionId);
+      setIsSubmitted(true);
+      setShowSubmitModal(false);
+    } catch (err) {
+      alert(err.message || 'Gagal mengirimkan form');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Timer countdown hook
   useEffect(() => {
     if (!form || !form.end_date || isSubmitted) return;
@@ -149,7 +165,7 @@ export default function FormFillPage() {
         setTimeLeft(0);
         // Auto submit when time expires
         if (submissionId && !isSubmitted && !isSubmitting) {
-          handleFinalSubmit(true);
+          handleFinalSubmit();
         }
       } else {
         setTimeLeft(diff);
@@ -159,7 +175,8 @@ export default function FormFillPage() {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [form, submissionId, isSubmitted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, submissionId, isSubmitted, isSubmitting]);
 
   // Format timer
   const formatTimer = (seconds) => {
@@ -240,20 +257,7 @@ export default function FormFillPage() {
     }
   };
 
-  // Handle Final Submit
-  const handleFinalSubmit = async (isAuto = false) => {
-    if (!submissionId) return;
-    try {
-      setIsSubmitting(true);
-      await submitFinal(token, submissionId);
-      setIsSubmitted(true);
-      setShowSubmitModal(false);
-    } catch (err) {
-      alert(err.message || 'Gagal mengirimkan form');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   // Question type label helper
   const getTypeLabel = (type) => {
@@ -751,7 +755,7 @@ export default function FormFillPage() {
               <button className="modal-btn-secondary" onClick={() => setShowSubmitModal(false)} disabled={isSubmitting}>
                 Periksa Kembali
               </button>
-              <button className="modal-btn-primary" onClick={() => handleFinalSubmit(false)} disabled={isSubmitting}>
+              <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting}>
                 {isSubmitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}
               </button>
             </div>

@@ -6,7 +6,6 @@ import { getMe, logout } from '../api/auth';
 import { createForm, getForm, updateForm, generateQR } from '../api/forms';
 import { getTemplate, createTemplate } from '../api/templates';
 import { uploadFile } from '../api/uploads';
-import { API_BASE_URL } from '../api/config';
 import {
   createQuestionInForm,
   updateQuestion,
@@ -200,7 +199,9 @@ export default function FormBuilderPage() {
         });
 
         // Save questions
-        for (const q of questions) {
+        let updatedQuestions = [...questions];
+        for (let i = 0; i < updatedQuestions.length; i++) {
+          let q = { ...updatedQuestions[i] };
           if (q.id && q._saved) {
             // Update existing question
             await updateQuestion(token, q.id, {
@@ -212,7 +213,9 @@ export default function FormBuilderPage() {
               settings: q.settings,
             });
             // Handle options
-            for (const opt of q.options) {
+            let updatedOptions = [...q.options];
+            for (let j = 0; j < updatedOptions.length; j++) {
+              let opt = { ...updatedOptions[j] };
               if (opt.id && opt._saved) {
                 await updateOption(token, opt.id, {
                   label: opt.label,
@@ -227,10 +230,11 @@ export default function FormBuilderPage() {
                   order_index: opt.order_index,
                   is_correct: opt.is_correct || false,
                 });
-                opt.id = newOpt.id;
-                opt._saved = true;
+                opt = { ...opt, id: newOpt.id, _saved: true };
               }
+              updatedOptions[j] = opt;
             }
+            q.options = updatedOptions;
           } else if (!q.id) {
             // Create new question
             const newQ = await createQuestionInForm(token, formData.id, {
@@ -247,10 +251,9 @@ export default function FormBuilderPage() {
                 is_correct: o.is_correct || false,
               })),
             });
-            q.id = newQ.id;
-            q._saved = true;
-            q.options = (newQ.options || []).map((o) => ({ ...o, _saved: true }));
+            q = { ...q, id: newQ.id, _saved: true, options: (newQ.options || []).map((o) => ({ ...o, _saved: true })) };
           }
+          updatedQuestions[i] = q;
         }
 
         showToast('Form berhasil disimpan!', 'success');

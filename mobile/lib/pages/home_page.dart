@@ -1,15 +1,21 @@
+// lib/pages/home_page.dart
+// Halaman utama aplikasi Form4x.
+// Berisi Dashboard, Template, dan History dalam satu layar dengan BottomNavigationBar.
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../models/form_model.dart';
+import '../models/form_template.dart';
 import '../services/api_service.dart';
+import '../data/mock_data.dart';
+import '../widgets/template_card.dart';
+import '../widgets/search_results_view.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
-
-class FormTemplate {
-  final String title;
-  final String subtitle;
-
-  FormTemplate({required this.title, required this.subtitle});
-}
+import 'historypage.dart';
+import 'join_link_page.dart';
+import 'scan_qr_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,63 +26,69 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  String _fullName = "User";
+  String _fullName = 'User';
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _debounce;
+
+  bool _isSearching = false;
+  bool _isLoadingSearch = false;
+  Map<String, dynamic> _searchData = {};
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    if (query.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _isLoadingSearch = false;
+        _searchData = {};
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isLoadingSearch = true;
+    });
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await ApiService.search(query);
+      if (mounted) {
+        setState(() {
+          _isLoadingSearch = false;
+          if (result['success'] == true) {
+            _searchData = result['data'] as Map<String, dynamic>;
+          } else {
+            _searchData = {};
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadUserProfile() async {
     final result = await ApiService.getMe();
     if (result['success'] == true && mounted) {
       setState(() {
-        _fullName = result['data']['full_name'] ?? "User";
+        _fullName = result['data']['full_name'] ?? 'User';
       });
-    }
-  }
-
-  List<FormTemplate> templates = [
-    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago"),
-    FormTemplate(title: "Ujian", subtitle: "Updated 1 week ago"),
-    FormTemplate(title: "Angket Classmeet", subtitle: "Updated 1 month ago"),
-  ];
-
-  Widget _buildBody() {
-    switch (_selectedIndex) {
-      case 0: // Dashboard
-        return const Center(
-          child: Text(
-            "Halaman Dashboard",
-            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
-          ),
-        );
-      case 1: // Template
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildCreateNewTemplateBtn(),
-              const SizedBox(height: 16),
-              ...templates.map(
-                (t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _buildTemplateCard(t.title, t.subtitle),
-                ),
-              ),
-            ],
-          ),
-        );
-      case 2: // History
-        return const Center(
-          child: Text(
-            "Belum ada riwayat",
-            style: TextStyle(fontSize: 16, color: Color(0xFF9CA3AF)),
-          ),
-        );
-      default:
-        return const SizedBox.shrink();
     }
   }
 
@@ -84,226 +96,578 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: appBar(),
+      appBar: _buildAppBar(),
       endDrawer: _buildEndDrawer(),
       body: _buildBody(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  // ─── AppBar ───────────────────────────────────────────────────────────────
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color(0xFFB4C5D4),
+      foregroundColor: Colors.white,
+      centerTitle: false,
+      leading: GestureDetector(
+        onTap: () {},
+        child: Container(
+          margin: const EdgeInsets.all(5),
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 10, right: 5),
+            child: SvgPicture.asset(
+              'assets/icons/pP.svg',
+              height: 28,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+        ),
+      ),
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Form4x',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'Tempat membuat Form terlengkap',
+            style: TextStyle(color: Colors.white70, fontSize: 11),
+          ),
+        ],
+      ),
+      actions: [
+        Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
+          ),
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocus,
+            decoration: InputDecoration(
+              hintText: 'Cari formulir...',
+              hintStyle: const TextStyle(fontSize: 14, color: Colors.black38),
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: const Icon(Icons.search, color: Colors.black38),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.black38),
+                      onPressed: () {
+                        _searchController.clear();
+                        _searchFocus.unfocus();
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(50),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Bottom Navigation ────────────────────────────────────────────────────
+
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: (i) => setState(() => _selectedIndex = i),
+      selectedItemColor: const Color(0xFF3B82F6),
+      unselectedItemColor: const Color(0xFF94A3B8),
+      showUnselectedLabels: true,
+      type: BottomNavigationBarType.fixed,
+      selectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
+      ),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.grid_view_rounded),
+          label: 'Dashboard',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.description_outlined),
+          label: 'Template',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.history_rounded),
+          label: 'History',
+        ),
+      ],
+    );
+  }
+
+  // ─── Body ─────────────────────────────────────────────────────────────────
+
+  Widget _buildBody() {
+    if (_isSearching) {
+      if (_isLoadingSearch) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return SearchResultsView(
+        searchData: _searchData,
+        onRefresh: () {
+          // You could re-trigger search here, or just let them clear it
+          _onSearchChanged();
         },
-        selectedItemColor: const Color(0xFF1E66D0),
-        unselectedItemColor: const Color(0xFF9CA3AF),
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w500,
-          fontSize: 12,
-        ),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_rounded),
-            label: 'Dashboard',
+      );
+    }
+
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardTab();
+      case 1:
+        return _buildTemplateTab();
+      case 2:
+        return const HistoryPage();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ─── Dashboard Tab ────────────────────────────────────────────────────────
+
+  Widget _buildDashboardTab() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ApiService.getMyForms(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        List<FormModel> forms = [];
+        if (snapshot.data?['success'] == true) {
+          final rawList = snapshot.data!['data'] as List<dynamic>;
+          forms = rawList
+              .map((e) => FormModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          // Sort by createdAt DESC, take 10
+          forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          if (forms.length > 10) forms = forms.sublist(0, 10);
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Greeting card
+              _buildGreetingCard(),
+              const SizedBox(height: 24),
+              // Recently created forms
+              Row(
+                children: [
+                  const Text(
+                    'Formulir Terbaru',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => setState(() => _selectedIndex = 2),
+                    child: const Text('Lihat semua'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (forms.isEmpty)
+                _buildEmptyState(
+                  icon: Icons.article_outlined,
+                  title: 'Belum ada formulir',
+                  subtitle: 'Buat formulir pertamamu dari tab Template',
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: forms.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) => _buildFormCard(forms[index]),
+                ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.description_outlined),
-            label: 'Template',
+        );
+      },
+    );
+  }
+
+  Widget _buildGreetingCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFB4C5D4), Color.fromARGB(255, 141, 184, 253)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Halo, $_fullName! 👋',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Buat formulir baru hari ini?',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  onPressed: () => setState(() => _selectedIndex = 1),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Buat Formulir'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1E40AF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history_rounded),
-            label: 'History',
+          const SizedBox(width: 12),
+          const Icon(
+            Icons.assignment_turned_in_outlined,
+            size: 64,
+            color: Colors.white24,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCreateNewTemplateBtn() {
-    return CustomPaint(
-      painter: DashedRectPainter(
-        color: const Color(0xFFB4C5D4),
-        strokeWidth: 1.5,
-        dashWidth: 6,
-        dashSpace: 4,
-      ),
-      child: InkWell(
-        onTap: () async {
-          final newTemplate = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TemplateMakerPage()),
-          );
-          if (newTemplate != null && newTemplate is FormTemplate) {
-            setState(() {
-              templates.insert(0, newTemplate);
-            });
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFB4C5D4),
-                    width: 1.2,
-                  ),
+  Widget _buildFormCard(FormModel form) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              backgroundColor: const Color(0xFFF9FAFB),
+              appBar: AppBar(
+                title: const Text(
+                  'Detail Form',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                child: const Icon(
-                  Icons.add,
-                  color: Color(0xFFB4C5D4),
-                  size: 20,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
+                elevation: 0.5,
+              ),
+              body: HistoryPage(highlightFormId: form.id),
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.description_outlined,
+                color: Color(0xFF1E40AF),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    form.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${form.totalSubmissions} responden · ${_formatDate(form.createdAt)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildStatusBadge(form.status),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: Colors.black26),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    final isPublished = status == 'published';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isPublished ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        isPublished ? 'Aktif' : 'Draft',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: isPublished
+              ? const Color(0xFF065F46)
+              : const Color(0xFF92400E),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(icon, size: 56, color: Colors.black12),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black45,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.black38),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0) return 'Hari ini';
+    if (diff.inDays == 1) return 'Kemarin';
+    if (diff.inDays < 7) return '${diff.inDays} hari lalu';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  // ─── Template Tab ─────────────────────────────────────────────────────────
+
+  Widget _buildTemplateTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Template Bawaan',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 180,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: MockData.builtInTemplates.length,
+              itemBuilder: (context, index) {
+                final t = MockData.builtInTemplates[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: TemplateCard(template: t, isBuiltIn: true),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Template Saya',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111827),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                "Create New Template",
-                style: TextStyle(
-                  color: Color(0xFF8BA3B8),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              FilledButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push<FormTemplate>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TemplateMakerPage(),
+                    ),
+                  );
+                  if (result != null) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${result.title} berhasil disimpan!'),
+                        backgroundColor: const Color(0xFF059669),
+                      ),
+                    );
+                    setState(() {}); // Refresh FutureBuilder
+                  }
+                },
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Buat Baru'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 12),
+          FutureBuilder<Map<String, dynamic>>(
+            future: ApiService.getMyTemplates(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
 
-  Widget _buildTemplateCard(String title, String subtitle) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Placeholder Image Area
-          Container(
-            height: 120,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAFAFA),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Center(child: _buildDocumentPlaceholder()),
-          ),
-          // Info Area
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1F2937),
-                      ),
+              List<FormTemplate> myTemplates = [];
+              if (snapshot.data?['success'] == true) {
+                final rawList = snapshot.data!['data'] as List<dynamic>;
+                myTemplates = rawList.map((e) {
+                  return FormTemplate(
+                    title: e['title'] ?? 'Tanpa Judul',
+                    subtitle: e['description'] ?? 'Template kustom',
+                    id: e['id'],
+                    questionsJson: e['questions'],
+                  );
+                }).toList();
+              }
+
+              if (myTemplates.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'Belum ada template yang disimpan.',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.85,
                 ),
-                const Icon(Icons.more_vert, color: Color(0xFF9CA3AF)),
-              ],
-            ),
+                itemCount: myTemplates.length,
+                itemBuilder: (context, index) {
+                  return TemplateCard(
+                    template: myTemplates[index],
+                    isBuiltIn: false,
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentPlaceholder() {
-    return Container(
-      width: 80,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 8,
-            width: 45,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDBEAFE),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 4,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            height: 4,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            height: 4,
-            width: 30,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const Spacer(),
-          Container(
-            height: 8,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ─── Drawer ───────────────────────────────────────────────────────────────
 
   Widget _buildEndDrawer() {
     return Drawer(
@@ -311,13 +675,12 @@ class _HomePageState extends State<HomePage> {
       surfaceTintColor: Colors.transparent,
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.only(
-              top: 50,
-              left: 24,
-              right: 24,
-              bottom: 20,
+              top: 52,
+              left: 20,
+              right: 20,
+              bottom: 16,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -325,51 +688,42 @@ class _HomePageState extends State<HomePage> {
                 const Text(
                   'Form4x',
                   style: TextStyle(
-                    color: Color(0xFF1E66D0),
+                    color: Color(0xFF1E40AF),
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.close, color: Color(0xFF4B5563)),
+                  child: const Icon(Icons.close, color: Color(0xFF6B7280)),
                 ),
               ],
             ),
           ),
-          // Menu Items
-          _buildDrawerItem(
-            icon: Icons.grid_view_rounded,
-            title: 'Dashboard',
-            isSelected: _selectedIndex == 0,
-            onTap: () {
-              setState(() => _selectedIndex = 0);
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.description_outlined,
-            title: 'Template',
-            isSelected: _selectedIndex == 1,
-            onTap: () {
-              setState(() => _selectedIndex = 1);
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.history_rounded,
-            title: 'History',
-            isSelected: _selectedIndex == 2,
-            onTap: () {
-              setState(() => _selectedIndex = 2);
-              Navigator.pop(context);
-            },
-          ),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          _drawerItem(Icons.grid_view_rounded, 'Dashboard', () {
+            setState(() => _selectedIndex = 0);
+            Navigator.pop(context);
+          }, _selectedIndex == 0),
+          _drawerItem(Icons.link, 'Join with Link', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const JoinLinkPage()),
+            );
+          }, false),
+          _drawerItem(Icons.qr_code_scanner, 'Scan QR', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ScanQRPage()),
+            );
+          }, false),
           const Spacer(),
-          // Footer
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 const CircleAvatar(
@@ -382,7 +736,7 @@ class _HomePageState extends State<HomePage> {
                   child: Text(
                     _fullName,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF374151),
                     ),
@@ -395,10 +749,8 @@ class _HomePageState extends State<HomePage> {
                     if (!mounted) return;
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginPage(),
-                      ),
-                      (route) => false,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (_) => false,
                     );
                   },
                 ),
@@ -410,12 +762,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _drawerItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap,
+    bool isSelected,
+  ) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -423,28 +775,28 @@ class _HomePageState extends State<HomePage> {
           color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
           border: Border(
             right: BorderSide(
-              color: isSelected ? const Color(0xFF1E66D0) : Colors.transparent,
-              width: 4,
+              color: isSelected ? const Color(0xFF1E40AF) : Colors.transparent,
+              width: 3,
             ),
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
             Icon(
               icon,
               color: isSelected
-                  ? const Color(0xFF1E66D0)
+                  ? const Color(0xFF1E40AF)
                   : const Color(0xFF6B7280),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
-                    ? const Color(0xFF1E66D0)
+                    ? const Color(0xFF1E40AF)
                     : const Color(0xFF4B5563),
               ),
             ),
@@ -453,163 +805,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  Column searchBar() {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 5, left: 5, right: 5),
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0XFFB4C5D4).withValues(alpha: 0.11),
-                blurRadius: 40,
-                spreadRadius: 0.0,
-              ),
-            ],
-          ),
-          child: TextField(
-            decoration: InputDecoration(
-              filled: true,
-              hintText: 'Search',
-              hintStyle: const TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 14,
-              ),
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.all(10),
-              prefixIcon: SizedBox(
-                width: 0,
-                child: IntrinsicHeight(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SvgPicture.asset('assets/icons/searchicon.svg'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(55),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  AppBar appBar() {
-    return AppBar(
-      foregroundColor: Colors.blue,
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Form4x',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            'Tempat membuat Form terlengkap',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-      backgroundColor: const Color(0xFFB4C5D4),
-      centerTitle: false,
-      leading: GestureDetector(
-        onTap: () {},
-        child: Container(
-          margin: const EdgeInsets.all(5),
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 1, left: 10, right: 5),
-            child: SvgPicture.asset('assets/icons/pP.svg'),
-          ),
-        ),
-      ),
-      actions: [
-        Builder(
-          builder: (context) => GestureDetector(
-            onTap: () {
-              Scaffold.of(context).openEndDrawer();
-            },
-            child: Container(
-              margin: const EdgeInsets.all(10),
-              alignment: Alignment.center,
-              width: 37,
-              child: const Padding(
-                padding: EdgeInsets.only(bottom: 1, left: 5, right: 10),
-                child: Icon(Icons.menu, color: Colors.white),
-              ),
-            ),
-          ),
-        ),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 25, left: 5, right: 5),
-          child: searchBar(),
-        ),
-      ),
-    );
-  }
-}
-
-class DashedRectPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double dashWidth;
-  final double dashSpace;
-
-  DashedRectPainter({
-    this.color = Colors.grey,
-    this.strokeWidth = 1.0,
-    this.dashWidth = 6.0,
-    this.dashSpace = 4.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final RRect rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(12),
-    );
-
-    final Path path = Path()..addRRect(rrect);
-    final Path dashPath = Path();
-    for (var metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        dashPath.addPath(
-          metric.extractPath(distance, distance + dashWidth),
-          Offset.zero,
-        );
-        distance += dashWidth + dashSpace;
-      }
-    }
-    canvas.drawPath(dashPath, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

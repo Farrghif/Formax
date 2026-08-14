@@ -197,6 +197,38 @@ class FormListOut(BaseModel):
 
 
 # ============================================================
+# SEARCH
+# ============================================================
+class SearchTemplateOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: Optional[str] = None
+    is_system: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SearchFormOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: FormStatus
+    slug: str
+    created_at: datetime
+    total_submissions: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class SearchResultOut(BaseModel):
+    system_templates: List[SearchTemplateOut] = []
+    user_templates: List[SearchTemplateOut] = []
+    published_forms: List[SearchFormOut] = []
+
+
+# ============================================================
 # JOIN / SUBMISSION / ANSWERS
 # ============================================================
 class JoinFormRequest(BaseModel):

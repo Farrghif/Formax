@@ -3,21 +3,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, templates, forms, submissions, uploads, export, questions
+from .routers import auth, templates, forms, submissions, uploads, export, questions, search
 
 from sqlalchemy import text
 
 # Buat semua tabel otomatis kalau belum ada (development).
 Base.metadata.create_all(bind=engine)
 
+from sqlalchemy.exc import OperationalError
+
 # Auto-migrate: pastikan kolom banner_url ada di tabel forms & templates
 with engine.connect() as conn:
-    conn.execute(text("ALTER TABLE forms ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
-    conn.execute(text("ALTER TABLE templates ADD COLUMN IF NOT EXISTS banner_url VARCHAR;"))
-    # Auto-migrate: kunci jawaban di question_options
-    conn.execute(text("ALTER TABLE question_options ADD COLUMN IF NOT EXISTS is_correct BOOLEAN;"))
+    try:
+        conn.execute(text("ALTER TABLE forms ADD COLUMN banner_url VARCHAR;"))
+    except OperationalError:
+        pass
+        
+    try:
+        conn.execute(text("ALTER TABLE templates ADD COLUMN banner_url VARCHAR;"))
+    except OperationalError:
+        pass
+        
+    try:
+        conn.execute(text("ALTER TABLE question_options ADD COLUMN is_correct BOOLEAN;"))
+    except OperationalError:
+        pass
+        
     # Backfill: opsi lama yang belum punya nilai dianggap bukan jawaban benar
-    conn.execute(text("UPDATE question_options SET is_correct = FALSE WHERE is_correct IS NULL;"))
+    conn.execute(text("UPDATE question_options SET is_correct = 0 WHERE is_correct IS NULL;"))
     conn.commit()
 
 
@@ -41,6 +54,7 @@ app.include_router(questions.router)
 app.include_router(submissions.router)
 app.include_router(uploads.router)
 app.include_router(export.router)
+app.include_router(search.router)
 
 
 @app.get("/")
