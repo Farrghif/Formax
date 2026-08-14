@@ -49,9 +49,10 @@ class _ScanQRPageState extends State<ScanQRPage> {
                 setState(() => _isProcessing = true);
 
                 final result = await ApiService.validateFormLink(link);
+                if (!context.mounted) return;
                 if (result['success'] == true) {
                   final slug = result['data']['slug'] ?? '';
-                  if (mounted && slug.isNotEmpty) {
+                  if (slug.isNotEmpty) {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
