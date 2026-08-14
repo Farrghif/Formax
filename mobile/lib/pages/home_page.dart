@@ -2,6 +2,7 @@
 // Halaman utama aplikasi Form4x.
 // Berisi Dashboard, Template, dan History dalam satu layar dengan BottomNavigationBar.
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/form_model.dart';
@@ -9,6 +10,7 @@ import '../models/form_template.dart';
 import '../services/api_service.dart';
 import '../data/mock_data.dart';
 import '../widgets/template_card.dart';
+import '../widgets/search_results_view.dart';
 import 'login_page.dart';
 import 'templatemakerpage.dart';
 import 'historypage.dart';
@@ -26,10 +28,59 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   String _fullName = 'User';
 
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _debounce;
+
+  bool _isSearching = false;
+  bool _isLoadingSearch = false;
+  Map<String, dynamic> _searchData = {};
+
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    if (query.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _isLoadingSearch = false;
+        _searchData = {};
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isLoadingSearch = true;
+    });
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await ApiService.search(query);
+      if (mounted) {
+        setState(() {
+          _isLoadingSearch = false;
+          if (result['success'] == true) {
+            _searchData = result['data'] as Map<String, dynamic>;
+          } else {
+            _searchData = {};
+          }
+        });
+      }
+    });
   }
 
   Future<void> _loadUserProfile() async {
@@ -108,12 +159,23 @@ class _HomePageState extends State<HomePage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocus,
             decoration: InputDecoration(
               hintText: 'Cari formulir...',
               hintStyle: const TextStyle(fontSize: 14, color: Colors.black38),
               filled: true,
               fillColor: Colors.white,
               prefixIcon: const Icon(Icons.search, color: Colors.black38),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.black38),
+                      onPressed: () {
+                        _searchController.clear();
+                        _searchFocus.unfocus();
+                      },
+                    )
+                  : null,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(50),
@@ -160,6 +222,19 @@ class _HomePageState extends State<HomePage> {
   // ─── Body ─────────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
+    if (_isSearching) {
+      if (_isLoadingSearch) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return SearchResultsView(
+        searchData: _searchData,
+        onRefresh: () {
+          // You could re-trigger search here, or just let them clear it
+          _onSearchChanged();
+        },
+      );
+    }
+
     switch (_selectedIndex) {
       case 0:
         return _buildDashboardTab();
