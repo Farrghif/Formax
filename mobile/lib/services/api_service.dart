@@ -326,4 +326,31 @@ class ApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  // Fungsi Search (untuk Dashboard Search)
+  static Future<Map<String, dynamic>> search(String query) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final uri = Uri.parse('$baseUrl/search').replace(
+        queryParameters: query.isNotEmpty ? {'q': query} : null,
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

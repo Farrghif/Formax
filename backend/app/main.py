@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, templates, forms, submissions, uploads, export, questions
+from .routers import auth, templates, forms, submissions, uploads, export, questions, search
 
 from sqlalchemy import text
 
@@ -54,6 +54,7 @@ app.include_router(questions.router)
 app.include_router(submissions.router)
 app.include_router(uploads.router)
 app.include_router(export.router)
+app.include_router(search.router)
 
 
 @app.get("/")
