@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,6 +10,21 @@ from .. import models, schemas
 from ..deps import get_db, get_current_user
 
 router = APIRouter(tags=["submissions"])
+
+# start_date / end_date dikirim dari <input datetime-local> browser sebagai waktu
+# LOKAL (WIB) tanpa zona. Waktu server (utcnow) adalah UTC. Window timer wajib
+# dibandingkan dalam zona yang sama supaya tidak meleset 7 jam di WIB.
+WIB = timezone(timedelta(hours=7))
+
+
+def _window_now():
+    return datetime.now(WIB)
+
+
+def _window_dt(dt):
+    if dt is None or dt.tzinfo is not None:
+        return dt
+    return dt.replace(tzinfo=WIB)
 
 
 @router.post("/forms/public/{slug}/join", response_model=schemas.SubmissionStartOut)
@@ -36,10 +51,10 @@ def join_form(
         if not payload.token or payload.token.strip().upper() != form.join_token.upper():
             raise HTTPException(status_code=403, detail="Token salah atau belum diisi")
 
-    now = datetime.utcnow()
-    if form.start_date and now < form.start_date:
+    now = _window_now()
+    if form.start_date and now < _window_dt(form.start_date):
         raise HTTPException(status_code=403, detail="Form belum dibuka")
-    if form.end_date and now > form.end_date:
+    if form.end_date and now > _window_dt(form.end_date):
         raise HTTPException(status_code=403, detail="Waktu pengisian form sudah berakhir")
 
     existing = (
@@ -96,7 +111,7 @@ def save_answer(
         raise HTTPException(status_code=400, detail="Form ini sudah kamu submit, tidak bisa diubah lagi")
 
     form = db.query(models.Form).filter(models.Form.id == submission.form_id).first()
-    if form.end_date and datetime.utcnow() > form.end_date:
+    if form.end_date and _window_now() > _window_dt(form.end_date):
         raise HTTPException(status_code=403, detail="Waktu pengisian sudah habis")
 
     answer = (
@@ -154,11 +169,10 @@ def submit_final(
         raise HTTPException(status_code=400, detail="Sudah pernah disubmit")
 
     form = db.query(models.Form).filter(models.Form.id == submission.form_id).first()
-    now = datetime.utcnow()
-    if form.end_date and now > form.end_date:
+    if form.end_date and _window_now() > _window_dt(form.end_date):
         submission.is_auto_submitted = True
 
-    submission.submitted_at = now
+    submission.submitted_at = datetime.utcnow()
     db.commit()
     db.refresh(submission)
     return submission

@@ -1,5 +1,6 @@
 import io
 import math
+from datetime import timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -12,6 +13,9 @@ from .. import models
 from ..deps import get_db, get_current_user
 
 router = APIRouter(prefix="/forms", tags=["export"])
+
+# Timestamp server disimpan sebagai naive UTC; tampilkan dalam zona WIB (+07:00).
+WIB = timezone(timedelta(hours=7))
 
 # ============================================================
 # STYLING HELPERS
@@ -94,7 +98,9 @@ def _apply_row_heights(ws, first_row, last_row, min_height=18):
 def _fmt_datetime(dt):
     if not dt:
         return ""
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(WIB).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _duration_str(sub):
