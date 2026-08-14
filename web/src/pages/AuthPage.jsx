@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, signup, sendOtp } from '../api/auth';
+import logoForm4x from '../assets/logo_form4x.png';
 import '../styles/auth.css';
 
 export default function AuthPage() {
@@ -157,22 +158,29 @@ export default function AuthPage() {
 
   return (
     <div className="auth-bg">
-      {/* Wave SVG top */}
-      <svg className="wave wave-top" viewBox="0 0 1440 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#1d4ed8" d="M0,80 C360,160 1080,0 1440,80 L1440,0 L0,0 Z" />
-        <path fill="#3b82f6" opacity="0.6" d="M0,100 C400,20 1000,180 1440,60 L1440,0 L0,0 Z" />
-        <path fill="#93c5fd" opacity="0.35" d="M0,60 C500,140 900,20 1440,100 L1440,0 L0,0 Z" />
-      </svg>
+      {/* Wave image top */}
+      <img
+        src="/images/auth-wave-top.png"
+        alt=""
+        className="wave wave-top"
+        draggable="false"
+      />
 
-      {/* Wave SVG bottom */}
-      <svg className="wave wave-bottom" viewBox="0 0 1440 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#1d4ed8" d="M0,120 C360,40 1080,200 1440,120 L1440,200 L0,200 Z" />
-        <path fill="#3b82f6" opacity="0.6" d="M0,100 C400,180 1000,20 1440,140 L1440,200 L0,200 Z" />
-        <path fill="#93c5fd" opacity="0.35" d="M0,140 C500,60 900,180 1440,100 L1440,200 L0,200 Z" />
-      </svg>
+      {/* Wave image bottom */}
+      <img
+        src="/images/auth-wave-bottom.png"
+        alt=""
+        className="wave wave-bottom"
+        draggable="false"
+      />
 
       {/* Card */}
       <div className={`auth-card ${otpStep ? 'otp-card' : ''}`}>
+        {/* Header */}
+        <div className="auth-header">
+          <img src={logoForm4x} alt="Form4x" className="auth-logo" draggable="false" />
+        </div>
+
         {!otpStep && (
           <>
             {/* Tab switcher */}

@@ -1,8 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import TentangPage from './pages/TentangPage';
+import CaraPakaiPage from './pages/CaraPakaiPage';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import FormBuilderPage from './pages/FormBuilderPage';
 import FormFillPage from './pages/FormFillPage';
+import ProfilePage from './pages/ProfilePage';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -20,8 +24,18 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/auth" replace />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/tentang" element={<TentangPage />} />
+        <Route path="/cara-pakai" element={<CaraPakaiPage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
@@ -64,7 +78,7 @@ function App() {
           }
         />
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

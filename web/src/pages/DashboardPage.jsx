@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMe, logout } from '../api/auth';
 import { getMyForms, deleteForm, getForm, getFormSubmissions, exportSubmissions } from '../api/forms';
 import { getTemplates, deleteTemplate } from '../api/templates';
+import { parseServerTime } from '../utils/date';
 import logoForm4x from '../assets/logo_form4x.png';
 import '../styles/dashboard.css';
 
@@ -48,7 +49,7 @@ export default function DashboardPage() {
       .then(([userData, tpls, forms]) => {
         setUser(userData);
         setTemplates(tpls);
-        const sorted = [...forms].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const sorted = [...forms].sort((a, b) => parseServerTime(b.created_at) - parseServerTime(a.created_at));
         setAllForms(sorted);
         setRecentForms(sorted.slice(0, 3));
       })
@@ -168,7 +169,7 @@ export default function DashboardPage() {
         let durationMinutes = 0;
         let durationStr = '-';
         if (sub.started_at && sub.submitted_at) {
-          const diffMs = new Date(sub.submitted_at).getTime() - new Date(sub.started_at).getTime();
+          const diffMs = parseServerTime(sub.submitted_at).getTime() - parseServerTime(sub.started_at).getTime();
           const totalSecs = Math.max(0, Math.floor(diffMs / 1000));
           const mins = Math.floor(totalSecs / 60);
           const secs = totalSecs % 60;
@@ -212,7 +213,8 @@ export default function DashboardPage() {
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return '';
     const now = new Date();
-    const date = new Date(dateStr);
+    const date = parseServerTime(dateStr);
+    if (!date) return '';
     const diff = now - date;
     const mins = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
@@ -230,7 +232,9 @@ export default function DashboardPage() {
 
   const formatDateString = (dateStr) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('id-ID', {
+    const date = parseServerTime(dateStr);
+    if (!date) return '-';
+    return date.toLocaleString('id-ID', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -352,7 +356,12 @@ export default function DashboardPage() {
 
         {/* User Footer */}
         <div className="db-sidebar-footer">
-          <div className="db-user">
+          <div
+            className="db-user"
+            onClick={() => navigate('/profile')}
+            title="Lihat & Edit Profil"
+            style={{ cursor: 'pointer' }}
+          >
             <div className="db-avatar">
               {user?.avatar_url ? (
                 <img src={user.avatar_url} alt={user.full_name} />
@@ -425,8 +434,11 @@ export default function DashboardPage() {
                         <div className={`db-card-preview ${bgClass}`}>
                           {idx === 2 && (
                             <span className="db-badge">
-                              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" /></svg>
-                              Free enabled by default
+                              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              Timer Enabled
                             </span>
                           )}
                           <div className="db-preview-doc">
@@ -454,8 +466,11 @@ export default function DashboardPage() {
                         <div className={`db-card-preview ${card.bg}`}>
                           {card.badge && (
                             <span className="db-badge">
-                              <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" /></svg>
-                              Free enabled by default
+                              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              Timer Enabled
                             </span>
                           )}
                           <div className="db-preview-doc">
