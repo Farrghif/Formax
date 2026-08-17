@@ -353,4 +353,52 @@ class ApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  // Fungsi Update Profile
+  static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> payload) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': data['detail'] ?? 'Failed to update profile'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Fungsi Upload File (untuk avatar, file upload question, dll.)
+  static Future<Map<String, dynamic>> uploadFile(dynamic file) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/uploads'));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final data = jsonDecode(responseBody);
+
+      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+        return {'success': true, 'file_url': data['file_url']};
+      }
+      return {'success': false, 'message': data['detail'] ?? 'Upload failed'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
