@@ -421,7 +421,7 @@ class _ProfilePageState extends State<ProfilePage> {
         width: 110,
         height: 110,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+        errorBuilder: (_, _, _) => _buildDefaultAvatar(),
       );
     }
     return _buildDefaultAvatar();

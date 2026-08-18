@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/form_template.dart';
-import '../pages/templatemakerpage.dart';
+import '../pages/formmakerpage.dart';
 
 class TemplateCard extends StatelessWidget {
   final FormTemplate template;
@@ -18,7 +18,7 @@ class TemplateCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => TemplateMakerPage(initialTemplate: template)),
+          MaterialPageRoute(builder: (context) => FormMakerPage(initialTemplate: template)),
         );
       },
       child: Container(

@@ -54,8 +54,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             QuestionData(
               type: type,
               label: q['label'] ?? 'Pertanyaan',
-              hintText: q['placeholder'] ?? '',
-              hintStyle: const TextStyle(color: Colors.grey),
+              description: q['placeholder'] ?? '',
               isRequired: q['is_required'] ?? false,
               options: options,
             ),
@@ -79,8 +78,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         QuestionData(
           type: QuestionType.multipleChoice,
           label: 'Pertanyaan Tanpa Judul',
-          hintText: 'halo',
-          hintStyle: const TextStyle(color: Colors.grey),
+          description: 'halo',
           options: [QuestionOptionData(label: 'Opsi 1')],
         ),
       ];

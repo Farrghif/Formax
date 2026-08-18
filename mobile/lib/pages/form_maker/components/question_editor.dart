@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import '../../../models/question_model.dart';
+
+class QuestionEditor extends StatefulWidget {
+  final QuestionData question;
+  final VoidCallback onChanged;
+  final VoidCallback onTypeChangeTap;
+
+  const QuestionEditor({
+    super.key,
+    required this.question,
+    required this.onChanged,
+    required this.onTypeChangeTap,
+  });
+
+  @override
+  State<QuestionEditor> createState() => _QuestionEditorState();
+}
+
+class _QuestionEditorState extends State<QuestionEditor> {
+  late TextEditingController _titleCtrl;
+  late TextEditingController _descCtrl;
+  
+  // Debounce controllers for linear scale configs etc.
+  late TextEditingController _minLabelCtrl;
+  late TextEditingController _maxLabelCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.question.label);
+    _descCtrl = TextEditingController(text: widget.question.description);
+    _minLabelCtrl = TextEditingController(text: widget.question.minLabel);
+    _maxLabelCtrl = TextEditingController(text: widget.question.maxLabel);
+  }
+
+  @override
+  void didUpdateWidget(covariant QuestionEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.question.id != widget.question.id) {
+      _titleCtrl.text = widget.question.label;
+      _descCtrl.text = widget.question.description;
+      _minLabelCtrl.text = widget.question.minLabel;
+      _maxLabelCtrl.text = widget.question.maxLabel;
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _minLabelCtrl.dispose();
+    _maxLabelCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Drag Handle
+        const Center(
+          child: Icon(Icons.drag_handle, color: Colors.black26, size: 20),
+        ),
+        const SizedBox(height: 8),
+
+        // Title and Type Selector
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _titleCtrl,
+                    onChanged: (v) {
+                      widget.question.label = v;
+                      widget.onChanged();
+                    },
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'Pertanyaan',
+                      filled: true,
+                      fillColor: const Color(0xFFF3F4F6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8), 
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    maxLines: null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _descCtrl,
+                    onChanged: (v) {
+                      widget.question.description = v;
+                      widget.onChanged();
+                    },
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    decoration: const InputDecoration(
+                      hintText: 'Deskripsi tambahan (opsional)',
+                      isDense: true,
+                      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: InkWell(
+                onTap: widget.onTypeChangeTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.question.type.label, 
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), 
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down, size: 20, color: Colors.black54),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Editor Body based on type
+        _buildEditorBody(),
+      ],
+    );
+  }
+
+  Widget _buildEditorBody() {
+    final q = widget.question;
+
+    if (q.type == QuestionType.linearScale) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              DropdownButton<int>(
+                value: q.scaleMin,
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('0')),
+                  DropdownMenuItem(value: 1, child: Text('1')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    q.scaleMin = v;
+                    widget.onChanged();
+                  }
+                },
+              ),
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('sampai')),
+              DropdownButton<int>(
+                value: q.scaleMax,
+                items: List.generate(9, (index) => index + 2).map((val) => DropdownMenuItem(value: val, child: Text('$val'))).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    q.scaleMax = v;
+                    widget.onChanged();
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text('${q.scaleMin}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _minLabelCtrl,
+                  onChanged: (v) { q.minLabel = v; widget.onChanged(); },
+                  decoration: const InputDecoration(hintText: 'Label opsional', isDense: true),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text('${q.scaleMax}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _maxLabelCtrl,
+                  onChanged: (v) { q.maxLabel = v; widget.onChanged(); },
+                  decoration: const InputDecoration(hintText: 'Label opsional', isDense: true),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (q.type == QuestionType.rating) {
+      return Row(
+        children: [
+          const Text('Jumlah Tingkat: '),
+          DropdownButton<int>(
+            value: q.ratingCount,
+            items: List.generate(8, (i) => i + 3).map((val) => DropdownMenuItem(value: val, child: Text('$val'))).toList(),
+            onChanged: (v) {
+              if (v != null) {
+                q.ratingCount = v;
+                widget.onChanged();
+              }
+            },
+          ),
+          const SizedBox(width: 24),
+          const Text('Bentuk: '),
+          DropdownButton<String>(
+            value: q.ratingIcon,
+            items: const [
+              DropdownMenuItem(value: 'star', child: Text('Bintang')),
+              DropdownMenuItem(value: 'heart', child: Text('Hati')),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                q.ratingIcon = v;
+                widget.onChanged();
+              }
+            },
+          ),
+        ],
+      );
+    }
+
+    if (!q.type.hasOptions) {
+      return Container(); // No specific body editor needed for text/date/time
+    }
+
+    return Column(
+      children: [
+        ...q.options.asMap().entries.map((entry) {
+          final i = entry.key;
+          final opt = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Icon(
+                  q.type == QuestionType.multipleChoice 
+                    ? Icons.radio_button_unchecked 
+                    : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
+                  size: 20, 
+                  color: Colors.black26,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: opt.label,
+                    onChanged: (v) {
+                      opt.label = v;
+                      widget.onChanged();
+                    },
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Opsi ${i + 1}',
+                      border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                if (q.options.length > 1)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20, color: Colors.black38),
+                    onPressed: () {
+                      q.options.removeAt(i);
+                      widget.onChanged();
+                    },
+                  ),
+              ],
+            ),
+          );
+        }),
+        Row(
+          children: [
+            Icon(
+              q.type == QuestionType.multipleChoice 
+                ? Icons.radio_button_unchecked 
+                : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
+              size: 20, 
+              color: Colors.black26,
+            ),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: () {
+                q.options.add(QuestionOptionData(label: 'Opsi baru'));
+                widget.onChanged();
+              },
+              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+              child: const Text('Tambah opsi', style: TextStyle(color: Colors.black54, fontSize: 14)),
+            ),
+          ],
+        )
+      ],
+    );
+  }
+}
