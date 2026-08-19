@@ -70,7 +70,7 @@ def create_form(
             db.add(new_q)
             db.flush()
             for opt in tq.options:
-                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
+                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct, is_other=getattr(opt, 'is_other', False)))
     else:
         for q in payload.questions:
             new_q = models.Question(
@@ -80,7 +80,7 @@ def create_form(
             db.add(new_q)
             db.flush()
             for opt in q.options:
-                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct))
+                db.add(models.QuestionOption(question_id=new_q.id, label=opt.label, value=opt.value, order_index=opt.order_index, is_correct=opt.is_correct, is_other=getattr(opt, 'is_other', False)))
 
     db.commit()
     db.expire_all()

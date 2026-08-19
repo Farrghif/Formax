@@ -82,19 +82,29 @@ class FormBuilderState extends ChangeNotifier {
       if (typeStr == 'file_upload') type = QuestionType.fileUpload;
       if (typeStr == 'date') type = QuestionType.date;
       if (typeStr == 'time') type = QuestionType.time;
+      if (typeStr == 'image') type = QuestionType.image;
+      if (typeStr == 'text_block') type = QuestionType.text;
 
       final optionsList = (q['options'] as List<dynamic>?) ?? [];
       final options = optionsList.map((opt) {
-        return QuestionOptionData(label: opt['label'] ?? 'Opsi');
+        return QuestionOptionData(
+          label: opt['label'] ?? 'Opsi',
+          isOther: opt['is_other'] ?? false,
+        );
       }).toList();
+
+      // Extract image_url from settings if present
+      final settings = (q['settings'] as Map<String, dynamic>?) ?? {};
+      final imageUrl = settings['image_url'] as String?;
 
       currentPage.questions.add(
         QuestionData(
           type: type,
           label: q['label'] ?? 'Pertanyaan',
-          description: q['description'] ?? '',
+          description: q['placeholder'] ?? q['description'] ?? '',
           isRequired: q['is_required'] ?? false,
           options: options,
+          imageUrl: imageUrl,
         ),
       );
     }
@@ -248,7 +258,7 @@ class FormBuilderState extends ChangeNotifier {
         result.add({
           'type': QuestionType.pageBreak.apiValue,
           'label': page.title,
-          'description': page.description,
+          'placeholder': page.description,
           'is_required': false,
           'order_index': orderIndex++,
           'options': [],
@@ -258,21 +268,53 @@ class FormBuilderState extends ChangeNotifier {
       for (final q in page.questions) {
         final opts = q.options.asMap().entries.map((e) {
           return {
-            'label': e.value.label, 
+            'label': e.value.label,
             'order_index': e.key,
             'is_other': e.value.isOther,
           };
         }).toList();
 
+        // Build settings for question-specific config
+        final settings = <String, dynamic>{};
+        if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
+          settings['image_url'] = q.imageUrl;
+        }
+        if (q.scaleMin != 1) {
+          settings['scale_min'] = q.scaleMin;
+        }
+        if (q.scaleMax != 5) {
+          settings['scale_max'] = q.scaleMax;
+        }
+        if (q.minLabel.isNotEmpty) {
+          settings['min_label'] = q.minLabel;
+        }
+        if (q.maxLabel.isNotEmpty) {
+          settings['max_label'] = q.maxLabel;
+        }
+        if (q.ratingCount != 5) {
+          settings['rating_count'] = q.ratingCount;
+        }
+        if (q.ratingIcon != 'star') {
+          settings['rating_icon'] = q.ratingIcon;
+        }
+        if (q.allowedFileTypes.isNotEmpty) {
+          settings['allowed_file_types'] = q.allowedFileTypes;
+        }
+        if (q.maxFileSizeMB != 10) {
+          settings['max_file_size_mb'] = q.maxFileSizeMB;
+        }
+        if (q.maxFileCount != 1) {
+          settings['max_file_count'] = q.maxFileCount;
+        }
+
         result.add({
           'type': q.type.apiValue,
           'label': q.label,
-          'description': q.description, // Added description sending
+          'placeholder': q.description,
           'is_required': q.isRequired,
           'order_index': orderIndex++,
+          'settings': settings.isNotEmpty ? settings : {},
           'options': opts,
-          if (q.imageUrl != null) 'image_url': q.imageUrl,
-          // You can also add rating/scale limits here if API supports it in the future
         });
       }
     }
