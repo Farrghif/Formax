@@ -197,9 +197,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         final shareLink = qrRes['data']['share_link'] as String;
         String qrUrl = qrRes['data']['qr_code_url'] as String;
 
-        // Ganti localhost dengan IP emulator (10.0.2.2) agar gambar bisa dimuat
+        // Ganti localhost dengan host dari baseUrl agar gambar bisa dimuat
         if (qrUrl.contains('localhost')) {
-          qrUrl = qrUrl.replaceAll('localhost', '10.0.2.2');
+          final apiHost = Uri.parse(ApiService.baseUrl).host;
+          qrUrl = qrUrl.replaceAll('localhost', apiHost);
         }
 
         if (mounted) _showShareDialog(shareLink, qrUrl);

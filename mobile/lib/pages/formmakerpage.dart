@@ -5,7 +5,6 @@ import '../widgets/share_form_dialog.dart';
 import 'form_maker/models/form_builder_state.dart';
 import 'form_maker/editor_canvas.dart';
 import 'form_maker/preview_canvas.dart';
-import 'form_maker/components/builder_toolbar.dart';
 import '../models/question_model.dart'; // Ensure QuestionType is imported for toolbar
 import 'package:image_picker/image_picker.dart';
 
@@ -24,7 +23,7 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
   bool _isPreviewMode = false;
 
   final Color _primaryColor = const Color(0xFF4F46E5);
-  final Color _bgColor = const Color(0xFFF3F4F6);
+  final Color _bgColor = const Color(0xFFE8EEF7);
 
   // State untuk Setelan
   bool _isQuiz = true;
@@ -132,7 +131,8 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
         final shareLink = qrRes['data']['share_link'] as String;
         String qrUrl = qrRes['data']['qr_code_url'] as String;
         if (qrUrl.contains('localhost')) {
-          qrUrl = qrUrl.replaceAll('localhost', '10.0.2.2');
+          final apiHost = Uri.parse(ApiService.baseUrl).host;
+          qrUrl = qrUrl.replaceAll('localhost', apiHost);
         }
         if (mounted) _showShareDialog(shareLink, qrUrl);
       } else {
@@ -176,6 +176,45 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     }
   }
 
+  void _showAddQuestionSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          children: QuestionType.values.where((t) => t != QuestionType.pageBreak).map((type) {
+            return ListTile(
+              leading: Icon(_getIconForType(type), color: Colors.black54),
+              title: Text(type.label),
+              onTap: () {
+                final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
+                _builderState.addQuestion(activePageId, type);
+                Navigator.pop(context);
+              },
+            );
+          }).toList(),
+        );
+      }
+    );
+  }
+
+  IconData _getIconForType(QuestionType type) {
+    switch (type) {
+      case QuestionType.shortAnswer: return Icons.short_text;
+      case QuestionType.paragraph: return Icons.notes;
+      case QuestionType.multipleChoice: return Icons.radio_button_checked;
+      case QuestionType.checkboxes: return Icons.check_box;
+      case QuestionType.dropdown: return Icons.arrow_drop_down_circle;
+      case QuestionType.fileUpload: return Icons.cloud_upload;
+      case QuestionType.linearScale: return Icons.linear_scale;
+      case QuestionType.rating: return Icons.star;
+      case QuestionType.date: return Icons.event;
+      case QuestionType.time: return Icons.access_time;
+      default: return Icons.widgets;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -198,23 +237,43 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  BuilderToolbar(
-                    onAddText: () {
-                      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-                      _builderState.addQuestion(activePageId, QuestionType.text);
-                    },
-                    onAddImage: _pickImage,
-                    onAddPage: () {
-                      _builderState.addPage();
-                    },
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.title, color: Colors.black87),
+                          onPressed: () {
+                            final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
+                            _builderState.addQuestion(activePageId, QuestionType.text);
+                          },
+                          tooltip: 'Tambah Judul/Deskripsi',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.image_outlined, color: Colors.black87),
+                          onPressed: _pickImage,
+                          tooltip: 'Tambah Gambar',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.view_agenda_outlined, color: Colors.black87),
+                          onPressed: () => _builderState.addPage(),
+                          tooltip: 'Tambah Bagian',
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   FloatingActionButton(
                     heroTag: 'add_question_btn',
-                    onPressed: () {
-                      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-                      _builderState.addQuestion(activePageId, QuestionType.multipleChoice);
-                    },
+                    onPressed: _showAddQuestionSheet,
                     backgroundColor: _primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 4,
@@ -231,44 +290,49 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: _bgColor,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _builderState.formTitle.isEmpty ? 'Form Tanpa Judul' : _builderState.formTitle,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
           ),
-          const Text('Status: Draft', style: TextStyle(fontSize: 12, color: Colors.black54)),
-        ],
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
       ),
-      bottom: _isPreviewMode ? null : TabBar(
-        controller: _tabController,
-        labelColor: _primaryColor,
-        unselectedLabelColor: Colors.black54,
-        indicatorColor: _primaryColor,
-        indicatorWeight: 3,
-        onTap: (index) {
-          setState(() {}); // refresh floating button
-        },
-        tabs: const [
-          Tab(text: 'Pertanyaan'),
-          Tab(text: 'Setelan'),
-        ],
+      title: null,
+      bottom: _isPreviewMode ? null : PreferredSize(
+        preferredSize: const Size.fromHeight(kTextTabBarHeight),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: TabBar(
+            controller: _tabController,
+            labelColor: _primaryColor,
+            unselectedLabelColor: Colors.black54,
+            indicatorColor: _primaryColor,
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            onTap: (index) {
+              setState(() {}); // refresh floating button
+            },
+            tabs: const [
+              Tab(text: 'Soal'),
+              Tab(text: 'Setelan'),
+            ],
+          ),
+        ),
       ),
       actions: [
         IconButton(
           icon: Icon(
             _isPreviewMode ? Icons.edit_outlined : Icons.visibility_outlined, 
-            color: _primaryColor
+            color: Colors.black54
           ),
           onPressed: () {
             setState(() {
@@ -281,7 +345,7 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
         ),
         if (!_isPreviewMode)
           IconButton(
-            icon: Icon(Icons.save_outlined, color: _primaryColor),
+            icon: const Icon(Icons.save_outlined, color: Colors.black54),
             onPressed: _builderState.isSaving ? null : _saveDraft,
             tooltip: 'Simpan Draft',
           ),
@@ -292,7 +356,7 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
             icon: _builderState.isSaving 
               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
               : const Icon(Icons.send, size: 16),
-            label: const Text('Publish'),
+            label: const Text('Publish', style: TextStyle(fontWeight: FontWeight.bold)),
             style: FilledButton.styleFrom(
               backgroundColor: _primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

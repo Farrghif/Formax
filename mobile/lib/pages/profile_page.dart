@@ -5,6 +5,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -409,12 +410,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildAvatarImage() {
     if (_pickedImage != null) {
+      if (kIsWeb) {
+        return Image.network(_pickedImage!.path, width: 110, height: 110, fit: BoxFit.cover);
+      }
       return Image.file(_pickedImage!, width: 110, height: 110, fit: BoxFit.cover);
     }
     if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
       String url = _avatarUrl!;
       if (url.contains('localhost')) {
-        url = url.replaceAll('localhost', '10.0.2.2');
+        final apiHost = Uri.parse(ApiService.baseUrl).host;
+        url = url.replaceAll('localhost', apiHost);
       }
       return Image.network(
         url,

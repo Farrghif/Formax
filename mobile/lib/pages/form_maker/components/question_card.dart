@@ -38,10 +38,7 @@ class QuestionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? const Color(0xFF4F46E5) : Colors.transparent,
-            width: 2,
-          ),
+          border: isActive ? const Border(left: BorderSide(color: Color(0xFF4F46E5), width: 4)) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: isActive ? 0.08 : 0.03),
@@ -52,6 +49,16 @@ class QuestionCard extends StatelessWidget {
         ),
         child: Column(
           children: [
+            if (isActive)
+              Center(
+                child: ReorderableDragStartListener(
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.only(bottom: 12.0),
+                    child: Icon(Icons.drag_indicator, size: 20, color: Colors.black26),
+                  ),
+                ),
+              ),
             isActive
                 ? QuestionEditor(
                     question: question,

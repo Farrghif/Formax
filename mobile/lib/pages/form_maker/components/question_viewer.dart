@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
 
 class QuestionViewer extends StatelessWidget {
@@ -179,7 +180,9 @@ class QuestionViewer extends StatelessWidget {
         if (question.imageUrl != null && question.imageUrl!.isNotEmpty) {
           return Padding(
             padding: const EdgeInsets.only(top: 8.0),
-            child: Image.file(File(question.imageUrl!), fit: BoxFit.cover),
+            child: (kIsWeb || question.imageUrl!.startsWith('http'))
+                ? Image.network(question.imageUrl!, fit: BoxFit.cover)
+                : Image.file(File(question.imageUrl!), fit: BoxFit.cover),
           );
         }
         return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
 
 class QuestionEditor extends StatefulWidget {
@@ -160,7 +161,9 @@ class _QuestionEditorState extends State<QuestionEditor> {
       if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
         return Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Image.file(File(q.imageUrl!), fit: BoxFit.cover),
+          child: (kIsWeb || q.imageUrl!.startsWith('http'))
+              ? Image.network(q.imageUrl!, fit: BoxFit.cover)
+              : Image.file(File(q.imageUrl!), fit: BoxFit.cover),
         );
       }
       return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
@@ -284,21 +287,26 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextFormField(
-                    initialValue: opt.label,
-                    onChanged: (v) {
-                      opt.label = v;
-                      widget.onChanged();
-                    },
-                    style: const TextStyle(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Opsi ${i + 1}',
-                      border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                  ),
+                  child: opt.isOther
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: Colors.black87)),
+                      )
+                    : TextFormField(
+                        initialValue: opt.label,
+                        onChanged: (v) {
+                          opt.label = v;
+                          widget.onChanged();
+                        },
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Opsi ${i + 1}',
+                          border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
                 ),
                 if (q.options.length > 1)
                   IconButton(
@@ -322,14 +330,23 @@ class _QuestionEditorState extends State<QuestionEditor> {
               color: Colors.black26,
             ),
             const SizedBox(width: 12),
-            TextButton(
-              onPressed: () {
-                q.options.add(QuestionOptionData(label: 'Opsi baru'));
+            InkWell(
+              onTap: () {
+                q.options.add(QuestionOptionData(label: 'Opsi ${q.options.length + 1}'));
                 widget.onChanged();
               },
-              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
               child: const Text('Tambah opsi', style: TextStyle(color: Colors.black54, fontSize: 14)),
             ),
+            if (!q.options.any((o) => o.isOther) && (q.type == QuestionType.multipleChoice || q.type == QuestionType.checkboxes)) ...[
+              const Text(' atau ', style: TextStyle(color: Colors.black54, fontSize: 14)),
+              InkWell(
+                onTap: () {
+                  q.options.add(QuestionOptionData(label: 'Lainnya', isOther: true));
+                  widget.onChanged();
+                },
+                child: const Text('tambahkan "Lainnya"', style: TextStyle(color: Color(0xFF4F46E5), fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+            ]
           ],
         )
       ],

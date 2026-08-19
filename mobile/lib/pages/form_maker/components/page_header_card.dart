@@ -28,10 +28,7 @@ class PageHeaderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? const Color(0xFF4F46E5) : Colors.transparent, 
-            width: 2
-          ),
+          border: isActive ? const Border(left: BorderSide(color: Color(0xFF4F46E5), width: 4)) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05), 

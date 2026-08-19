@@ -1,11 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // Gunakan 10.0.2.2 untuk Android Emulator mengakses localhost komputer host.
-  // Jika menggunakan real device, ganti dengan IP lokal komputer host (misal: 192.168.1.xxx)
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // Base URL dikonfigurasi via --dart-define=API_URL=...
+  // Default: 10.0.2.2:8000 (untuk Android Emulator)
+  // HP fisik via USB: jalankan `adb reverse tcp:8000 tcp:8000`
+  //   lalu `flutter run --dart-define=API_URL=http://127.0.0.1:8000`
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+    if (kIsWeb) return 'http://127.0.0.1:8000';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8000';
+    return 'http://127.0.0.1:8000';
+  }
 
   static String? _sessionToken;
 

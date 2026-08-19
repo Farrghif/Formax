@@ -257,7 +257,11 @@ class FormBuilderState extends ChangeNotifier {
 
       for (final q in page.questions) {
         final opts = q.options.asMap().entries.map((e) {
-          return {'label': e.value.label, 'order_index': e.key};
+          return {
+            'label': e.value.label, 
+            'order_index': e.key,
+            'is_other': e.value.isOther,
+          };
         }).toList();
 
         result.add({

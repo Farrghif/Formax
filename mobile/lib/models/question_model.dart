@@ -71,11 +71,12 @@ extension QuestionTypeExtension on QuestionType {
 class QuestionOptionData {
   String id;
   String label;
-  QuestionOptionData({String? id, required this.label}) 
+  bool isOther;
+  QuestionOptionData({String? id, required this.label, this.isOther = false}) 
       : id = id ?? UniqueKey().toString();
 
   QuestionOptionData clone() {
-    return QuestionOptionData(id: UniqueKey().toString(), label: label);
+    return QuestionOptionData(id: UniqueKey().toString(), label: label, isOther: isOther);
   }
 }
 

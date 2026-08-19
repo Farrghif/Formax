@@ -18,7 +18,9 @@ class TemplateCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => FormMakerPage(initialTemplate: template)),
+          MaterialPageRoute(
+            builder: (context) => FormMakerPage(initialTemplate: template),
+          ),
         );
       },
       child: Container(
@@ -67,10 +69,7 @@ class TemplateCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     template.subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
