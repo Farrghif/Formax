@@ -14,6 +14,8 @@ enum QuestionType {
   date,
   time,
   pageBreak,
+  image,
+  text,
 }
 
 extension QuestionTypeExtension on QuestionType {
@@ -32,6 +34,8 @@ extension QuestionTypeExtension on QuestionType {
       case QuestionType.date: return 'Tanggal';
       case QuestionType.time: return 'Waktu';
       case QuestionType.pageBreak: return 'Pemisah Halaman';
+      case QuestionType.image: return 'Gambar';
+      case QuestionType.text: return 'Teks';
     }
   }
 
@@ -50,6 +54,8 @@ extension QuestionTypeExtension on QuestionType {
       case QuestionType.date: return 'date';
       case QuestionType.time: return 'text';
       case QuestionType.pageBreak: return 'page_break'; // Custom handling for backend
+      case QuestionType.image: return 'image'; // Sent as image block
+      case QuestionType.text: return 'text_block'; // Sent as static text block
     }
   }
 
@@ -81,6 +87,7 @@ class QuestionData {
   bool isRequired;
   List<QuestionOptionData> options;
   List<String> rowLabels;
+  String? imageUrl; // For storing local path or base64
   
   // Linear scale & Rating
   int scaleMin;
@@ -103,6 +110,7 @@ class QuestionData {
     this.label = 'Pertanyaan',
     this.description = '',
     this.isRequired = false,
+    this.imageUrl,
     List<QuestionOptionData>? options,
     List<String>? rowLabels,
     this.scaleMin = 1,
@@ -124,6 +132,7 @@ class QuestionData {
       type: type,
       label: label,
       description: description,
+      imageUrl: imageUrl,
       isRequired: isRequired,
       options: options.map((e) => e.clone()).toList(),
       rowLabels: List.from(rowLabels),

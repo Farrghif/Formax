@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../models/question_model.dart';
 
@@ -174,6 +175,17 @@ class QuestionViewer extends StatelessWidget {
             border: UnderlineInputBorder(),
           ),
         );
+      case QuestionType.image:
+        if (question.imageUrl != null && question.imageUrl!.isNotEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Image.file(File(question.imageUrl!), fit: BoxFit.cover),
+          );
+        }
+        return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
+      case QuestionType.text:
+      case QuestionType.pageBreak:
+        return const SizedBox.shrink();
       default:
         return Text(
           'Preview untuk tipe ${question.type.label} belum didukung', 

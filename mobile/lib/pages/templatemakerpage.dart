@@ -636,8 +636,13 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       case QuestionType.date:
         return _previewTextField('Tanggal', icon: Icons.calendar_today);
       case QuestionType.time:
-        return _previewTextField('Waktu', icon: Icons.access_time);
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('Waktu (HH:MM)', style: TextStyle(color: Colors.black54)),
+        );
       case QuestionType.pageBreak:
+      case QuestionType.image:
+      case QuestionType.text:
         return const SizedBox.shrink();
     }
   }

@@ -76,22 +76,24 @@ class QuestionCard extends StatelessWidget {
                     tooltip: 'Hapus',
                     onPressed: onDelete,
                   ),
-                  Container(
-                    height: 24, 
-                    width: 1, 
-                    color: Colors.black12, 
-                    margin: const EdgeInsets.symmetric(horizontal: 8)
-                  ),
-                  const Text('Wajib', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87)),
-                  Switch(
-                    value: question.isRequired,
-                    onChanged: onRequiredChanged,
-                    activeThumbColor: const Color(0xFF4F46E5),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.black54),
-                    onPressed: () {},
-                  ),
+                  if (question.type != QuestionType.image && question.type != QuestionType.text) ...[
+                    Container(
+                      height: 24, 
+                      width: 1, 
+                      color: Colors.black12, 
+                      margin: const EdgeInsets.symmetric(horizontal: 8)
+                    ),
+                    const Text('Wajib', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87)),
+                    Switch(
+                      value: question.isRequired,
+                      onChanged: onRequiredChanged,
+                      activeThumbColor: const Color(0xFF4F46E5),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert, color: Colors.black54),
+                      onPressed: () {},
+                    ),
+                  ]
                 ],
               ),
             ]

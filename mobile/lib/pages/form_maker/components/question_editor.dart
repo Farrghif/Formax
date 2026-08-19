@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../models/question_model.dart';
 
@@ -81,7 +82,9 @@ class _QuestionEditorState extends State<QuestionEditor> {
                     },
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
-                      hintText: 'Pertanyaan',
+                      hintText: widget.question.type == QuestionType.text 
+                          ? 'Judul Teks' 
+                          : (widget.question.type == QuestionType.image ? 'Caption (opsional)' : 'Pertanyaan'),
                       filled: true,
                       fillColor: const Color(0xFFF3F4F6),
                       border: OutlineInputBorder(
@@ -110,10 +113,11 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 1,
-              child: InkWell(
+            if (widget.question.type != QuestionType.image && widget.question.type != QuestionType.text) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: InkWell(
                 onTap: widget.onTypeChangeTap,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
@@ -138,6 +142,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 ),
               ),
             ),
+            ]
           ],
         ),
         const SizedBox(height: 20),
@@ -150,6 +155,16 @@ class _QuestionEditorState extends State<QuestionEditor> {
 
   Widget _buildEditorBody() {
     final q = widget.question;
+
+    if (q.type == QuestionType.image) {
+      if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Image.file(File(q.imageUrl!), fit: BoxFit.cover),
+        );
+      }
+      return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
+    }
 
     if (q.type == QuestionType.linearScale) {
       return Column(

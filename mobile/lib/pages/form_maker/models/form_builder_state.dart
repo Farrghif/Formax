@@ -131,13 +131,14 @@ class FormBuilderState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addQuestion(String pageId, QuestionType type) {
+  void addQuestion(String pageId, QuestionType type, {String? imageUrl}) {
     final pageIndex = pages.indexWhere((p) => p.id == pageId);
     if (pageIndex == -1) return;
 
     final newQuestion = QuestionData(
       type: type,
       options: type.hasOptions ? [QuestionOptionData(label: 'Opsi 1')] : [],
+      imageUrl: imageUrl,
     );
 
     // Insert after active question if possible
@@ -193,7 +194,18 @@ class FormBuilderState extends ChangeNotifier {
         options: [QuestionOptionData(label: 'Opsi 1')],
       )
     ]);
-    pages.add(newPage);
+    
+    if (activePageId != null) {
+      final activeIndex = pages.indexWhere((p) => p.id == activePageId);
+      if (activeIndex != -1) {
+        pages.insert(activeIndex + 1, newPage);
+      } else {
+        pages.add(newPage);
+      }
+    } else {
+      pages.add(newPage);
+    }
+    
     activePageId = newPage.id;
     activeQuestionId = null;
     notifyListeners();
@@ -255,6 +267,7 @@ class FormBuilderState extends ChangeNotifier {
           'is_required': q.isRequired,
           'order_index': orderIndex++,
           'options': opts,
+          if (q.imageUrl != null) 'image_url': q.imageUrl,
           // You can also add rating/scale limits here if API supports it in the future
         });
       }

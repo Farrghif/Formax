@@ -7,6 +7,7 @@ import 'form_maker/editor_canvas.dart';
 import 'form_maker/preview_canvas.dart';
 import 'form_maker/components/builder_toolbar.dart';
 import '../models/question_model.dart'; // Ensure QuestionType is imported for toolbar
+import 'package:image_picker/image_picker.dart';
 
 class FormMakerPage extends StatefulWidget {
   final FormTemplate? initialTemplate;
@@ -166,6 +167,15 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     });
   }
 
+  void _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
+      _builderState.addQuestion(activePageId, QuestionType.image, imageUrl: pickedFile.path);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -184,17 +194,36 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
                 ],
               ),
           floatingActionButton: (!_isPreviewMode && _tabController.index == 0) 
-            ? BuilderToolbar(
-                onAddQuestion: () {
-                  final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-                  _builderState.addQuestion(activePageId, QuestionType.multipleChoice);
-                },
-                onAddPage: () {
-                  _builderState.addPage();
-                },
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  BuilderToolbar(
+                    onAddText: () {
+                      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
+                      _builderState.addQuestion(activePageId, QuestionType.text);
+                    },
+                    onAddImage: _pickImage,
+                    onAddPage: () {
+                      _builderState.addPage();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  FloatingActionButton(
+                    heroTag: 'add_question_btn',
+                    onPressed: () {
+                      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
+                      _builderState.addQuestion(activePageId, QuestionType.multipleChoice);
+                    },
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    child: const Icon(Icons.add, size: 28),
+                  ),
+                ],
               )
             : null,
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       }
     );
