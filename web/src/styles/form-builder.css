@@ -2,6 +2,234 @@
    FORM BUILDER PAGE STYLES
    =================================================== */
 
+/* Google Fonts for WYSIWYG Editor */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Nunito:wght@300;400;600;700&family=Raleway:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+/* ---- Quill Custom Font Registration ---- */
+.ql-font-inter { font-family: 'Inter', sans-serif; }
+.ql-font-roboto { font-family: 'Roboto', sans-serif; }
+.ql-font-poppins { font-family: 'Poppins', sans-serif; }
+.ql-font-montserrat { font-family: 'Montserrat', sans-serif; }
+.ql-font-open-sans { font-family: 'Open Sans', sans-serif; }
+.ql-font-lato { font-family: 'Lato', sans-serif; }
+.ql-font-nunito { font-family: 'Nunito', sans-serif; }
+.ql-font-raleway { font-family: 'Raleway', sans-serif; }
+.ql-font-source-code-pro { font-family: 'Source Code Pro', monospace; }
+.ql-font-fira-code { font-family: 'Fira Code', monospace; }
+.ql-font-jetbrains-mono { font-family: 'JetBrains Mono', monospace; }
+.ql-font-arial { font-family: Arial, Helvetica, sans-serif; }
+.ql-font-georgia { font-family: Georgia, 'Times New Roman', serif; }
+.ql-font-times-new-roman { font-family: 'Times New Roman', Times, serif; }
+.ql-font-courier-new { font-family: 'Courier New', Courier, monospace; }
+.ql-font-comic-sans { font-family: 'Comic Sans MS', 'Comic Sans', cursive; }
+
+/* ---- Quill Font Picker Labels ---- */
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="inter"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="inter"]::before { content: 'Inter'; font-family: 'Inter', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before { content: 'Roboto'; font-family: 'Roboto', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="poppins"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="poppins"]::before { content: 'Poppins'; font-family: 'Poppins', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="montserrat"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="montserrat"]::before { content: 'Montserrat'; font-family: 'Montserrat', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="open-sans"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="open-sans"]::before { content: 'Open Sans'; font-family: 'Open Sans', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="lato"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="lato"]::before { content: 'Lato'; font-family: 'Lato', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="nunito"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="nunito"]::before { content: 'Nunito'; font-family: 'Nunito', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="raleway"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="raleway"]::before { content: 'Raleway'; font-family: 'Raleway', sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="source-code-pro"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="source-code-pro"]::before { content: 'Source Code Pro'; font-family: 'Source Code Pro', monospace; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="fira-code"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="fira-code"]::before { content: 'Fira Code'; font-family: 'Fira Code', monospace; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="jetbrains-mono"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="jetbrains-mono"]::before { content: 'JetBrains Mono'; font-family: 'JetBrains Mono', monospace; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: 'Arial'; font-family: Arial, sans-serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before { content: 'Georgia'; font-family: Georgia, serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="courier-new"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="courier-new"]::before { content: 'Courier New'; font-family: 'Courier New', monospace; }
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="comic-sans"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="comic-sans"]::before { content: 'Comic Sans'; font-family: 'Comic Sans MS', cursive; }
+
+/* ---- Quill Size Picker Labels ---- */
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="10px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10px"]::before { content: '10px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="12px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12px"]::before { content: '12px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="14px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14px"]::before { content: '14px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="16px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before { content: '16px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="18px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before { content: '18px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before { content: '20px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { content: '24px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="28px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28px"]::before { content: '28px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="32px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="32px"]::before { content: '32px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { content: '36px'; }
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { content: '48px'; }
+
+/* Size items actual font size applied */
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10px"]::before { font-size: 10px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12px"]::before { font-size: 12px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14px"]::before { font-size: 14px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before { font-size: 16px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before { font-size: 18px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before { font-size: 20px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24px"]::before { font-size: 24px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28px"]::before { font-size: 28px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="32px"]::before { font-size: 32px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36px"]::before { font-size: 36px; }
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { font-size: 48px; }
+
+/* ---- Quill Enhanced Toolbar Styles ---- */
+.ql-toolbar.ql-snow {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px 6px !important;
+  padding: 8px 12px !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.ql-toolbar.ql-snow .ql-formats {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  margin-right: 6px !important;
+  margin-bottom: 0 !important;
+  padding-right: 6px !important;
+  border-right: 1px solid #e2e8f0;
+}
+
+.ql-toolbar.ql-snow .ql-formats:last-child {
+  border-right: none;
+  padding-right: 0;
+  margin-right: 0;
+}
+
+/* Pickers (Font, Size, Header) */
+.ql-snow .ql-picker {
+  height: 30px !important;
+  line-height: 28px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background-color: #ffffff !important;
+  transition: all 0.15s ease;
+}
+
+.ql-snow .ql-picker:hover {
+  border-color: #3b82f6 !important;
+}
+
+.ql-snow .ql-picker .ql-picker-label {
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  border: none !important;
+  font-size: 13px !important;
+  color: #334155 !important;
+  font-weight: 500 !important;
+}
+
+.ql-snow .ql-picker.ql-font {
+  width: 130px !important;
+}
+
+.ql-snow .ql-picker.ql-size {
+  width: 75px !important;
+}
+
+.ql-snow .ql-picker.ql-header {
+  width: 95px !important;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-options,
+.ql-snow .ql-picker.ql-size .ql-picker-options,
+.ql-snow .ql-picker.ql-header .ql-picker-options {
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 4px !important;
+}
+
+/* Buttons */
+.ql-snow .ql-toolbar button {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  padding: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.15s ease;
+}
+
+.ql-snow .ql-toolbar button:hover,
+.ql-snow .ql-toolbar button.ql-active {
+  background-color: #e2e8f0 !important;
+  color: #1e40af !important;
+}
+
+.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+  stroke: #1d4ed8 !important;
+}
+
+.ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: #1d4ed8 !important;
+}
+
+/* Code block styling */
+.ql-snow .ql-editor pre.ql-syntax,
+.ql-snow .ql-editor .ql-code-block-container {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-family: 'Fira Code', 'Source Code Pro', 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin: 8px 0;
+  border-left: 3px solid #3b82f6;
+}
+
+.ql-snow .ql-editor code {
+  background: #f1f5f9;
+  color: #e11d48;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Source Code Pro', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.ql-snow .ql-editor blockquote {
+  border-left: 4px solid #3b82f6;
+  background: #f0f6ff;
+  margin: 8px 0;
+  padding: 12px 18px;
+  border-radius: 0 8px 8px 0;
+  color: #334155;
+  font-style: italic;
+}
+
 /* ---- Builder Root ---- */
 .fb-root {
   font-family: 'Inter', system-ui, sans-serif;
@@ -354,9 +582,58 @@
 
 .fb-question-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.fb-question-top-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- Question WYSIWYG Editor ---- */
+.fb-question-wysiwyg-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  margin-bottom: 14px;
+}
+
+.fb-question-wysiwyg-wrap:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.fb-question-wysiwyg-wrap .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  padding: 6px 8px;
+  flex-wrap: wrap;
+}
+
+.fb-question-wysiwyg-wrap .ql-container.ql-snow {
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  min-height: 72px;
+}
+
+.fb-question-wysiwyg-wrap .ql-editor {
+  padding: 12px 14px;
+  min-height: 72px;
+  color: #1e293b;
+}
+
+.fb-question-wysiwyg-wrap .ql-editor.ql-blank::before {
+  color: #94a3b8;
+  font-style: normal;
 }
 
 .fb-question-label-input {

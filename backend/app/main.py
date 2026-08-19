@@ -10,27 +10,30 @@ from sqlalchemy import text
 # Buat semua tabel otomatis kalau belum ada (development).
 Base.metadata.create_all(bind=engine)
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import ProgrammingError
 
 # Auto-migrate: pastikan kolom banner_url ada di tabel forms & templates
 with engine.connect() as conn:
-    try:
+    def column_exists(table, column):
+        return conn.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = :table AND column_name = :column"
+            ),
+            {"table": table, "column": column},
+        ).first() is not None
+
+    if not column_exists("forms", "banner_url"):
         conn.execute(text("ALTER TABLE forms ADD COLUMN banner_url VARCHAR;"))
-    except OperationalError:
-        pass
-        
-    try:
+
+    if not column_exists("templates", "banner_url"):
         conn.execute(text("ALTER TABLE templates ADD COLUMN banner_url VARCHAR;"))
-    except OperationalError:
-        pass
-        
-    try:
+
+    if not column_exists("question_options", "is_correct"):
         conn.execute(text("ALTER TABLE question_options ADD COLUMN is_correct BOOLEAN;"))
-    except OperationalError:
-        pass
-        
+
     # Backfill: opsi lama yang belum punya nilai dianggap bukan jawaban benar
-    conn.execute(text("UPDATE question_options SET is_correct = 0 WHERE is_correct IS NULL;"))
+    conn.execute(text("UPDATE question_options SET is_correct = FALSE WHERE is_correct IS NULL;"))
     conn.commit()
 
 

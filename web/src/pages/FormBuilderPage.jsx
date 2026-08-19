@@ -17,6 +17,35 @@ import {
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
 
+// Register custom fonts with Quill
+const Quill = ReactQuill.Quill;
+const Font = Quill.import('formats/font');
+Font.whitelist = [
+  false, // default
+  'inter',
+  'roboto',
+  'poppins',
+  'montserrat',
+  'open-sans',
+  'lato',
+  'nunito',
+  'raleway',
+  'source-code-pro',
+  'fira-code',
+  'jetbrains-mono',
+  'arial',
+  'georgia',
+  'times-new-roman',
+  'courier-new',
+  'comic-sans',
+];
+Quill.register(Font, true);
+
+// Register custom font sizes
+const Size = Quill.import('formats/size');
+Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
+Quill.register(Size, true);
+
 const QUESTION_TYPES = [
   { value: 'text', label: 'Teks' },
   { value: 'single_choice', label: 'Pilihan Ganda' },
@@ -26,16 +55,41 @@ const QUESTION_TYPES = [
   { value: 'file_upload', label: 'Upload File' },
 ];
 
+// Full toolbar for form description
 const QUILL_MODULES = {
   toolbar: [
-    ['bold', 'italic', 'underline'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link'],
+    [{ font: Font.whitelist }, { size: Size.whitelist }, { header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    ['code-block', 'blockquote'],
+    [{ list: 'ordered' }, { list: 'bullet' }, { align: [] }],
+    ['link', 'image', 'video'],
     ['clean'],
   ],
 };
 
-const QUILL_FORMATS = ['bold', 'italic', 'underline', 'list', 'link'];
+// Sleek, compact single-line toolbar for question labels
+const QUILL_QUESTION_MODULES = {
+  toolbar: [
+    [{ font: Font.whitelist }, { size: Size.whitelist }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    ['code-block', 'blockquote'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link', 'image'],
+    ['clean'],
+  ],
+};
+
+const QUILL_FORMATS = [
+  'font', 'size', 'header',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background',
+  'script',
+  'blockquote', 'code-block',
+  'list', 'indent', 'direction', 'align',
+  'link', 'image', 'video', 'formula',
+];
 
 function generateSlug(title) {
   return title
@@ -757,15 +811,9 @@ export default function FormBuilderPage() {
                       className={`fb-question-card ${isActive ? 'active' : ''}`}
                       onClick={() => setActiveQuestion(qKey)}
                     >
-                      {/* Top: label + type */}
+                      {/* Top: type selector */}
                       <div className="fb-question-top">
-                        <input
-                          className="fb-question-label-input"
-                          type="text"
-                          placeholder="Tulis pertanyaan di sini..."
-                          value={q.label}
-                          onChange={(e) => updateQuestionLocal(qIdx, { label: e.target.value })}
-                        />
+                        <div className="fb-question-top-label">Pertanyaan {qIdx + 1}</div>
                         <select
                           className="fb-type-select"
                           value={q.type}
@@ -783,6 +831,18 @@ export default function FormBuilderPage() {
                             <option key={t.value} value={t.value}>{t.label}</option>
                           ))}
                         </select>
+                      </div>
+
+                      {/* WYSIWYG Question Label */}
+                      <div className="fb-question-wysiwyg-wrap">
+                        <ReactQuill
+                          theme="snow"
+                          value={q.label}
+                          onChange={(val) => updateQuestionLocal(qIdx, { label: val })}
+                          modules={QUILL_QUESTION_MODULES}
+                          formats={QUILL_FORMATS}
+                          placeholder="Tulis pertanyaan di sini..."
+                        />
                       </div>
 
                       {/* Options (for single_choice, checkbox, dropdown) */}

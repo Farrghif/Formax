@@ -687,10 +687,11 @@ export default function FormFillPage() {
             return (
               <div key={q.id} className="question-card" id={`q-${q.id}`}>
                 <div className="question-card-header">
-                  <h3 className="question-label">
-                    {globalNumber}. {q.label}
+                  <div className="question-label">
+                    <span className="question-number">{globalNumber}.</span>
+                    <div className="question-label-content" dangerouslySetInnerHTML={{ __html: q.label }} />
                     {q.is_required && <span className="required-star">*</span>}
-                  </h3>
+                  </div>
                   <div className="question-header-right">
                     <span className="question-type-tag">{getTypeLabel(q.type)}</span>
                     {points !== null && <span className="points-badge">{points} poin</span>}
