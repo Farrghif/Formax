@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/form_model.dart';
 import '../models/form_template.dart';
 import '../pages/historypage.dart';
-import '../pages/templatemakerpage.dart';
+import '../pages/formmakerpage.dart';
 
 class SearchResultsView extends StatelessWidget {
   final Map<String, dynamic> searchData;
@@ -77,7 +77,7 @@ class SearchResultsView extends StatelessWidget {
         final result = await Navigator.push<FormTemplate>(
           context,
           MaterialPageRoute(
-            builder: (_) => const TemplateMakerPage(),
+            builder: (_) => const FormMakerPage(),
           ),
         );
         if (result != null) {

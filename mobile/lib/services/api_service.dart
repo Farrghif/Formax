@@ -1,11 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // Gunakan 10.0.2.2 untuk Android Emulator mengakses localhost komputer host.
-  // Jika menggunakan real device, ganti dengan IP lokal komputer host (misal: 192.168.1.xxx)
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // Base URL dikonfigurasi via --dart-define=API_URL=...
+  // Default: 10.0.2.2:8000 (untuk Android Emulator)
+  // HP fisik via USB: jalankan `adb reverse tcp:8000 tcp:8000`
+  //   lalu `flutter run --dart-define=API_URL=http://127.0.0.1:8000`
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+    if (kIsWeb) return 'http://127.0.0.1:8000';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8000';
+    return 'http://127.0.0.1:8000';
+  }
 
   static String? _sessionToken;
 
@@ -349,6 +358,54 @@ class ApiService {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
       return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Fungsi Update Profile
+  static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> payload) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': data['detail'] ?? 'Failed to update profile'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Fungsi Upload File (untuk avatar, file upload question, dll.)
+  static Future<Map<String, dynamic>> uploadFile(dynamic file) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/uploads'));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final data = jsonDecode(responseBody);
+
+      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+        return {'success': true, 'file_url': data['file_url']};
+      }
+      return {'success': false, 'message': data['detail'] ?? 'Upload failed'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -37,36 +37,31 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Top image
-            Align(
-              alignment: Alignment.topCenter,
-              child: Image.asset(
-                'assets/images/atasloginregister.png',
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+      body: Stack(
+        children: [
+          // Top image
+          Align(
+            alignment: Alignment.topCenter,
+            child: Image.asset(
+              'assets/images/atasloginregister.png',
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
+          ),
 
-            // Align(
-            //   alignment: Alignment.center,
-            //   child: Image.asset(
-            //     'assets/icons/logoForm4x.png',
-            //     width: double.infinity,
-            //     fit: BoxFit.cover,
-            //   ),
-            // ),
-
-            // Bottom image
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Image.asset('assets/images/bawahloginregister.png'),
+          // Bottom image
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Image.asset(
+              'assets/images/bawahloginregister.png',
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
+          ),
 
-            // Main content
-            Center(
+          // Main content
+          SafeArea(
+            child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
@@ -453,8 +448,8 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-          ],
-        ),
+          ), // closes SafeArea
+        ],
       ),
     );
   }

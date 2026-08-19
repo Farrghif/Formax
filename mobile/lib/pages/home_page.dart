@@ -12,10 +12,11 @@ import '../data/mock_data.dart';
 import '../widgets/template_card.dart';
 import '../widgets/search_results_view.dart';
 import 'login_page.dart';
-import 'templatemakerpage.dart';
+import 'formmakerpage.dart';
 import 'historypage.dart';
 import 'join_link_page.dart';
 import 'scan_qr_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -118,8 +119,10 @@ class _HomePageState extends State<HomePage> {
           child: Padding(
             padding: const EdgeInsets.only(left: 10, right: 5),
             child: SvgPicture.asset(
-              'assets/icons/pP.svg',
-              height: 28,
+              'assets/icons/logoss.svg',
+              width: 27,
+              height: 27,
+              fit: BoxFit.cover,
               colorFilter: const ColorFilter.mode(
                 Colors.white,
                 BlendMode.srcIn,
@@ -578,7 +581,7 @@ class _HomePageState extends State<HomePage> {
                   final result = await Navigator.push<FormTemplate>(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const TemplateMakerPage(),
+                      builder: (_) => const FormMakerPage(),
                     ),
                   );
                   if (result != null) {
@@ -726,22 +729,40 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Color(0xFFE5E7EB),
-                  child: Icon(Icons.person, color: Colors.grey),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _fullName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF374151),
-                    ),
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilePage()),
+                    ).then((updated) {
+                      if (updated == true && mounted) {
+                        _loadUserProfile();
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Color(0xFFE5E7EB),
+                        child: Icon(Icons.person, color: Colors.grey),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _fullName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.logout, color: Color(0xFF9CA3AF)),
                   onPressed: () async {

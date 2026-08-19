@@ -92,5 +92,9 @@ Buat file `.env` pada direktori `backend/` berdasarkan `.env.example`:
 ---
 
 ## Lisensi
+<<<<<<< HEAD
 
 Proyek ini bersifat internal dan tidak dipublikasikan.
+=======
+-
+

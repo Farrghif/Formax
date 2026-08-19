@@ -25,6 +25,7 @@ class QuestionType(str, enum.Enum):
     dropdown = "dropdown"
     date = "date"
     file_upload = "file_upload"
+    page_break = "page_break"
 
 
 class FormStatus(str, enum.Enum):
