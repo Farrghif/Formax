@@ -258,13 +258,17 @@ class _QuestionEditorState extends State<QuestionEditor> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  q.type == QuestionType.multipleChoice 
-                    ? Icons.radio_button_unchecked 
-                    : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
-                  size: 20, 
-                  color: Colors.black26,
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Icon(
+                    q.type == QuestionType.multipleChoice 
+                      ? Icons.radio_button_unchecked 
+                      : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
+                    size: 20, 
+                    color: Colors.black26,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -273,29 +277,29 @@ class _QuestionEditorState extends State<QuestionEditor> {
                         padding: EdgeInsets.symmetric(vertical: 12.0),
                         child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: Colors.black87)),
                       )
-                    : TextFormField(
-                        initialValue: opt.label,
-                        onChanged: (v) {
-                          opt.label = v;
+                    : RichTextField(
+                        key: ValueKey('opt_${opt.id}'),
+                        initialHtml: opt.label,
+                        onChanged: (html) {
+                          opt.label = html;
                           widget.onChanged();
                         },
-                        style: const TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Opsi ${i + 1}',
-                          border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
+                        hintText: 'Opsi ${i + 1}',
+                        compact: true,
+                        minLines: 1,
+                        maxLines: 2,
                       ),
                 ),
                 if (q.options.length > 1)
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Colors.black38),
-                    onPressed: () {
-                      q.options.removeAt(i);
-                      widget.onChanged();
-                    },
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: Colors.black38),
+                      onPressed: () {
+                        q.options.removeAt(i);
+                        widget.onChanged();
+                      },
+                    ),
                   ),
               ],
             ),

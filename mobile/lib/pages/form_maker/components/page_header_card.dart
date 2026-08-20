@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/form_builder_state.dart';
+import '../../../widgets/rich_text_field.dart';
+import '../../../widgets/rich_text_view.dart';
 
 class PageHeaderCard extends StatelessWidget {
   final FormPageModel page;
@@ -18,6 +20,8 @@ class PageHeaderCard extends StatelessWidget {
     required this.onChanged,
     required this.onDelete,
   });
+
+  bool _looksLikeHtml(String s) => s.contains('<');
 
   @override
   Widget build(BuildContext context) {
@@ -74,48 +78,71 @@ class PageHeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
+                  // --- Title Field ---
                   isActive
-                      ? TextField(
-                          controller: TextEditingController(text: page.title)..selection = TextSelection.collapsed(offset: page.title.length),
-                          onChanged: (v) { page.title = v; onChanged(); },
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
-                          decoration: InputDecoration(
-                            hintText: isFirstPage ? 'Judul Formulir' : 'Judul Bagian',
-                            border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          maxLines: null,
+                      ? RichTextField(
+                          initialHtml: page.title,
+                          onChanged: (html) {
+                            page.title = html;
+                            onChanged();
+                          },
+                          hintText: isFirstPage ? 'Judul Formulir' : 'Judul Bagian',
+                          minLines: 1,
+                          maxLines: 3,
                         )
-                      : Text(
-                          page.title.isEmpty ? (isFirstPage ? 'Judul Formulir' : 'Judul Bagian') : page.title,
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
+                      : _buildTitleView(),
                   const SizedBox(height: 16),
+                  // --- Description Field ---
                   isActive
-                      ? TextField(
-                          controller: TextEditingController(text: page.description)..selection = TextSelection.collapsed(offset: page.description.length),
-                          onChanged: (v) { page.description = v; onChanged(); },
-                          style: const TextStyle(fontSize: 15, color: Colors.black54),
-                          decoration: const InputDecoration(
-                            hintText: 'Deskripsi',
-                            border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          maxLines: null,
+                      ? RichTextField(
+                          initialHtml: page.description,
+                          onChanged: (html) {
+                            page.description = html;
+                            onChanged();
+                          },
+                          hintText: 'Deskripsi',
+                          minLines: 1,
+                          maxLines: 3,
                         )
-                      : (page.description.isNotEmpty 
-                          ? Text(page.description, style: const TextStyle(fontSize: 15, color: Colors.black54))
-                          : (isActive ? const SizedBox() : Container())),
+                      : _buildDescriptionView(),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTitleView() {
+    final displayText = page.title.isEmpty
+        ? (isFirstPage ? 'Judul Formulir' : 'Judul Bagian')
+        : page.title;
+
+    if (_looksLikeHtml(displayText)) {
+      return RichTextView(
+        html: displayText,
+        textStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+      );
+    }
+    return Text(
+      displayText,
+      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+    );
+  }
+
+  Widget _buildDescriptionView() {
+    if (page.description.isEmpty) return const SizedBox.shrink();
+
+    if (_looksLikeHtml(page.description)) {
+      return RichTextView(
+        html: page.description,
+        textStyle: const TextStyle(fontSize: 15, color: Colors.black54),
+      );
+    }
+    return Text(
+      page.description,
+      style: const TextStyle(fontSize: 15, color: Colors.black54),
     );
   }
 }
