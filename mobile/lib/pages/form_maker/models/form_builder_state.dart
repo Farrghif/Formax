@@ -52,6 +52,7 @@ class FormBuilderState extends ChangeNotifier {
       formDescription: template.subtitle,
       pages: [],
     );
+    state.pages.clear(); // Clear the default page added by the constructor
 
     final questionsJson = template.questionsJson;
     if (questionsJson == null || questionsJson.isEmpty) {
@@ -108,8 +109,7 @@ class FormBuilderState extends ChangeNotifier {
         ),
       );
     }
-    
-    // Add the last page
+
     state.pages.add(currentPage);
 
     // Ensure at least one question
@@ -197,22 +197,45 @@ class FormBuilderState extends ChangeNotifier {
     notifyListeners();
   }
 
+
+
+
   void addPage() {
-    final newPage = FormPageModel(title: 'Bagian Baru', questions: [
-      QuestionData(
-        type: QuestionType.multipleChoice,
-        options: [QuestionOptionData(label: 'Opsi 1')],
-      )
-    ]);
+    FormPageModel newPage = FormPageModel(title: 'Bagian Baru', questions: []);
     
     if (activePageId != null) {
       final activeIndex = pages.indexWhere((p) => p.id == activePageId);
       if (activeIndex != -1) {
+        final currentPage = pages[activeIndex];
+        
+        // Split questions if there is an active question
+        if (activeQuestionId != null) {
+          final qIndex = currentPage.questions.indexWhere((q) => q.id == activeQuestionId);
+          if (qIndex != -1) {
+            // Move questions after qIndex to new page
+            final questionsToMove = currentPage.questions.sublist(qIndex + 1);
+            newPage.questions.addAll(questionsToMove);
+            currentPage.questions.removeRange(qIndex + 1, currentPage.questions.length);
+          }
+        }
+        
+        // Ensure new page has at least one question if it's empty after split
+        if (newPage.questions.isEmpty) {
+          newPage.questions.add(QuestionData(
+            type: QuestionType.multipleChoice,
+            options: [QuestionOptionData(label: 'Opsi 1')],
+          ));
+        }
+
         pages.insert(activeIndex + 1, newPage);
       } else {
         pages.add(newPage);
       }
     } else {
+      newPage.questions.add(QuestionData(
+        type: QuestionType.multipleChoice,
+        options: [QuestionOptionData(label: 'Opsi 1')],
+      ));
       pages.add(newPage);
     }
     
@@ -249,7 +272,6 @@ class FormBuilderState extends ChangeNotifier {
   List<Map<String, dynamic>> buildApiPayload() {
     final List<Map<String, dynamic>> result = [];
     int orderIndex = 0;
-
     for (int i = 0; i < pages.length; i++) {
       final page = pages[i];
 

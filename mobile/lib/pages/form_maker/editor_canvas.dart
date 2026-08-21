@@ -28,7 +28,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
         itemBuilder: (context, index) {
           final item = _getFlatItem(index);
           if (item is _FlatPageHeader) {
-            return _buildPageHeader(item.page, item.isFirstPage, key: ValueKey('page_${item.page.id}'));
+            return _buildPageHeader(item.page, item.index, widget.state.pages.length, key: ValueKey('page_${item.page.id}'));
           } else if (item is _FlatQuestion) {
             return _buildQuestionCard(item.page, item.question, index, key: ValueKey('q_${item.question.id}'));
           }
@@ -51,7 +51,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
     int currentIndex = 0;
     for (int i = 0; i < widget.state.pages.length; i++) {
       final page = widget.state.pages[i];
-      if (currentIndex == index) return _FlatPageHeader(page, i == 0);
+      if (currentIndex == index) return _FlatPageHeader(page, i);
       currentIndex++;
 
       for (var q in page.questions) {
@@ -62,7 +62,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
     return null;
   }
 
-  Widget _buildPageHeader(FormPageModel page, bool isFirstPage, {required Key key}) {
+  Widget _buildPageHeader(FormPageModel page, int pageIndex, int totalPages, {required Key key}) {
     final isActive = widget.state.activePageId == page.id && widget.state.activeQuestionId == null;
     return Padding(
       key: key,
@@ -70,7 +70,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
       child: PageHeaderCard(
         page: page,
         isActive: isActive,
-        isFirstPage: isFirstPage,
+        sectionIndex: pageIndex + 1,
+        totalSections: totalPages,
         onTap: () {
           widget.state.setActiveQuestion(null, page.id);
         },
@@ -212,8 +213,8 @@ class _EditorCanvasState extends State<EditorCanvas> {
 
 class _FlatPageHeader {
   final FormPageModel page;
-  final bool isFirstPage;
-  _FlatPageHeader(this.page, this.isFirstPage);
+  final int index;
+  _FlatPageHeader(this.page, this.index);
 }
 
 class _FlatQuestion {

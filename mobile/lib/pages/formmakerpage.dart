@@ -278,7 +278,9 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
                         ),
                         IconButton(
                           icon: const Icon(Icons.view_agenda_outlined, color: Colors.black87),
-                          onPressed: () => _builderState.addPage(),
+                          onPressed: () {
+                            _builderState.addPage();
+                          },
                           tooltip: 'Tambah Bagian',
                         ),
                       ],

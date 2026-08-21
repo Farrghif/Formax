@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 class BuilderToolbar extends StatelessWidget {
   final VoidCallback onAddText;
   final VoidCallback onAddImage;
-  final VoidCallback onAddPage;
   
   const BuilderToolbar({
     super.key,
     required this.onAddText,
     required this.onAddImage,
-    required this.onAddPage,
   });
 
   @override
@@ -40,11 +38,6 @@ class BuilderToolbar extends StatelessWidget {
             icon: const Icon(Icons.image_outlined, color: Colors.black87),
             tooltip: 'Tambah Gambar',
             onPressed: onAddImage,
-          ),
-          IconButton(
-            icon: const Icon(Icons.view_agenda_outlined, color: Colors.black87),
-            tooltip: 'Tambah Bagian',
-            onPressed: onAddPage,
           ),
         ],
       ),
