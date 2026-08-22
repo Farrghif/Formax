@@ -1332,3 +1332,48 @@
   .fb-date-inputs { grid-template-columns: 1fr; }
   .fb-tab { padding: 8px 12px; font-size: 13px; }
 }
+
+/* ============================================================
+   SETTINGS BARU — MODE UJIAN / KEAMANAN
+   ============================================================ */
+.fb-settings-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 6px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.fb-settings-separator::before,
+.fb-settings-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.fb-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.fb-info-box svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.fb-info-box.warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+}

@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPublicFormBySlug, joinForm, saveAnswer, submitFinal } from '../api/submissions';
+import { getPublicFormBySlug, joinForm, saveAnswer, submitFinal, getSubmissionResult, flagCheated } from '../api/submissions';
 import { uploadFile } from '../api/uploads';
 import { getMe } from '../api/auth';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 4;
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+const ZOOM_STEP = 10;
 
 export default function FormFillPage() {
   const { slug } = useParams();
@@ -21,6 +24,12 @@ export default function FormFillPage() {
 
   // Pagination & Navigation
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Zoom controls (perbesar/perkecil tampilan form)
+  const [zoomLevel, setZoomLevel] = useState(() => {
+    const saved = parseInt(localStorage.getItem('formFillZoom'), 10);
+    return !isNaN(saved) && saved >= ZOOM_MIN && saved <= ZOOM_MAX ? saved : 100;
+  });
 
   // Join Token modal
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -45,6 +54,19 @@ export default function FormFillPage() {
   // Guard agar joinForm tidak dipanggil ganda (double effect / double click)
   const joiningRef = useRef(false);
 
+  // Fullscreen / anti-cheat
+  const [cheated, setCheated] = useState(false);
+  const cheatedRef = useRef(false);
+  const doneRef = useRef(false); // true setelah submit selesai / sudah submit
+  const [fullscreenStarted, setFullscreenStarted] = useState(false);
+  const [showFullscreenIntro, setShowFullscreenIntro] = useState(false);
+  const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+
+  // Lihat hasil
+  const [result, setResult] = useState(null);
+  const [showResult, setShowResult] = useState(false);
+  const [resultLoading, setResultLoading] = useState(false);
+
   // 1. Initial Load & Auth Check
   useEffect(() => {
     if (!token) {
@@ -67,6 +89,11 @@ export default function FormFillPage() {
           setSubmissionId(sub.id);
           if (sub.submitted_at) {
             setIsSubmitted(true);
+          } else if (formData.require_fullscreen) {
+            setShowFullscreenIntro(true);
+          }
+          if (sub.is_cheated) {
+            setCheated(true);
           }
           // Load existing answers if any
           if (sub.answers && Array.isArray(sub.answers)) {
@@ -110,6 +137,11 @@ export default function FormFillPage() {
       setShowJoinModal(false);
       if (sub.submitted_at) {
         setIsSubmitted(true);
+      } else if (form?.require_fullscreen) {
+        setShowFullscreenIntro(true);
+      }
+      if (sub.is_cheated) {
+        setCheated(true);
       }
       if (sub.answers && Array.isArray(sub.answers)) {
         const initialAnswers = {};
@@ -134,11 +166,79 @@ export default function FormFillPage() {
       setIsSubmitting(true);
       await submitFinal(token, submissionId);
       setIsSubmitted(true);
+      doneRef.current = true;
       setShowSubmitModal(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
     } catch (err) {
       alert(err.message || 'Gagal mengirimkan form');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Enter fullscreen (dipicu tombol "Mulai" / "Kembali ke Full Screen")
+  const enterFullscreen = async () => {
+    setFullscreenStarted(true);
+    setShowFullscreenWarning(false);
+    try {
+      const el = document.documentElement;
+      if (!document.fullscreenElement && el.requestFullscreen) {
+        await el.requestFullscreen();
+      }
+    } catch {
+      // browser menolak (butuh user gesture / unsupported) — tetap lanjut best-effort
+    }
+  };
+
+  // User keluar fullscreen / pindah tab saat mode fullscreen aktif -> tandai curang (sekali).
+  const handleFullscreenExit = useCallback(() => {
+    if (cheatedRef.current || doneRef.current) return;
+    cheatedRef.current = true;
+    setCheated(true);
+    setShowFullscreenWarning(true);
+    if (submissionId && form?.require_fullscreen) {
+      flagCheated(token, submissionId).catch(() => {});
+    }
+  }, [submissionId, form, token]);
+
+  // Listener fullscreenchange + visibilitychange
+  useEffect(() => {
+    if (!form?.require_fullscreen || isSubmitted) return;
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        handleFullscreenExit();
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden && document.fullscreenElement) {
+        handleFullscreenExit();
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [form, isSubmitted, handleFullscreenExit]);
+
+  // Fetch hasil submission untuk ditampilkan
+  const handleViewResult = async () => {
+    if (!submissionId) return;
+    setResultLoading(true);
+    try {
+      const data = await getSubmissionResult(token, submissionId);
+      setResult(data);
+      setShowResult(true);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch (err) {
+      alert(err.message || 'Gagal mengambil hasil form');
+    } finally {
+      setResultLoading(false);
     }
   };
 
@@ -189,6 +289,15 @@ export default function FormFillPage() {
     }
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Zoom handlers (persist ke localStorage)
+  useEffect(() => {
+    localStorage.setItem('formFillZoom', String(zoomLevel));
+  }, [zoomLevel]);
+
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP));
+  const handleZoomReset = () => setZoomLevel(100);
 
   // Handle profile hover - requirement: "di kanan atas logo profile jika dihover hanya memuat API get me saja"
   const handleProfileMouseEnter = () => {
@@ -477,6 +586,103 @@ export default function FormFillPage() {
     );
   }
 
+  // Halaman Hasil (responden lihat skor + rincian jawaban)
+  if (showResult && result) {
+    return (
+      <div className="form-fill-container">
+        <header className="form-fill-header">
+          <h1 className="form-fill-logo">Form4x</h1>
+          <div className="form-fill-header-right">
+            <button
+              className="profile-avatar-btn"
+              onClick={() => navigate('/dashboard')}
+              aria-label="Kembali ke dashboard"
+              title="Kembali ke dashboard"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" />
+              </svg>
+            </button>
+          </div>
+        </header>
+        <main className="result-main">
+          <div className="result-card">
+            <h2 className="result-title">{result.form_title}</h2>
+            <p className="result-subtitle">Hasil submission Anda</p>
+
+            {result.is_cheated && (
+              <div className="cheated-banner">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Submission ini ditandai curang karena keluar dari mode full screen.
+              </div>
+            )}
+
+            {result.score_percent !== null ? (
+              <div className="score-card">
+                <div className={`score-ring ${result.is_cheated ? 'cheated' : ''}`}>
+                  <span className="score-value">{result.score_percent}%</span>
+                  <span className="score-label">Skor</span>
+                </div>
+                <div className="score-detail">
+                  <div className="score-stat correct">
+                    <span className="score-stat-num">{result.correct_count}</span>
+                    <span className="score-stat-label">Benar</span>
+                  </div>
+                  <div className="score-stat">
+                    <span className="score-stat-num">{result.total_graded - result.correct_count}</span>
+                    <span className="score-stat-label">Salah</span>
+                  </div>
+                  <div className="score-stat">
+                    <span className="score-stat-num">{result.total_graded}</span>
+                    <span className="score-stat-label">Dinilai</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="result-no-score">Form ini tidak memiliki kunci jawaban, jadi skor tidak dihitung.</p>
+            )}
+
+            <div className="result-answers">
+              {result.answers.map((a, idx) => (
+                <div key={a.question_id} className="result-answer-item">
+                  <div className="result-answer-header">
+                    <span className="result-q-number">{idx + 1}.</span>
+                    <div className="result-q-label" dangerouslySetInnerHTML={{ __html: a.label }} />
+                    {a.is_correct !== null && a.is_correct !== undefined && (
+                      <span className={`result-badge ${a.is_correct ? 'correct' : 'wrong'}`}>
+                        {a.is_correct ? 'Benar' : 'Salah'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="result-answer-body">
+                    <p>
+                      <span className="result-label">Jawaban Anda:</span>
+                      <span className={`result-answer-text ${a.is_correct === false ? 'wrong' : ''}`}>
+                        {a.user_answer || '(tidak dijawab)'}
+                      </span>
+                    </p>
+                    {a.correct_answer && (
+                      <p>
+                        <span className="result-label">Jawaban Benar:</span>
+                        <span className="result-answer-text correct">{a.correct_answer}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button className="modal-btn-primary" onClick={() => navigate('/dashboard')}>
+              Kembali ke Dashboard
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Join Token Modal View
   if (showJoinModal) {
     return (
@@ -557,12 +763,38 @@ export default function FormFillPage() {
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>
             Jawaban Berhasil Terkirim!
           </h2>
-          <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6', marginBottom: '28px' }}>
+          <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
             Terima kasih telah mengisi <strong>{form?.title}</strong>. Jawaban Anda telah tersimpan dengan aman di sistem.
           </p>
-          <button className="modal-btn-primary" onClick={() => navigate('/dashboard')}>
-            Kembali ke Dashboard
-          </button>
+
+          {cheated && (
+            <div className="cheated-banner" style={{ marginBottom: '20px' }}>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Submission Anda ditandai curang karena keluar dari mode full screen.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {form?.allow_see_result && submissionId && (
+              <button
+                className="modal-btn-primary"
+                onClick={handleViewResult}
+                disabled={resultLoading}
+                style={{ background: '#2563EB', borderColor: '#2563EB' }}
+              >
+                {resultLoading ? 'Mengambil hasil...' : 'Lihat Hasil'}
+              </button>
+            )}
+            <button
+              className="modal-btn-primary"
+              onClick={() => navigate('/dashboard')}
+              style={{ background: '#475569', borderColor: '#475569' }}
+            >
+              Kembali ke Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -580,6 +812,39 @@ export default function FormFillPage() {
       <header className="form-fill-header">
         <h1 className="form-fill-logo">Form4x</h1>
         <div className="form-fill-header-right">
+          {/* Zoom Controls (perbesar / perkecil form) */}
+          <div className="zoom-controls">
+            <button
+              className="zoom-btn"
+              onClick={handleZoomOut}
+              disabled={zoomLevel <= ZOOM_MIN}
+              title="Perkecil tampilan"
+              aria-label="Perkecil tampilan"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 12H4" />
+              </svg>
+            </button>
+            <button
+              className="zoom-level-label"
+              onClick={handleZoomReset}
+              title="Klik untuk reset ke 100%"
+            >
+              {zoomLevel}%
+            </button>
+            <button
+              className="zoom-btn"
+              onClick={handleZoomIn}
+              disabled={zoomLevel >= ZOOM_MAX}
+              title="Perbesar tampilan"
+              aria-label="Perbesar tampilan"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+
           {timeLeft !== null && (
             <div className={`form-fill-timer ${timeLeft <= 60 ? 'urgent' : ''}`}>
               <svg className="form-fill-timer-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,7 +888,7 @@ export default function FormFillPage() {
       </header>
 
       {/* Main Grid Content */}
-      <main className="form-fill-main">
+      <main className="form-fill-main" style={{ zoom: zoomLevel / 100 }}>
         {/* Left Column: Question Navigator */}
         <aside className="question-navigator">
           <h2 className="navigator-title">Question Navigator</h2>
@@ -758,6 +1023,56 @@ export default function FormFillPage() {
               </button>
               <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting}>
                 {isSubmitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Intro Overlay (wajib fullscreen) */}
+      {form?.require_fullscreen && !isSubmitted && showFullscreenIntro && !fullscreenStarted && (
+        <div className="ff-overlay">
+          <div className="ff-overlay-card">
+            <div className="ff-overlay-icon">
+              <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" />
+              </svg>
+            </div>
+            <h2 className="ff-overlay-title">Mode Full Screen Diwajibkan</h2>
+            <p className="ff-overlay-desc">
+              Form ini wajib dikerjakan di mode full screen. Jika Anda keluar dari mode full screen atau berpindah tab,
+              submission Anda akan <strong>ditandai sebagai curang</strong> oleh sistem.
+            </p>
+            <button className="modal-btn-primary" onClick={enterFullscreen}>
+              Masuk Full Screen &amp; Mulai
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Warning Overlay (keluar dari fullscreen) */}
+      {showFullscreenWarning && !isSubmitted && (
+        <div className="ff-overlay warning">
+          <div className="ff-overlay-card">
+            <div className="ff-overlay-icon danger">
+              <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="ff-overlay-title">Anda Keluar dari Mode Full Screen</h2>
+            <p className="ff-overlay-desc">
+              Submission Anda telah <strong>ditandai sebagai curang</strong> oleh sistem. Anda tetap bisa melanjutkan,
+              namun tanda ini akan tercatat di hasil Anda.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="modal-btn-primary" onClick={enterFullscreen}>
+                Kembali ke Full Screen
+              </button>
+              <button
+                className="modal-btn-secondary"
+                onClick={() => setShowFullscreenWarning(false)}
+              >
+                Lanjutkan Mengisi
               </button>
             </div>
           </div>

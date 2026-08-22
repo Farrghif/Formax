@@ -126,6 +126,10 @@ export default function FormBuilderPage() {
     status: 'draft',
     slug: '',
     accept_responses: true,
+    allow_see_result: false,
+    max_submissions: 1,
+    require_fullscreen: false,
+    reveal_answers: false,
     banner_url: null,
     start_date: '',
     end_date: '',
@@ -138,6 +142,9 @@ export default function FormBuilderPage() {
 
   // Settings flags
   const [useJoinToken, setUseJoinToken] = useState(false);
+  // Batas pengisian: 'once' | 'unlimited' | 'custom'
+  const [maxSubmissionsMode, setMaxSubmissionsMode] = useState('once');
+  const [customMaxSubmissions, setCustomMaxSubmissions] = useState(2);
 
   const token = localStorage.getItem('token');
 
@@ -168,12 +175,25 @@ export default function FormBuilderPage() {
             status: form.status,
             slug: form.slug,
             accept_responses: form.accept_responses,
+            allow_see_result: form.allow_see_result ?? false,
+            max_submissions: form.max_submissions ?? 1,
+            require_fullscreen: form.require_fullscreen ?? false,
+            reveal_answers: form.reveal_answers ?? false,
             banner_url: form.banner_url || null,
             start_date: form.start_date ? form.start_date.substring(0, 16) : '',
             end_date: form.end_date ? form.end_date.substring(0, 16) : '',
             join_token: form.join_token,
             qr_code_url: form.qr_code_url,
           });
+          const maxSub = form.max_submissions ?? 1;
+          if (maxSub === 1) {
+            setMaxSubmissionsMode('once');
+          } else if (maxSub === 0) {
+            setMaxSubmissionsMode('unlimited');
+          } else {
+            setMaxSubmissionsMode('custom');
+            setCustomMaxSubmissions(maxSub);
+          }
           setUseJoinToken(!!form.join_token);
           setQuestions(
             (form.questions || [])
@@ -247,6 +267,10 @@ export default function FormBuilderPage() {
           description: formData.description,
           status: formData.status,
           accept_responses: formData.accept_responses,
+          allow_see_result: formData.allow_see_result,
+          max_submissions: formData.max_submissions,
+          require_fullscreen: formData.require_fullscreen,
+          reveal_answers: formData.reveal_answers,
           banner_url: formData.banner_url,
           start_date: formData.start_date || null,
           end_date: formData.end_date || null,
@@ -319,6 +343,10 @@ export default function FormBuilderPage() {
           description: formData.description,
           status: formData.status,
           accept_responses: formData.accept_responses,
+          allow_see_result: formData.allow_see_result,
+          max_submissions: formData.max_submissions,
+          require_fullscreen: formData.require_fullscreen,
+          reveal_answers: formData.reveal_answers,
           slug,
           template_id: templateId || null,
           banner_url: formData.banner_url,
@@ -1128,6 +1156,104 @@ export default function FormBuilderPage() {
                     />
                   </div>
                 </div>
+
+                {/* ===== Mode Ujian / Keamanan ===== */}
+                <div className="fb-settings-separator">
+                  <span>Mode Ujian / Keamanan</span>
+                </div>
+
+                {/* Responden Lihat Hasil */}
+                <div className="fb-setting-row">
+                  <div>
+                    <p className="fb-setting-row-label">Responden Lihat Hasil</p>
+                    <p className="fb-setting-row-desc">Setelah submit, responden bisa melihat skor dan rincian jawaban</p>
+                  </div>
+                  <button
+                    className={`fb-toggle ${formData.allow_see_result ? 'on' : 'off'}`}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        allow_see_result: !prev.allow_see_result,
+                        reveal_answers: !prev.allow_see_result ? prev.reveal_answers : false,
+                      }))
+                    }
+                  />
+                </div>
+
+                {/* Tampilkan Kunci Jawaban */}
+                <div className="fb-setting-row" style={{ opacity: formData.allow_see_result ? 1 : 0.45 }}>
+                  <div>
+                    <p className="fb-setting-row-label">Tampilkan Kunci Jawaban</p>
+                    <p className="fb-setting-row-desc">Responden melihat jawaban yang benar di halaman hasil (aktif jika "Responden Lihat Hasil" menyala)</p>
+                  </div>
+                  <button
+                    className={`fb-toggle ${formData.reveal_answers ? 'on' : 'off'}`}
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, reveal_answers: !prev.reveal_answers }))
+                    }
+                    disabled={!formData.allow_see_result}
+                  />
+                </div>
+
+                {/* Batas Pengisian */}
+                <div className="fb-setting-row">
+                  <div>
+                    <p className="fb-setting-row-label">Batas Pengisian</p>
+                    <p className="fb-setting-row-desc">Berapa kali responden boleh mengirimkan jawaban</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <select
+                      className="fb-status-select"
+                      style={{ width: '150px' }}
+                      value={maxSubmissionsMode}
+                      onChange={(e) => {
+                        const mode = e.target.value;
+                        setMaxSubmissionsMode(mode);
+                        if (mode === 'once') setFormData((prev) => ({ ...prev, max_submissions: 1 }));
+                        if (mode === 'unlimited') setFormData((prev) => ({ ...prev, max_submissions: 0 }));
+                        if (mode === 'custom') setFormData((prev) => ({ ...prev, max_submissions: customMaxSubmissions }));
+                      }}
+                    >
+                      <option value="once">1 kali</option>
+                      <option value="unlimited">Tidak terbatas</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                    {maxSubmissionsMode === 'custom' && (
+                      <input
+                        className="fb-setting-input"
+                        style={{ width: '80px' }}
+                        type="number"
+                        min="2"
+                        value={customMaxSubmissions}
+                        onChange={(e) => {
+                          const val = Math.max(2, parseInt(e.target.value, 10) || 2);
+                          setCustomMaxSubmissions(val);
+                          setFormData((prev) => ({ ...prev, max_submissions: val }));
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Mode Full Screen */}
+                <div className="fb-setting-row">
+                  <div>
+                    <p className="fb-setting-row-label">Mode Full Screen</p>
+                    <p className="fb-setting-row-desc">Responden wajib mengisi dalam mode full screen; keluar = ditandai curang</p>
+                  </div>
+                  <button
+                    className={`fb-toggle ${formData.require_fullscreen ? 'on' : 'off'}`}
+                    onClick={() => setFormData((prev) => ({ ...prev, require_fullscreen: !prev.require_fullscreen }))}
+                  />
+                </div>
+                {formData.require_fullscreen && (
+                  <div className="fb-info-box warning">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Peringatan: jika responden keluar dari mode full screen, submission akan ditandai sebagai curang (is_cheated).</span>
+                  </div>
+                )}
 
                 {/* Date Range */}
                 <div className="fb-setting-group" style={{ marginTop: '22px' }}>

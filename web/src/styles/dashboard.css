@@ -1412,6 +1412,29 @@
   color: #b45309;
 }
 
+.status-pill.cheated {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.detail-cheated-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.detail-cheated-banner svg {
+  flex-shrink: 0;
+}
+
 .btn-table-view {
   background-color: #eff6ff;
   color: #0053db;

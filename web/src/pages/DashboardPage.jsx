@@ -261,8 +261,9 @@ export default function DashboardPage() {
       email.toLowerCase().includes(respondentSearch.toLowerCase());
 
     if (!matchesSearch) return false;
-    if (statusFilter === 'completed') return sub.isCompleted;
-    if (statusFilter === 'process') return !sub.isCompleted;
+    if (statusFilter === 'completed') return sub.isCompleted && !sub.is_cheated;
+    if (statusFilter === 'process') return !sub.isCompleted && !sub.is_cheated;
+    if (statusFilter === 'cheated') return !!sub.is_cheated;
     return true;
   });
 
@@ -809,6 +810,7 @@ export default function DashboardPage() {
                           <option value="all">Semua Status</option>
                           <option value="completed">Selesai</option>
                           <option value="process">Proses</option>
+                          <option value="cheated">Curang</option>
                         </select>
                       </div>
                     </div>
@@ -850,9 +852,15 @@ export default function DashboardPage() {
                                     {sub.scorePercent !== null ? `${sub.scorePercent}/100` : '-'}
                                   </td>
                                   <td>
-                                    <span className={`status-pill ${isCompleted ? 'completed' : 'process'}`}>
-                                      • {isCompleted ? 'Selesai' : 'Proses'}
-                                    </span>
+                                    {sub.is_cheated ? (
+                                      <span className="status-pill cheated" title="Responden keluar dari mode full screen">
+                                        • Curang
+                                      </span>
+                                    ) : (
+                                      <span className={`status-pill ${isCompleted ? 'completed' : 'process'}`}>
+                                        • {isCompleted ? 'Selesai' : 'Proses'}
+                                      </span>
+                                    )}
                                   </td>
                                   <td style={{ textAlign: 'right' }}>
                                     <button
@@ -1070,6 +1078,18 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Banner penanda curang (keluar mode full screen) */}
+                  {selectedRespondent.is_cheated && (
+                    <div className="detail-cheated-banner">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>
+                        Responden ini terdeteksi <strong>curang</strong> karena keluar dari mode full screen saat mengisi form.
+                      </span>
+                    </div>
+                  )}
 
                   {/* Questions & Answers Breakdown */}
                   <div>

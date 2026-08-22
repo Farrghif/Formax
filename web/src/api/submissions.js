@@ -63,3 +63,26 @@ export async function submitFinal(token, submissionId) {
   });
   return readJsonResponse(res, 'Gagal mengirimkan form');
 }
+
+/**
+ * Ambil hasil submission untuk responden (skor + benar/salah per soal).
+ * Hanya aktif jika form.allow_see_result true.
+ */
+export async function getSubmissionResult(token, submissionId) {
+  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/result`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return readJsonResponse(res, 'Gagal mengambil hasil form');
+}
+
+/**
+ * Tandai submission sebagai curang (keluar dari mode full screen).
+ * Hanya aktif jika form.require_fullscreen true.
+ */
+export async function flagCheated(token, submissionId) {
+  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/flag-cheated`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return readJsonResponse(res, 'Gagal menandai submission');
+}
