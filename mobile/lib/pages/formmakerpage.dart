@@ -172,7 +172,19 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-      _builderState.addQuestion(activePageId, QuestionType.image, imageUrl: pickedFile.path);
+      
+      // Upload the image to the backend first
+      final uploadResult = await ApiService.uploadFile(pickedFile);
+      if (uploadResult['success'] == true) {
+        final fileUrl = uploadResult['file_url'] as String;
+        _builderState.addQuestion(activePageId, QuestionType.image, imageUrl: fileUrl);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal unggah gambar: ${uploadResult['message']}')),
+          );
+        }
+      }
     }
   }
 
@@ -211,6 +223,8 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
       case QuestionType.rating: return Icons.star;
       case QuestionType.date: return Icons.event;
       case QuestionType.time: return Icons.access_time;
+      case QuestionType.image: return Icons.image_outlined;
+      case QuestionType.text: return Icons.title;
       default: return Icons.widgets;
     }
   }
@@ -264,7 +278,9 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
                         ),
                         IconButton(
                           icon: const Icon(Icons.view_agenda_outlined, color: Colors.black87),
-                          onPressed: () => _builderState.addPage(),
+                          onPressed: () {
+                            _builderState.addPage();
+                          },
                           tooltip: 'Tambah Bagian',
                         ),
                       ],

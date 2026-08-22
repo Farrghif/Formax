@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
+import '../widgets/rich_text_view.dart';
 
 /// ============================================================
 /// MODEL CLASSES
@@ -892,26 +893,35 @@ class _FillFormPageState extends State<FillFormPage> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    text: question.label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
-                    ),
-                    children: [
-                      if (question.isRequired)
-                        const TextSpan(
-                          text: ' *',
-                          style: TextStyle(
-                            color: Color(0xFFDC2626),
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: question.label.contains('<')
+                    ? RichTextView(
+                        html: question.label,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
                         ),
-                    ],
-                  ),
-                ),
+                      )
+                    : RichText(
+                        text: TextSpan(
+                          text: question.label,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                          children: [
+                            if (question.isRequired)
+                              const TextSpan(
+                                text: ' *',
+                                style: TextStyle(
+                                  color: Color(0xFFDC2626),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),

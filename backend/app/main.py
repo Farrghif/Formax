@@ -1,40 +1,37 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
 from .routers import auth, templates, forms, submissions, uploads, export, questions, search
 
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 
 # Buat semua tabel otomatis kalau belum ada (development).
 Base.metadata.create_all(bind=engine)
 
-# Auto-migrate ringan: tambah kolom baru kalau belum ada & hapus unique constraint
-# (form_id, user_id) di submissions untuk mendukung multi-submit.
-with engine.connect() as conn:
+
+def column_exists(table_name: str, column_name: str) -> bool:
+    """Cek apakah kolom ada di tabel - kompatibel dengan SQLite, PostgreSQL, dll."""
+    insp = inspect(engine)
+    if not insp.has_table(table_name):
+        return False
+    columns = insp.get_columns(table_name)
+    return any(col["name"] == column_name for col in columns)
+
+
+# Auto-migrate ringan & schema update
+with engine.begin() as conn:
     dialect = engine.dialect.name
 
-    def column_exists(table, column):
-        if dialect == "postgresql":
-            return conn.execute(
-                text(
-                    "SELECT 1 FROM information_schema.columns "
-                    "WHERE table_name = :table AND column_name = :column"
-                ),
-                {"table": table, "column": column},
-            ).first() is not None
-        # SQLite / lainnya
-        rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
-        return any(r[1] == column for r in rows)
-
-    def add_column(table, column, coldef):
+    def add_column(table: str, column: str, coldef: str):
         if not column_exists(table, column):
             if dialect == "postgresql":
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coldef}"))
             else:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}"))
 
+    # Migrasi banner & opsi soal
     if not column_exists("forms", "banner_url"):
         conn.execute(text("ALTER TABLE forms ADD COLUMN banner_url VARCHAR;"))
 
@@ -90,8 +87,6 @@ with engine.connect() as conn:
             conn.execute(text(f"INSERT INTO submissions_new ({cols_sql}) SELECT {cols_sql} FROM submissions"))
             conn.execute(text("DROP TABLE submissions"))
             conn.execute(text("ALTER TABLE submissions_new RENAME TO submissions"))
-
-    conn.commit()
 
 
 app = FastAPI(title="Form Maker API", version="2.0.0")

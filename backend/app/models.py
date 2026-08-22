@@ -26,6 +26,8 @@ class QuestionType(str, enum.Enum):
     date = "date"
     file_upload = "file_upload"
     page_break = "page_break"
+    image = "image"
+    text_block = "text_block"
 
 
 class FormStatus(str, enum.Enum):
@@ -147,6 +149,7 @@ class QuestionOption(Base):
     value = Column(String, nullable=True)
     order_index = Column(Integer, default=0)
     is_correct = Column(Boolean, default=False)  # kunci jawaban (1 opsi benar per soal pilihan)
+    is_other = Column(Boolean, default=False)  # opsi "Lainnya" yang memungkinkan input bebas
 
     question = relationship("Question", back_populates="options")
 

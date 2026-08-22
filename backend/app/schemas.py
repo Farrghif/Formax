@@ -55,6 +55,7 @@ class QuestionOptionCreate(BaseModel):
     value: Optional[str] = None
     order_index: int = 0
     is_correct: bool = False
+    is_other: bool = False
 
 
 class QuestionOptionUpdate(BaseModel):
@@ -66,6 +67,7 @@ class QuestionOptionUpdate(BaseModel):
 
 class QuestionOptionOut(QuestionOptionCreate):
     id: uuid.UUID
+    is_other: bool = False
 
     class Config:
         from_attributes = True

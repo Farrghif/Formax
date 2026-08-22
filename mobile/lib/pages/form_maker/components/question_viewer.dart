@@ -2,24 +2,51 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
+import '../../../widgets/rich_text_view.dart';
 
 class QuestionViewer extends StatelessWidget {
   final QuestionData question;
 
   const QuestionViewer({super.key, required this.question});
 
+  bool _looksLikeHtml(String s) => s.contains('<');
+
   @override
   Widget build(BuildContext context) {
+    final hasLabel = question.label.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                question.label.isEmpty ? 'Pertanyaan' : question.label,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
-              ),
+              child: hasLabel
+                  ? (_looksLikeHtml(question.label)
+                      ? RichTextView(
+                          html: question.label,
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        )
+                      : Text(
+                          question.label,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ))
+                  : const Text(
+                      'Pertanyaan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
             ),
             if (question.isRequired)
               const Text(' *', style: TextStyle(color: Colors.red, fontSize: 16)),
@@ -28,10 +55,15 @@ class QuestionViewer extends StatelessWidget {
         if (question.description.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
-            child: Text(
-              question.description,
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
-            ),
+            child: _looksLikeHtml(question.description)
+                ? RichTextView(
+                    html: question.description,
+                    textStyle: const TextStyle(fontSize: 13, color: Colors.black54),
+                  )
+                : Text(
+                    question.description,
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
           ),
         const SizedBox(height: 16),
         _buildBody(),
@@ -63,28 +95,47 @@ class QuestionViewer extends StatelessWidget {
       case QuestionType.multipleChoice:
       case QuestionType.checkboxes:
         return Column(
-          children: question.options.map((opt) {
-            return Padding(
+          children: question.options.asMap().entries.expand((entry) {
+            final opt = entry.value;
+            final isOther = opt.isOther;
+            final optionTile = Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 children: [
                   Icon(
-                    question.type == QuestionType.multipleChoice 
-                      ? Icons.radio_button_unchecked 
-                      : Icons.check_box_outline_blank, 
-                    size: 20, 
+                    question.type == QuestionType.multipleChoice
+                      ? Icons.radio_button_unchecked
+                      : Icons.check_box_outline_blank,
+                    size: 20,
                     color: Colors.black38,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      opt.label.isEmpty ? 'Opsi' : opt.label, 
+                      opt.label.isEmpty ? 'Opsi' : opt.label,
                       style: const TextStyle(fontSize: 14)
                     ),
                   ),
                 ],
               ),
             );
+            if (isOther) {
+              return [
+                optionTile,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: TextField(
+                    enabled: false,
+                    decoration: InputDecoration(
+                      hintText: 'Jawaban lainnya',
+                      isDense: true,
+                      border: const UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ];
+            }
+            return [optionTile];
           }).toList(),
         );
       case QuestionType.dropdown:

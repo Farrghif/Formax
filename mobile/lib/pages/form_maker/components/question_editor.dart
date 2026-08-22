@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
+import '../../../widgets/rich_text_field.dart';
 
 class QuestionEditor extends StatefulWidget {
   final QuestionData question;
@@ -20,9 +21,6 @@ class QuestionEditor extends StatefulWidget {
 }
 
 class _QuestionEditorState extends State<QuestionEditor> {
-  late TextEditingController _titleCtrl;
-  late TextEditingController _descCtrl;
-  
   // Debounce controllers for linear scale configs etc.
   late TextEditingController _minLabelCtrl;
   late TextEditingController _maxLabelCtrl;
@@ -30,8 +28,6 @@ class _QuestionEditorState extends State<QuestionEditor> {
   @override
   void initState() {
     super.initState();
-    _titleCtrl = TextEditingController(text: widget.question.label);
-    _descCtrl = TextEditingController(text: widget.question.description);
     _minLabelCtrl = TextEditingController(text: widget.question.minLabel);
     _maxLabelCtrl = TextEditingController(text: widget.question.maxLabel);
   }
@@ -40,8 +36,6 @@ class _QuestionEditorState extends State<QuestionEditor> {
   void didUpdateWidget(covariant QuestionEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.question.id != widget.question.id) {
-      _titleCtrl.text = widget.question.label;
-      _descCtrl.text = widget.question.description;
       _minLabelCtrl.text = widget.question.minLabel;
       _maxLabelCtrl.text = widget.question.maxLabel;
     }
@@ -49,8 +43,6 @@ class _QuestionEditorState extends State<QuestionEditor> {
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
-    _descCtrl.dispose();
     _minLabelCtrl.dispose();
     _maxLabelCtrl.dispose();
     super.dispose();
@@ -75,41 +67,30 @@ class _QuestionEditorState extends State<QuestionEditor> {
               flex: 2,
               child: Column(
                 children: [
-                  TextField(
-                    controller: _titleCtrl,
-                    onChanged: (v) {
-                      widget.question.label = v;
+                  RichTextField(
+                    initialHtml: widget.question.label,
+                    onChanged: (html) {
+                      widget.question.label = html;
                       widget.onChanged();
                     },
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    decoration: InputDecoration(
-                      hintText: widget.question.type == QuestionType.text 
-                          ? 'Judul Teks' 
-                          : (widget.question.type == QuestionType.image ? 'Caption (opsional)' : 'Pertanyaan'),
-                      filled: true,
-                      fillColor: const Color(0xFFF3F4F6),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8), 
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    maxLines: null,
+                    hintText: widget.question.type == QuestionType.text
+                        ? 'Judul Teks'
+                        : (widget.question.type == QuestionType.image
+                            ? 'Caption (opsional)'
+                            : 'Pertanyaan'),
+                    minLines: 1,
+                    maxLines: 3,
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: _descCtrl,
-                    onChanged: (v) {
-                      widget.question.description = v;
+                  RichTextField(
+                    initialHtml: widget.question.description,
+                    onChanged: (html) {
+                      widget.question.description = html;
                       widget.onChanged();
                     },
-                    style: const TextStyle(fontSize: 13, color: Colors.black87),
-                    decoration: const InputDecoration(
-                      hintText: 'Deskripsi tambahan (opsional)',
-                      isDense: true,
-                      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    ),
+                    hintText: 'Deskripsi tambahan (opsional)',
+                    minLines: 1,
+                    maxLines: 3,
                   ),
                 ],
               ),
@@ -277,13 +258,17 @@ class _QuestionEditorState extends State<QuestionEditor> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  q.type == QuestionType.multipleChoice 
-                    ? Icons.radio_button_unchecked 
-                    : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
-                  size: 20, 
-                  color: Colors.black26,
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Icon(
+                    q.type == QuestionType.multipleChoice 
+                      ? Icons.radio_button_unchecked 
+                      : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
+                    size: 20, 
+                    color: Colors.black26,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -292,29 +277,29 @@ class _QuestionEditorState extends State<QuestionEditor> {
                         padding: EdgeInsets.symmetric(vertical: 12.0),
                         child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: Colors.black87)),
                       )
-                    : TextFormField(
-                        initialValue: opt.label,
-                        onChanged: (v) {
-                          opt.label = v;
+                    : RichTextField(
+                        key: ValueKey('opt_${opt.id}'),
+                        initialHtml: opt.label,
+                        onChanged: (html) {
+                          opt.label = html;
                           widget.onChanged();
                         },
-                        style: const TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Opsi ${i + 1}',
-                          border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4F46E5))),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
+                        hintText: 'Opsi ${i + 1}',
+                        compact: true,
+                        minLines: 1,
+                        maxLines: 2,
                       ),
                 ),
                 if (q.options.length > 1)
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Colors.black38),
-                    onPressed: () {
-                      q.options.removeAt(i);
-                      widget.onChanged();
-                    },
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: Colors.black38),
+                      onPressed: () {
+                        q.options.removeAt(i);
+                        widget.onChanged();
+                      },
+                    ),
                   ),
               ],
             ),
