@@ -13,6 +13,8 @@ class _LoginPageState extends State<LoginPage> {
   bool isLogin = true;
   bool _isLoading = false;
   bool _rememberMe = true; // State untuk remember me
+  bool _obscureLoginPassword = true;
+  bool _obscureRegisterPassword = true;
 
   final TextEditingController loginEmailController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
@@ -177,7 +179,24 @@ class _LoginPageState extends State<LoginPage> {
                             ? loginPasswordController
                             : registerPasswordController,
                         hint: 'Enter your password',
-                        obscureText: true,
+                        obscureText: isLogin ? _obscureLoginPassword : _obscureRegisterPassword,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            (isLogin ? _obscureLoginPassword : _obscureRegisterPassword)
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              if (isLogin) {
+                                _obscureLoginPassword = !_obscureLoginPassword;
+                              } else {
+                                _obscureRegisterPassword = !_obscureRegisterPassword;
+                              }
+                            });
+                          },
+                        ),
                       ),
 
                       const SizedBox(height: 10),
@@ -471,6 +490,7 @@ class _LoginPageState extends State<LoginPage> {
     required TextEditingController controller,
     required String hint,
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
@@ -484,6 +504,7 @@ class _LoginPageState extends State<LoginPage> {
           horizontal: 12,
           vertical: 12,
         ),
+        suffixIcon: suffixIcon,
       ),
     );
   }
