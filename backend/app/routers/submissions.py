@@ -3,7 +3,6 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -27,7 +26,7 @@ def _window_dt(dt):
     return dt.replace(tzinfo=WIB)
 
 
-@router.post("/forms/public/{slug}/join", response_model=schemas.SubmissionStartOut)
+@router.post("/forms/public/{slug}/join", response_model=schemas.SubmissionOut)
 def join_form(
     slug: str,
     payload: schemas.JoinFormRequest,
@@ -38,8 +37,12 @@ def join_form(
     Dipanggil pas user klik 'Mulai Isi Form' / 'Mulai Ujian'.
     - Kalau form.join_token diset, user WAJIB kirim token yang cocok (fitur ujian bareng).
     - Kalau ada start_date/end_date, dicek apakah sekarang ada di dalam window itu.
-    - 1 user cuma boleh punya 1 submission per form (unique constraint) — kalau udah pernah
-      mulai, submission yang sama dikembalikan lagi (biar bisa lanjut isi, bukan mulai dari 0).
+    - Logika submission mengikuti setting form.max_submissions:
+        * Ada submission yang belum selesai -> dikembalikan lagi biar bisa lanjut isi.
+        * max_submissions == 0 (unlimited) -> boleh buat submission baru terus.
+        * max_submissions > 0 -> dibatasi jumlah submission yang SUDAH SELESAI (submitted).
+          Kalau sudah capai limit dan form.allow_see_result aktif, submission terakhir
+          dikembalikan supaya responden bisa lihat hasilnya; kalau tidak, ditolak.
     """
     form = db.query(models.Form).filter(models.Form.slug == slug).first()
     if not form:
@@ -57,35 +60,55 @@ def join_form(
     if form.end_date and now > _window_dt(form.end_date):
         raise HTTPException(status_code=403, detail="Waktu pengisian form sudah berakhir")
 
-    existing = (
+    # 1) Kalau masih ada submission yang belum selesai, lanjutkan itu (bukan mulai dari 0).
+    in_progress = (
         db.query(models.Submission)
-        .filter(models.Submission.form_id == form.id, models.Submission.user_id == current_user.id)
+        .filter(
+            models.Submission.form_id == form.id,
+            models.Submission.user_id == current_user.id,
+            models.Submission.submitted_at.is_(None),
+        )
         .first()
     )
-    if existing:
-        if existing.submitted_at is not None:
-            raise HTTPException(status_code=400, detail="Kamu sudah submit form ini sebelumnya")
-        return existing  # lanjutin submission yang belum selesai
+    if in_progress:
+        return in_progress
 
+    # 2) Cek batas jumlah submission yang sudah selesai.
+    max_sub = form.max_submissions if form.max_submissions is not None else 1
+    completed_count = (
+        db.query(func.count(models.Submission.id))
+        .filter(
+            models.Submission.form_id == form.id,
+            models.Submission.user_id == current_user.id,
+            models.Submission.submitted_at.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
+    if max_sub != 0 and completed_count >= max_sub:
+        if form.allow_see_result:
+            latest = (
+                db.query(models.Submission)
+                .filter(
+                    models.Submission.form_id == form.id,
+                    models.Submission.user_id == current_user.id,
+                    models.Submission.submitted_at.isnot(None),
+                )
+                .order_by(models.Submission.submitted_at.desc())
+                .first()
+            )
+            if latest:
+                return latest
+        raise HTTPException(
+            status_code=400,
+            detail=f"Kamu sudah mencapai batas pengisian form ({max_sub} kali)",
+        )
+
+    # 3) Belum pernah / masih boleh isi -> buat submission baru.
     submission = models.Submission(form_id=form.id, user_id=current_user.id)
     db.add(submission)
-    try:
-        db.commit()
-    except IntegrityError:
-        # Race: dua request join (double click / double effect) sama-sama lolos pengecekan
-        # "sudah ada submission?" sebelum ada yang commit. Constraint unik menolak INSERT
-        # kedua — kembalikan submission yang sudah terlanjur dibuat.
-        db.rollback()
-        existing = (
-            db.query(models.Submission)
-            .filter(models.Submission.form_id == form.id, models.Submission.user_id == current_user.id)
-            .first()
-        )
-        if existing:
-            if existing.submitted_at is not None:
-                raise HTTPException(status_code=400, detail="Kamu sudah submit form ini sebelumnya")
-            return existing
-        raise
+    db.commit()
     db.refresh(submission)
     return submission
 
@@ -192,4 +215,129 @@ def list_submissions_for_form(
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
     return db.query(models.Submission).filter(models.Submission.form_id == form_id).all()
+
+
+# ============================================================
+# HELPERS SKOR (sama dengan logika export.py)
+# ============================================================
+def _correct_keys(question):
+    return {o.label for o in question.options if o.is_correct}
+
+
+def _is_graded(question):
+    return len(_correct_keys(question)) > 0
+
+
+def _user_answer_str(ans):
+    if not ans:
+        return ""
+    if ans.answer_text:
+        return ans.answer_text
+    if ans.answer_options:
+        return ", ".join(ans.answer_options)
+    if ans.file_url:
+        return ans.file_url
+    return ""
+
+
+def _is_answer_correct(question, ans):
+    keys = _correct_keys(question)
+    if not keys:
+        return None
+    if ans is None:
+        return False
+    selected = set(ans.answer_options) if ans.answer_options else ({ans.answer_text} if ans.answer_text else set())
+    return keys == selected
+
+
+# ============================================================
+# RESPONDEN LIHAT HASIL
+# ============================================================
+@router.get("/submissions/{submission_id}/result", response_model=schemas.SubmissionResultOut)
+def get_submission_result(
+    submission_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Responden lihat hasil submission-nya sendiri (skor + benar/salah per soal).
+    Hanya aktif kalau form.allow_see_result true dan submission sudah di-submit.
+    Kunci jawaban (opsi benar) hanya dikirim kalau form.reveal_answers true.
+    """
+    submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
+    if submission.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bukan submission milikmu")
+    if submission.submitted_at is None:
+        raise HTTPException(status_code=400, detail="Hasil belum tersedia, submission belum disubmit")
+
+    form = db.query(models.Form).filter(models.Form.id == submission.form_id).first()
+    if not form or not form.allow_see_result:
+        raise HTTPException(status_code=403, detail="Pembuat form tidak mengizinkan responden melihat hasil")
+
+    questions = (
+        db.query(models.Question)
+        .filter(models.Question.form_id == form.id)
+        .order_by(models.Question.order_index)
+        .all()
+    )
+    answers = {a.question_id: a for a in submission.answers}
+    reveal = bool(form.reveal_answers)
+
+    total_graded = sum(1 for q in questions if _is_graded(q))
+    correct_count = sum(
+        1 for q in questions
+        if _is_graded(q) and _is_answer_correct(q, answers.get(q.id))
+    )
+    score = round((correct_count / total_graded) * 100) if total_graded else None
+
+    result_answers = [
+        schemas.AnswerResultOut(
+            question_id=q.id,
+            label=q.label,
+            type=q.type,
+            user_answer=_user_answer_str(answers.get(q.id)),
+            is_correct=_is_answer_correct(q, answers.get(q.id)),
+            correct_answer=", ".join(sorted(_correct_keys(q))) if reveal else None,
+        )
+        for q in questions
+    ]
+
+    return schemas.SubmissionResultOut(
+        submission_id=submission.id,
+        form_title=form.title,
+        score_percent=score,
+        correct_count=correct_count,
+        total_graded=total_graded,
+        is_cheated=submission.is_cheated,
+        submitted_at=submission.submitted_at,
+        answers=result_answers,
+    )
+
+
+@router.post("/submissions/{submission_id}/flag-cheated", response_model=schemas.SubmissionOut)
+def flag_cheated(
+    submission_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Frontend kirim flag ini kalau user keluar dari mode fullscreen.
+    is_cheated diset permanen (sekali). Hanya aktif kalau form.require_fullscreen true.
+    """
+    submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
+    if submission.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bukan submission milikmu")
+
+    form = db.query(models.Form).filter(models.Form.id == submission.form_id).first()
+    if not form or not form.require_fullscreen:
+        raise HTTPException(status_code=403, detail="Form tidak mengaktifkan mode full screen")
+
+    submission.is_cheated = True
+    db.commit()
+    db.refresh(submission)
+    return submission
 

@@ -47,6 +47,10 @@ def create_form(
         start_date=payload.start_date,
         end_date=payload.end_date,
         join_token=security.generate_join_token() if payload.use_join_token else None,
+        allow_see_result=payload.allow_see_result,
+        max_submissions=payload.max_submissions,
+        require_fullscreen=payload.require_fullscreen,
+        reveal_answers=payload.reveal_answers,
     )
     db.add(form)
     db.flush()

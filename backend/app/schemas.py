@@ -150,6 +150,10 @@ class FormCreate(BaseModel):
     end_date: Optional[datetime] = None
     use_join_token: bool = False        # kalau true, server generate token acak buat ujian bareng
     questions: List[QuestionCreate] = []  # dipakai kalau blank form (tanpa template)
+    allow_see_result: bool = False
+    max_submissions: int = 1
+    require_fullscreen: bool = False
+    reveal_answers: bool = False
 
 
 class FormUpdate(BaseModel):
@@ -160,6 +164,10 @@ class FormUpdate(BaseModel):
     banner_url: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    allow_see_result: Optional[bool] = None
+    max_submissions: Optional[int] = None
+    require_fullscreen: Optional[bool] = None
+    reveal_answers: Optional[bool] = None
 
 
 class FormOut(BaseModel):
@@ -174,6 +182,10 @@ class FormOut(BaseModel):
     join_token: Optional[str]
     qr_code_url: Optional[str]
     accept_responses: bool
+    allow_see_result: bool
+    max_submissions: int
+    require_fullscreen: bool
+    reveal_answers: bool
     start_date: Optional[datetime]
     end_date: Optional[datetime]
     created_at: datetime
@@ -275,7 +287,31 @@ class SubmissionOut(BaseModel):
     started_at: datetime
     is_auto_submitted: bool
     submitted_at: Optional[datetime]
+    is_cheated: bool = False
     answers: List[AnswerOut] = []
 
     class Config:
         from_attributes = True
+
+
+# ============================================================
+# RESULT (Responden lihat hasil sendiri)
+# ============================================================
+class AnswerResultOut(BaseModel):
+    question_id: uuid.UUID
+    label: str
+    type: QuestionType
+    user_answer: Optional[str] = None
+    is_correct: Optional[bool] = None
+    correct_answer: Optional[str] = None  # kunci jawaban, hanya dikirim jika form.reveal_answers
+
+
+class SubmissionResultOut(BaseModel):
+    submission_id: uuid.UUID
+    form_title: str
+    score_percent: Optional[int] = None   # None kalau belum ada soal ber-kunci
+    correct_count: int = 0
+    total_graded: int = 0
+    is_cheated: bool = False
+    submitted_at: Optional[datetime]
+    answers: List[AnswerResultOut] = []

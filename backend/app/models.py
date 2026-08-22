@@ -91,6 +91,12 @@ class Form(Base):
 
     accept_responses = Column(Boolean, default=True)
 
+    # settings tambahan
+    allow_see_result = Column(Boolean, default=False)   # responden boleh lihat hasil submit + skor
+    max_submissions = Column(Integer, default=1)        # berapa kali boleh submit (0 = unlimited)
+    require_fullscreen = Column(Boolean, default=False) # wajib fullscreen, keluar = ditandai curang
+    reveal_answers = Column(Boolean, default=False)     # tampilkan kunci jawaban di halaman hasil
+
     # timer: window waktu tetap, berlaku sama buat semua orang
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
@@ -150,9 +156,6 @@ class QuestionOption(Base):
 # ============================================================
 class Submission(Base):
     __tablename__ = "submissions"
-    __table_args__ = (
-        UniqueConstraint("form_id", "user_id", name="uq_one_submission_per_user_per_form"),
-    )
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
     form_id = Column(String(36), ForeignKey("forms.id", ondelete="CASCADE"), nullable=False)
@@ -161,6 +164,7 @@ class Submission(Base):
     started_at = Column(DateTime, default=datetime.utcnow)
     is_auto_submitted = Column(Boolean, default=False)
     submitted_at = Column(DateTime, nullable=True)
+    is_cheated = Column(Boolean, default=False)  # ditandai curang jika keluar mode fullscreen
 
     form = relationship("Form", back_populates="submissions")
     user = relationship("User", back_populates="submissions")

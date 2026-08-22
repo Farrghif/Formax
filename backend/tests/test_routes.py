@@ -22,6 +22,12 @@ class RouteRegistrationTests(unittest.TestCase):
 
         self.assertTrue(put_routes, "PUT /auth/me should be registered")
 
+    def test_submission_result_and_flag_cheated_routes_are_registered(self):
+        paths = {route.path for route in app.routes if hasattr(route, "path")}
+
+        self.assertIn("/submissions/{submission_id}/result", paths)
+        self.assertIn("/submissions/{submission_id}/flag-cheated", paths)
+
 
 if __name__ == "__main__":
     unittest.main()
