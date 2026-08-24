@@ -7,6 +7,7 @@ import 'form_maker/editor_canvas.dart';
 import 'form_maker/preview_canvas.dart';
 import '../models/question_model.dart'; // Ensure QuestionType is imported for toolbar
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
 class FormMakerPage extends StatefulWidget {
   final FormTemplate? initialTemplate;
@@ -24,6 +25,7 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
 
   final Color _primaryColor = const Color(0xFF4F46E5);
   final Color _bgColor = const Color(0xFFE8EEF7);
+  
 
   // State untuk Setelan
   bool _isQuiz = true;
