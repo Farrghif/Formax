@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+__pycache__/
+*.pyc
 
 # Node.js dependencies & builds
 node_modules/
