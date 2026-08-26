@@ -14,6 +14,7 @@ import {
   updateOption,
   deleteOption,
 } from '../api/questions';
+import { downloadTemplateDocx, previewDocxImport, confirmDocxImport } from '../api/docx';
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
 
@@ -116,6 +117,16 @@ export default function FormBuilderPage() {
   const [toast, setToast] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Import DOCX state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPhase, setImportPhase] = useState('upload'); // 'upload' | 'preview' | 'importing'
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importSelected, setImportSelected] = useState(new Set());
+  const [importLoading, setImportLoading] = useState(false);
+  const [importDragging, setImportDragging] = useState(false);
+  const [importError, setImportError] = useState(null);
 
 
   // Form data
@@ -618,6 +629,155 @@ export default function FormBuilderPage() {
     }
   };
 
+  // ============================================================
+  // IMPORT DOCX HANDLERS
+  // ============================================================
+  const resetImportModal = () => {
+    setShowImportModal(false);
+    setImportPhase('upload');
+    setImportFile(null);
+    setImportPreview(null);
+    setImportSelected(new Set());
+    setImportLoading(false);
+    setImportDragging(false);
+    setImportError(null);
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadTemplateDocx(token);
+      showToast('Template berhasil diunduh!', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleFileSelect = async (file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      setImportError('File harus berformat .docx (Word modern), bukan .doc lama');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImportError('Ukuran file maksimal 5 MB');
+      return;
+    }
+
+    setImportFile(file);
+    setImportLoading(true);
+    setImportError(null);
+
+    try {
+      const result = await previewDocxImport(token, formData.id, file);
+      setImportPreview(result);
+
+      const validIds = new Set();
+      result.questions.forEach((q) => {
+        if (q.errors.length === 0) validIds.add(q.number);
+      });
+      setImportSelected(validIds);
+      setImportPhase('preview');
+    } catch (err) {
+      setImportError(err.message);
+      setImportFile(null);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importPreview || importSelected.size === 0) return;
+
+    setImportPhase('importing');
+    setImportLoading(true);
+
+    try {
+      const selectedQuestions = importPreview.questions
+        .filter((q) => importSelected.has(q.number))
+        .map((q) => ({
+          label: q.label,
+          is_required: false,
+          options: q.options.map((o) => ({
+            label: o.label,
+            value: o.value || o.label,
+            order_index: o.order_index,
+            is_correct: o.is_correct,
+          })),
+        }));
+
+      const result = await confirmDocxImport(token, formData.id, selectedQuestions);
+      showToast(result.message || `${selectedQuestions.length} soal berhasil diimpor!`, 'success');
+
+      // Reload form to get fresh questions
+      try {
+        const freshForm = await getForm(token, formData.id);
+        setQuestions(
+          (freshForm.questions || [])
+            .sort((a, b) => a.order_index - b.order_index)
+            .map((q) => ({
+              ...q,
+              _saved: true,
+              options: (q.options || []).sort((a, b) => a.order_index - b.order_index).map((o) => ({ ...o, _saved: true })),
+            }))
+        );
+      } catch {
+        // If reload fails, just close modal
+      }
+
+      resetImportModal();
+    } catch (err) {
+      showToast(err.message, 'error');
+      setImportPhase('preview');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportDrop = (e) => {
+    e.preventDefault();
+    setImportDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleImportDragOver = (e) => {
+    e.preventDefault();
+    setImportDragging(true);
+  };
+
+  const handleImportDragLeave = (e) => {
+    e.preventDefault();
+    setImportDragging(false);
+  };
+
+  const toggleImportQuestion = (number) => {
+    const q = importPreview?.questions?.find((q) => q.number === number);
+    if (q && q.errors.length > 0) return; // can't select error questions
+
+    setImportSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(number)) {
+        next.delete(number);
+      } else {
+        next.add(number);
+      }
+      return next;
+    });
+  };
+
+  const toggleImportSelectAll = () => {
+    if (!importPreview) return;
+    const validNumbers = importPreview.questions
+      .filter((q) => q.errors.length === 0)
+      .map((q) => q.number);
+
+    if (importSelected.size === validNumbers.length) {
+      setImportSelected(new Set());
+    } else {
+      setImportSelected(new Set(validNumbers));
+    }
+  };
+
 
   // ============================================================
   // BANNER
@@ -743,6 +903,25 @@ export default function FormBuilderPage() {
           </div>
 
           <div className="fb-topbar-actions">
+            <button
+              className="fb-import-btn"
+              onClick={() => {
+                if (!formData.id) {
+                  showToast('Simpan form terlebih dahulu, lalu klik Import Word', 'error');
+                  return;
+                }
+                setShowImportModal(true);
+              }}
+              title="Import soal dari file Word (.docx)"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <polyline points="9 15 12 18 15 15" />
+              </svg>
+              Import Word
+            </button>
             <button className="fb-template-btn" onClick={handleSaveAsTemplate} disabled={templateSaving} title="Simpan soal-soal ini sebagai template baru">
               {templateSaving ? 'Menyimpan...' : 'Simpan sebagai Template'}
             </button>
@@ -1307,6 +1486,228 @@ export default function FormBuilderPage() {
           )}
         </section>
       </main>
+
+      {/* Import Word Modal */}
+      {showImportModal && (
+        <div className="fb-import-modal-overlay" onClick={resetImportModal}>
+          <div className="fb-import-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="fb-import-modal-header">
+              <h3>Import Soal dari Word</h3>
+              <button className="fb-import-close-btn" onClick={resetImportModal} aria-label="Tutup">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="fb-import-modal-body">
+              {/* ===== PHASE: UPLOAD ===== */}
+              {importPhase === 'upload' && (
+                <>
+                  {/* Download Template */}
+                  <button className="fb-import-download-btn" onClick={handleDownloadTemplate}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download Template Word
+                  </button>
+
+                  {/* Petunjuk */}
+                  <div className="fb-import-petunjuk">
+                    <div className="fb-import-petunjuk-title">
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      Petunjuk Penggunaan
+                    </div>
+                    <ul className="fb-import-petunjuk-list">
+                      <li>Download template Word di atas lalu buka dengan <strong>Microsoft Word</strong> atau <strong>Google Docs</strong></li>
+                      <li>Tulis soal dengan format: <code>1. Teks soal...</code></li>
+                      <li>Tulis opsi dengan format: <code>A. Teks opsi</code>, <code>B. Teks opsi</code>, dst.</li>
+                      <li>Tandai kunci jawaban dengan salah satu cara:
+                        <code>*A. Opsi benar</code> (tanda bintang) atau <code>Jawaban: A</code> (di bawah opsi)
+                      </li>
+                      <li>Simpan file sebagai <code>.docx</code> lalu upload ke sini</li>
+                      <li>System akan otomatis mendeteksi soal, opsi, dan kunci jawaban</li>
+                    </ul>
+                  </div>
+
+                  {/* Error Message */}
+                  {importError && (
+                    <div style={{
+                      marginTop: '14px',
+                      padding: '12px 16px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '10px',
+                      color: '#dc2626',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                    }}>
+                      {importError}
+                    </div>
+                  )}
+
+                  {/* Dropzone */}
+                  <div
+                    className={`fb-import-dropzone ${importDragging ? 'dragging' : ''}`}
+                    onDrop={handleImportDrop}
+                    onDragOver={handleImportDragOver}
+                    onDragLeave={handleImportDragLeave}
+                    onClick={() => document.getElementById('fb-import-file-input')?.click()}
+                  >
+                    {importLoading ? (
+                      <div className="fb-import-loading">
+                        <div className="db-spinner" />
+                        <span className="fb-import-loading-text">Memproses file...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="fb-import-dropzone-icon">
+                          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="12" y1="18" x2="12" y2="12" />
+                            <polyline points="9 15 12 18 15 15" />
+                          </svg>
+                        </div>
+                        <div className="fb-import-dropzone-text">
+                          <strong>Klik untuk upload</strong> atau seret file ke sini
+                        </div>
+                        <div className="fb-import-dropzone-hint">
+                          File .docx (Word) — Maks. 5 MB
+                        </div>
+                      </>
+                    )}
+                    <input
+                      id="fb-import-file-input"
+                      type="file"
+                      accept=".docx"
+                      onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ===== PHASE: PREVIEW ===== */}
+              {importPhase === 'preview' && importPreview && (
+                <>
+                  {/* Summary */}
+                  <div className="fb-import-summary">
+                    <div className="fb-import-summary-item">
+                      <span className="fb-import-summary-num blue">{importPreview.total}</span>
+                      <span className="fb-import-summary-label">Total Soal</span>
+                    </div>
+                    <div className="fb-import-summary-divider" />
+                    <div className="fb-import-summary-item">
+                      <span className="fb-import-summary-num green">{importPreview.valid_count}</span>
+                      <span className="fb-import-summary-label">Valid</span>
+                    </div>
+                    <div className="fb-import-summary-divider" />
+                    <div className="fb-import-summary-item">
+                      <span className="fb-import-summary-num red">{importPreview.total - importPreview.valid_count}</span>
+                      <span className="fb-import-summary-label">Error</span>
+                    </div>
+                  </div>
+
+                  {/* File info */}
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                    File: <strong style={{ color: '#334155' }}>{importFile?.name}</strong>
+                  </div>
+
+                  {/* Select All */}
+                  {importPreview.valid_count > 0 && (
+                    <div className="fb-import-select-all">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={importSelected.size === importPreview.valid_count}
+                          onChange={toggleImportSelectAll}
+                        />
+                        Pilih semua soal valid ({importSelected.size}/{importPreview.valid_count})
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Question List */}
+                  <div className="fb-import-question-list">
+                    {importPreview.questions.map((q) => (
+                      <div key={q.number} className={`fb-import-q-item ${q.errors.length === 0 ? 'valid' : 'error'}`}>
+                        <input
+                          type="checkbox"
+                          checked={importSelected.has(q.number)}
+                          disabled={q.errors.length > 0}
+                          onChange={() => toggleImportQuestion(q.number)}
+                        />
+                        <div className="fb-import-q-content">
+                          <div className="fb-import-q-num">Soal {q.number}</div>
+                          <div className="fb-import-q-label">{q.label}</div>
+                          {q.options.length > 0 && (
+                            <div className="fb-import-q-options">
+                              {q.options.map((o, i) => (
+                                <span key={i}>
+                                  {String.fromCharCode(65 + o.order_index)}. {o.label}{o.is_correct ? ' ✓' : ''}
+                                  {i < q.options.length - 1 ? ' | ' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {q.errors.length > 0 && (
+                            <div className="fb-import-q-errors">
+                              {q.errors.map((err, i) => (
+                                <span key={i} className="fb-import-q-error-tag">{err}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {importPreview.valid_count === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '24px',
+                      color: '#94a3b8',
+                      fontSize: '13px',
+                    }}>
+                      Tidak ada soal yang bisa diimpor. Periksa format penulisan sesuai template.
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ===== PHASE: IMPORTING ===== */}
+              {importPhase === 'importing' && (
+                <div className="fb-import-loading">
+                  <div className="db-spinner" />
+                  <span className="fb-import-loading-text">Mengimpor {importSelected.size} soal...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="fb-import-modal-footer">
+              <button className="fb-import-cancel-btn" onClick={resetImportModal}>
+                {importPhase === 'preview' ? 'Batal' : 'Tutup'}
+              </button>
+              {importPhase === 'preview' && (
+                <button
+                  className="fb-import-confirm-btn"
+                  onClick={handleImportConfirm}
+                  disabled={importSelected.size === 0 || importLoading}
+                >
+                  Import {importSelected.size} Soal
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Modal Pop-up */}
       {showQrModal && formData.qr_code_url && (
