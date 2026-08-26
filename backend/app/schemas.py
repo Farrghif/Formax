@@ -317,3 +317,35 @@ class SubmissionResultOut(BaseModel):
     is_cheated: bool = False
     submitted_at: Optional[datetime]
     answers: List[AnswerResultOut] = []
+
+# ============================================================
+# IMPORT SOAL DARI WORD (.docx)
+# ============================================================
+class DocxParsedOption(BaseModel):
+    label: str
+    value: Optional[str] = None
+    order_index: int = 0
+    is_correct: bool = False
+
+
+class DocxParsedQuestion(BaseModel):
+    number: int
+    label: str
+    options: List[DocxParsedOption] = []
+    errors: List[str] = []
+
+
+class DocxPreviewOut(BaseModel):
+    total: int
+    valid_count: int
+    questions: List[DocxParsedQuestion]
+
+
+class DocxImportQuestionIn(BaseModel):
+    label: str
+    is_required: bool = False
+    options: List[QuestionOptionCreate] = []
+
+
+class DocxImportRequest(BaseModel):
+    questions: List[DocxImportQuestionIn]

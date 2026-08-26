@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, templates, forms, submissions, uploads, export, questions, search
+from .routers import auth, templates, forms, submissions, uploads, export, questions, search, import_docx
 
 from sqlalchemy import text, inspect
 
@@ -41,8 +41,27 @@ with engine.begin() as conn:
     if not column_exists("question_options", "is_correct"):
         conn.execute(text("ALTER TABLE question_options ADD COLUMN is_correct BOOLEAN;"))
 
+    if not column_exists("question_options", "is_other"):
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE question_options ADD COLUMN IF NOT EXISTS is_other BOOLEAN;"))
+        else:
+            conn.execute(text("ALTER TABLE question_options ADD COLUMN is_other BOOLEAN;"))
+
     # Backfill: opsi lama yang belum punya nilai dianggap bukan jawaban benar
     conn.execute(text("UPDATE question_options SET is_correct = FALSE WHERE is_correct IS NULL;"))
+    conn.execute(text("UPDATE question_options SET is_other = FALSE WHERE is_other IS NULL;"))
+
+    # Tambah nilai enum baru untuk PostgreSQL (image & text_block)
+    if dialect == "postgresql":
+        raw = engine.raw_connection()
+        try:
+            raw_cursor = raw.cursor()
+            raw_cursor.execute("ALTER TYPE questiontype ADD VALUE IF NOT EXISTS 'image'")
+            raw_cursor.execute("ALTER TYPE questiontype ADD VALUE IF NOT EXISTS 'text_block'")
+            raw.commit()
+            raw_cursor.close()
+        finally:
+            raw.close()
 
     # Setting baru Form Builder
     add_column("forms", "allow_see_result", "BOOLEAN NOT NULL DEFAULT FALSE")
@@ -110,6 +129,7 @@ app.include_router(submissions.router)
 app.include_router(uploads.router)
 app.include_router(export.router)
 app.include_router(search.router)
+app.include_router(import_docx.router)
 
 
 @app.get("/")
