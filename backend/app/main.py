@@ -111,15 +111,29 @@ with engine.begin() as conn:
 
 app = FastAPI(title="Form Maker API", version="2.0.0")
 
-_allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else []
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in _allowed_origins if o.strip()] if _allowed_origins else [],
-    allow_origin_regex=None if _allowed_origins else ".*",  # dev: open, prod: isi ALLOWED_ORIGINS
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS: baca dari env ALLOWED_ORIGINS (comma-separated), fallback buka untuk ngrok/Vercel
+_allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+_allowed_origins = [o.strip() for o in _allowed_origins_raw.split(",") if o.strip()] if _allowed_origins_raw.strip() else []
+
+if _allowed_origins:
+    # Production: hanya origin yang di-whitelist
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Dev / ngrok tunnel: allow semua origin (Bearer token tidak butuh cookies)
+    # Ini yang fix Cross-Origin di https://formax-seven.vercel.app -> ngrok-free.dev
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Serve file QR code & hasil upload
 app.mount("/static", StaticFiles(directory="static"), name="static")

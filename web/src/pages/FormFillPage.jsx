@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicFormBySlug, joinForm, saveAnswer, submitFinal, getSubmissionResult, flagCheated } from '../api/submissions';
 import { uploadFile } from '../api/uploads';
 import { getMe } from '../api/auth';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 4;
@@ -593,6 +594,7 @@ export default function FormFillPage() {
         <header className="form-fill-header">
           <h1 className="form-fill-logo">Form4x</h1>
           <div className="form-fill-header-right">
+            <ThemeToggle />
             <button
               className="profile-avatar-btn"
               onClick={() => navigate('/dashboard')}
@@ -723,6 +725,7 @@ export default function FormFillPage() {
         <header className="form-fill-header">
           <h1 className="form-fill-logo">Form4x</h1>
           <div className="form-fill-header-right">
+            <ThemeToggle />
             <div
               className="profile-menu-wrapper"
               onMouseEnter={handleProfileMouseEnter}
@@ -854,6 +857,7 @@ export default function FormFillPage() {
             </div>
           )}
 
+          <ThemeToggle />
           {/* Profile Logo - Hover fetches GET /auth/me */}
           <div
             className="profile-menu-wrapper"

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/landing.css';
 
 /* ─── Feature Card Component ─── */
@@ -94,6 +95,7 @@ const HomePage = () => {
             <Link to="/cara-pakai" className="hp-nav-link">Cara Pakai</Link>
           </nav>
           <div className="hp-header-actions">
+            <ThemeToggle />
             <Link to="/auth" className="hp-btn-login">Login</Link>
             <Link to="/auth" className="hp-btn-register">Daftar</Link>
           </div>

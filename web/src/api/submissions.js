@@ -1,10 +1,10 @@
-import { API_BASE_URL, readJsonResponse } from './config';
+import { API_BASE_URL, apiFetch, readJsonResponse } from './config';
 
 /**
  * Ambil detail form publik berdasarkan slug (wajib token auth)
  */
 export async function getPublicFormBySlug(token, slug) {
-  const res = await fetch(`${API_BASE_URL}/forms/public/${slug}`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/public/${slug}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil data form');
@@ -17,7 +17,7 @@ export async function getPublicFormBySlug(token, slug) {
  * @param {string} [joinToken] - Join token jika form membutuhkan token ujian
  */
 export async function joinForm(token, slug, joinToken = null) {
-  const res = await fetch(`${API_BASE_URL}/forms/public/${slug}/join`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/public/${slug}/join`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ export async function joinForm(token, slug, joinToken = null) {
  * Autosave jawaban per soal
  */
 export async function saveAnswer(token, submissionId, payload) {
-  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/answers`, {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/${submissionId}/answers`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ export async function saveAnswer(token, submissionId, payload) {
  * Ambil progress submission (X/Y)
  */
 export async function getSubmissionProgress(token, submissionId) {
-  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/progress`, {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/${submissionId}/progress`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil progress');
@@ -57,7 +57,7 @@ export async function getSubmissionProgress(token, submissionId) {
  * Final submit jawaban
  */
 export async function submitFinal(token, submissionId) {
-  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/submit`, {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/${submissionId}/submit`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -69,7 +69,7 @@ export async function submitFinal(token, submissionId) {
  * Hanya aktif jika form.allow_see_result true.
  */
 export async function getSubmissionResult(token, submissionId) {
-  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/result`, {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/${submissionId}/result`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil hasil form');
@@ -80,9 +80,20 @@ export async function getSubmissionResult(token, submissionId) {
  * Hanya aktif jika form.require_fullscreen true.
  */
 export async function flagCheated(token, submissionId) {
-  const res = await fetch(`${API_BASE_URL}/submissions/${submissionId}/flag-cheated`, {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/${submissionId}/flag-cheated`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal menandai submission');
+}
+
+/**
+ * Aktivitas Saya — daftar submission milik user login sebagai responden
+ * GET /submissions/me  (auth required)
+ */
+export async function getMySubmissions(token) {
+  const res = await apiFetch(`${API_BASE_URL}/submissions/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return readJsonResponse(res, 'Gagal mengambil aktivitas saya');
 }

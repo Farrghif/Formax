@@ -1,2 +1,6 @@
 venv/
 formmaker.db
+.env
+*.pyc
+__pycache__/
+*.egg-info/

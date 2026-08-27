@@ -1,4 +1,4 @@
-import { API_BASE_URL, readJsonResponse } from './config';
+import { API_BASE_URL, apiFetch, readJsonResponse } from './config';
 
 // ============================================================
 // QUESTIONS
@@ -8,7 +8,7 @@ import { API_BASE_URL, readJsonResponse } from './config';
  * Tambah pertanyaan ke form
  */
 export async function createQuestionInForm(token, formId, data) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/questions`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/questions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -23,7 +23,7 @@ export async function createQuestionInForm(token, formId, data) {
  * Update pertanyaan
  */
 export async function updateQuestion(token, questionId, data) {
-  const res = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/questions/${questionId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -38,7 +38,7 @@ export async function updateQuestion(token, questionId, data) {
  * Hapus pertanyaan
  */
 export async function deleteQuestion(token, questionId) {
-  const res = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/questions/${questionId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -53,7 +53,7 @@ export async function deleteQuestion(token, questionId) {
  * Tambah opsi ke pertanyaan
  */
 export async function createOption(token, questionId, data) {
-  const res = await fetch(`${API_BASE_URL}/questions/${questionId}/options`, {
+  const res = await apiFetch(`${API_BASE_URL}/questions/${questionId}/options`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export async function createOption(token, questionId, data) {
  * Update opsi
  */
 export async function updateOption(token, optionId, data) {
-  const res = await fetch(`${API_BASE_URL}/options/${optionId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/options/${optionId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export async function updateOption(token, optionId, data) {
  * Hapus opsi
  */
 export async function deleteOption(token, optionId) {
-  const res = await fetch(`${API_BASE_URL}/options/${optionId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/options/${optionId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
