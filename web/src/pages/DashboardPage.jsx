@@ -7,6 +7,32 @@ import { parseServerTime } from '../utils/date';
 import logoForm4x from '../assets/logo_form4x.png';
 import '../styles/dashboard.css';
 
+// Helper: ubah HTML WYSIWYG (Quill) menjadi teks polos agar tidak bocor tag di riwayat
+function stripHtml(html) {
+  if (!html) return '';
+  // Jika sudah teks polos tanpa tag, langsung kembalikan
+  if (!html.includes('<')) return html.trim();
+  try {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    // textContent otomatis hilangkan semua tag <p>, <pre>, <strong>, dll
+    // ganti &nbsp; dan rapikan whitespace
+    const text = (div.textContent || div.innerText || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    // Fallback jika hasilnya kosong tapi html ada isinya (mis. hanya <p><br></p>)
+    return text || html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  } catch {
+    return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+}
+
+function plainLabel(html, fallback = 'Pertanyaan tanpa judul') {
+  const t = stripHtml(html);
+  return t || fallback;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -942,8 +968,8 @@ export default function DashboardPage() {
                           return (
                             <div key={q.id} className="analytics-question-card">
                               <div className="analytics-q-header">
-                                <h4 className="analytics-q-title">
-                                  {idx + 1}. {q.label}
+                                <h4 className="analytics-q-title" title={plainLabel(q.label)}>
+                                  {idx + 1}. {plainLabel(q.label)}
                                 </h4>
                                 <div className="analytics-q-tags">
                                   <span className="analytics-type-badge">{typeLabels[q.type] || q.type}</span>
@@ -1114,8 +1140,8 @@ export default function DashboardPage() {
                         return (
                           <div key={q.id} className="detail-question-card">
                             <div className="detail-question-header">
-                              <h3 className="detail-question-title">
-                                {idx + 1}. {q.label}
+                              <h3 className="detail-question-title" title={plainLabel(q.label)}>
+                                {idx + 1}. {plainLabel(q.label)}
                               </h3>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                 <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px' }}>

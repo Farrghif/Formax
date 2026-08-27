@@ -118,6 +118,13 @@ export default function FormBuilderPage() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Bulk select state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState(() => new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmSingleIdx, setConfirmSingleIdx] = useState(null);
+
   // Import DOCX state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importPhase, setImportPhase] = useState('upload'); // 'upload' | 'preview' | 'importing'
@@ -523,6 +530,65 @@ export default function FormBuilderPage() {
       }
     }
     setQuestions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Bulk helpers
+  const getQKey = (q) => q.id || q._tempId;
+  const isAllSelected = questions.length > 0 && bulkSelected.size === questions.length;
+  const toggleBulkSelect = (key) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const toggleBulkSelectAll = () => {
+    if (isAllSelected) setBulkSelected(new Set());
+    else setBulkSelected(new Set(questions.map(getQKey)));
+  };
+  const handleBulkDelete = () => {
+    if (bulkSelected.size === 0) return;
+    setShowBulkConfirm(true);
+  };
+  const executeBulkDelete = async () => {
+    if (bulkSelected.size === 0) return;
+    setBulkDeleting(true);
+    const toDelete = questions.filter((q) => bulkSelected.has(getQKey(q)) && q.id);
+    for (const q of toDelete) {
+      try {
+        await deleteQuestion(token, q.id);
+      } catch (err) {
+        showToast(err.message || 'Gagal menghapus beberapa soal', 'error');
+        setBulkDeleting(false);
+        return;
+      }
+    }
+    const count = bulkSelected.size;
+    setQuestions((prev) => prev.filter((q) => !bulkSelected.has(getQKey(q))).map((q, idx) => ({ ...q, order_index: idx })));
+    setBulkSelected(new Set());
+    setBulkMode(false);
+    setActiveQuestion(null);
+    setShowBulkConfirm(false);
+    setBulkDeleting(false);
+    showToast(`${count} pertanyaan berhasil dihapus`, 'success');
+  };
+  const executeSingleDelete = async () => {
+    if (confirmSingleIdx === null) return;
+    const q = questions[confirmSingleIdx];
+    if (!q) return;
+    if (q.id) {
+      try {
+        await deleteQuestion(token, q.id);
+      } catch (err) {
+        showToast(err.message, 'error');
+        return;
+      }
+    }
+    setQuestions((prev) => prev.filter((_, i) => i !== confirmSingleIdx).map((qq, idx) => ({ ...qq, order_index: idx })));
+    if (activeQuestion === getQKey(q)) setActiveQuestion(null);
+    setConfirmSingleIdx(null);
+    showToast('Pertanyaan dihapus', 'success');
   };
 
   const updateQuestionLocal = (index, updates) => {
@@ -1007,20 +1073,87 @@ export default function FormBuilderPage() {
                   </div>
                 </div>
 
+                {/* Bulk action bar */}
+                {questions.length > 0 && (
+                  <div className={`fb-bulk-bar ${bulkMode ? 'active' : ''}`}>
+                    {!bulkMode ? (
+                      <>
+                        <span className="fb-bulk-count">{questions.length} Soal</span>
+                        <button className="fb-bulk-trigger" onClick={() => setBulkMode(true)}>
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <path d="M9 12l2 2 4-4" />
+                          </svg>
+                          Pilih
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <label className="fb-bulk-selectall">
+                          <input
+                            type="checkbox"
+                            className="fb-bulk-checkbox-input"
+                            checked={isAllSelected}
+                            onChange={toggleBulkSelectAll}
+                          />
+                          <span className="fb-bulk-checkmark" />
+                          {isAllSelected ? 'Batalkan semua' : 'Pilih semua'}
+                        </label>
+                        <span className="fb-bulk-selected-count">
+                          {bulkSelected.size > 0 ? `${bulkSelected.size} dipilih` : 'Belum ada yang dipilih'}
+                        </span>
+                        <div className="fb-bulk-actions">
+                          <button
+                            className="fb-bulk-delete-btn"
+                            onClick={handleBulkDelete}
+                            disabled={bulkSelected.size === 0}
+                            title={bulkSelected.size === 0 ? 'Pilih soal terlebih dahulu' : `Hapus ${bulkSelected.size} soal`}
+                          >
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                            Hapus ({bulkSelected.size})
+                          </button>
+                          <button
+                            className="fb-bulk-cancel-btn"
+                            onClick={() => { setBulkMode(false); setBulkSelected(new Set()); }}
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* Questions */}
                 {questions.map((q, qIdx) => {
                   const qKey = q.id || q._tempId;
                   const isActive = activeQuestion === qKey;
+                  const isBulkSelected = bulkSelected.has(qKey);
 
                   return (
                     <div
                       key={qKey}
-                      className={`fb-question-card ${isActive ? 'active' : ''}`}
+                      className={`fb-question-card ${isActive ? 'active' : ''} ${isBulkSelected ? 'bulk-selected' : ''}`}
                       onClick={() => setActiveQuestion(qKey)}
                     >
                       {/* Top: type selector */}
                       <div className="fb-question-top">
-                        <div className="fb-question-top-label">Pertanyaan {qIdx + 1}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {bulkMode && (
+                            <label className="fb-bulk-card-check" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isBulkSelected}
+                                onChange={() => toggleBulkSelect(qKey)}
+                              />
+                              <span className="fb-bulk-card-checkmark" />
+                            </label>
+                          )}
+                          <div className="fb-question-top-label">Pertanyaan {qIdx + 1}</div>
+                        </div>
                         <select
                           className="fb-type-select"
                           value={q.type}
@@ -1204,7 +1337,7 @@ export default function FormBuilderPage() {
                           </svg>
                         </button>
                         {/* Delete */}
-                        <button className="fb-q-action-btn danger" onClick={() => removeQuestion(qIdx)} title="Hapus">
+                        <button className="fb-q-action-btn danger" onClick={(e) => { e.stopPropagation(); setConfirmSingleIdx(qIdx); }} title="Hapus">
                           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
@@ -1487,13 +1620,26 @@ export default function FormBuilderPage() {
         </section>
       </main>
 
-      {/* Import Word Modal */}
+      {/* Import Word Modal — Premium */}
       {showImportModal && (
         <div className="fb-import-modal-overlay" onClick={resetImportModal}>
           <div className="fb-import-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
+            {/* Header — gradient hero */}
             <div className="fb-import-modal-header">
-              <h3>Import Soal dari Word</h3>
+              <div className="fb-import-header-left">
+                <div className="fb-import-header-icon">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <polyline points="9 15 12 18 15 15" />
+                  </svg>
+                </div>
+                <div className="fb-import-header-text">
+                  <h3>Import Soal dari Word</h3>
+                  <p>Upload file .docx — otomatis jadi soal pilihan ganda</p>
+                </div>
+              </div>
               <button className="fb-import-close-btn" onClick={resetImportModal} aria-label="Tutup">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -1501,58 +1647,95 @@ export default function FormBuilderPage() {
               </button>
             </div>
 
+            {/* Stepper */}
+            <div className="fb-import-stepper">
+              <div className={`fb-import-step ${importPhase === 'upload' ? 'active' : importPhase === 'preview' || importPhase === 'importing' ? 'done' : ''}`}>
+                <span className="fb-import-step-num">{importPhase === 'preview' || importPhase === 'importing' ? '✓' : '1'}</span>
+                Template &amp; Upload
+              </div>
+              <div className={`fb-import-step-line ${importPhase === 'preview' || importPhase === 'importing' ? 'filled' : ''}`} />
+              <div className={`fb-import-step ${importPhase === 'preview' ? 'active' : importPhase === 'importing' ? 'done' : ''}`}>
+                <span className="fb-import-step-num">{importPhase === 'importing' ? '✓' : '2'}</span>
+                Preview &amp; Import
+              </div>
+            </div>
+
             {/* Body */}
             <div className="fb-import-modal-body">
               {/* ===== PHASE: UPLOAD ===== */}
               {importPhase === 'upload' && (
                 <>
-                  {/* Download Template */}
-                  <button className="fb-import-download-btn" onClick={handleDownloadTemplate}>
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download Template Word
-                  </button>
-
-                  {/* Petunjuk */}
-                  <div className="fb-import-petunjuk">
-                    <div className="fb-import-petunjuk-title">
-                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                  {/* Template download — premium card */}
+                  <div className="fb-import-template-card">
+                    <div className="fb-import-template-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="white" opacity="0.95" />
+                        <path d="M14 2v6h6" fill="#bfdbfe" />
                       </svg>
-                      Petunjuk Penggunaan
+                      <span>DOCX</span>
                     </div>
-                    <ul className="fb-import-petunjuk-list">
-                      <li>Download template Word di atas lalu buka dengan <strong>Microsoft Word</strong> atau <strong>Google Docs</strong></li>
-                      <li>Tulis soal dengan format: <code>1. Teks soal...</code></li>
-                      <li>Tulis opsi dengan format: <code>A. Teks opsi</code>, <code>B. Teks opsi</code>, dst.</li>
-                      <li>Tandai kunci jawaban dengan salah satu cara:
-                        <code>*A. Opsi benar</code> (tanda bintang) atau <code>Jawaban: A</code> (di bawah opsi)
-                      </li>
-                      <li>Simpan file sebagai <code>.docx</code> lalu upload ke sini</li>
-                      <li>System akan otomatis mendeteksi soal, opsi, dan kunci jawaban</li>
-                    </ul>
+                    <div className="fb-import-template-info">
+                      <strong>Template Word (.docx)</strong>
+                      <span>Download, isi 2–8 opsi per soal, lalu upload kembali</span>
+                    </div>
+                    <button className="fb-import-download-btn" onClick={handleDownloadTemplate}>
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download Template
+                    </button>
                   </div>
 
-                  {/* Error Message */}
+                  {/* Guide — premium cards */}
+                  <div className="fb-import-guide">
+                    <div className="fb-import-guide-head">
+                      <strong>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+                        </svg>
+                        Cara Penulisan di Word
+                      </strong>
+                      <small>Khusus Pilihan Ganda</small>
+                    </div>
+                    <div className="fb-import-guide-grid">
+                      <div className="fb-import-guide-item">
+                        <span className="fb-import-guide-num">1</span>
+                        <p>Soal diawali nomor<br /><span>1. Ibu kota Indonesia adalah ...</span></p>
+                      </div>
+                      <div className="fb-import-guide-item">
+                        <span className="fb-import-guide-num">2</span>
+                        <p>Opsi pakai huruf<br /><span>A. Bandung</span> &nbsp; <span>B. Jakarta</span></p>
+                      </div>
+                      <div className="fb-import-guide-item">
+                        <span className="fb-import-guide-num">★</span>
+                        <p>Kunci cara 1 — bintang<br /><em>*B. Jakarta</em> &nbsp; di depan opsi benar</p>
+                      </div>
+                      <div className="fb-import-guide-item">
+                        <span className="fb-import-guide-num">✎</span>
+                        <p>Kunci cara 2 — baris kunci<br /><span>Jawaban: B</span> &nbsp; setelah semua opsi</p>
+                      </div>
+                    </div>
+                    <div className="fb-import-guide-foot">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path d="M12 9v3m0 4h.01M10.3 3.3L3.3 10.3a1.5 1.5 0 000 2.12l6.99 6.99a1.5 1.5 0 002.12 0l6.99-6.99a1.5 1.5 0 000-2.12L12.4 3.3a1.5 1.5 0 00-2.12 0z" />
+                      </svg>
+                      Simpan sebagai <strong>.docx</strong> (bukan .doc lama) — maksimal 8 opsi &amp; 5 MB
+                    </div>
+                  </div>
+
+                  {/* Error */}
                   {importError && (
-                    <div style={{
-                      marginTop: '14px',
-                      padding: '12px 16px',
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
-                      borderRadius: '10px',
-                      color: '#dc2626',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                    }}>
-                      {importError}
+                    <div className="fb-import-error-banner">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{importError}</span>
                     </div>
                   )}
 
-                  {/* Dropzone */}
+                  {/* Dropzone — premium */}
                   <div
                     className={`fb-import-dropzone ${importDragging ? 'dragging' : ''}`}
                     onDrop={handleImportDrop}
@@ -1562,13 +1745,18 @@ export default function FormBuilderPage() {
                   >
                     {importLoading ? (
                       <div className="fb-import-loading">
-                        <div className="db-spinner" />
-                        <span className="fb-import-loading-text">Memproses file...</span>
+                        <div className="fb-import-loading-card">
+                          <div className="db-spinner" />
+                        </div>
+                        <span className="fb-import-loading-text">
+                          Memproses file...
+                          <small>Menganalisis soal &amp; kunci jawaban</small>
+                        </span>
                       </div>
                     ) : (
                       <>
                         <div className="fb-import-dropzone-icon">
-                          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
                             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                             <polyline points="14 2 14 8 20 8" />
                             <line x1="12" y1="18" x2="12" y2="12" />
@@ -1578,9 +1766,7 @@ export default function FormBuilderPage() {
                         <div className="fb-import-dropzone-text">
                           <strong>Klik untuk upload</strong> atau seret file ke sini
                         </div>
-                        <div className="fb-import-dropzone-hint">
-                          File .docx (Word) — Maks. 5 MB
-                        </div>
+                        <div className="fb-import-dropzone-hint">.docx • Maks. 5 MB • Drag &amp; drop didukung</div>
                       </>
                     )}
                     <input
@@ -1596,27 +1782,55 @@ export default function FormBuilderPage() {
               {/* ===== PHASE: PREVIEW ===== */}
               {importPhase === 'preview' && importPreview && (
                 <>
-                  {/* Summary */}
-                  <div className="fb-import-summary">
-                    <div className="fb-import-summary-item">
-                      <span className="fb-import-summary-num blue">{importPreview.total}</span>
-                      <span className="fb-import-summary-label">Total Soal</span>
+                  {/* Stats — premium cards */}
+                  <div className="fb-import-stats">
+                    <div className="fb-import-stat total">
+                      <div className="fb-import-stat-icon">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                      </div>
+                      <div className="fb-import-stat-text">
+                        <strong>{importPreview.total}</strong>
+                        <span>Total Soal</span>
+                      </div>
                     </div>
-                    <div className="fb-import-summary-divider" />
-                    <div className="fb-import-summary-item">
-                      <span className="fb-import-summary-num green">{importPreview.valid_count}</span>
-                      <span className="fb-import-summary-label">Valid</span>
+                    <div className="fb-import-stat valid">
+                      <div className="fb-import-stat-icon">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      </div>
+                      <div className="fb-import-stat-text">
+                        <strong>{importPreview.valid_count}</strong>
+                        <span>Valid</span>
+                      </div>
                     </div>
-                    <div className="fb-import-summary-divider" />
-                    <div className="fb-import-summary-item">
-                      <span className="fb-import-summary-num red">{importPreview.total - importPreview.valid_count}</span>
-                      <span className="fb-import-summary-label">Error</span>
+                    <div className="fb-import-stat error">
+                      <div className="fb-import-stat-icon">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                      </div>
+                      <div className="fb-import-stat-text">
+                        <strong>{importPreview.total - importPreview.valid_count}</strong>
+                        <span>Error</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* File info */}
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                    File: <strong style={{ color: '#334155' }}>{importFile?.name}</strong>
+                  {/* File badge */}
+                  <div className="fb-import-file-badge">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span><strong>{importFile?.name}</strong> • {(importFile?.size / 1024).toFixed(0)} KB</span>
+                    <button
+                      onClick={() => { setImportPhase('upload'); setImportPreview(null); setImportFile(null); setImportError(null); }}
+                      style={{ marginLeft: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}
+                    >
+                      Ganti file
+                    </button>
                   </div>
 
                   {/* Select All */}
@@ -1628,12 +1842,13 @@ export default function FormBuilderPage() {
                           checked={importSelected.size === importPreview.valid_count}
                           onChange={toggleImportSelectAll}
                         />
-                        Pilih semua soal valid ({importSelected.size}/{importPreview.valid_count})
+                        Pilih semua soal valid
                       </label>
+                      <span className="fb-import-select-count">{importSelected.size} / {importPreview.valid_count} dipilih</span>
                     </div>
                   )}
 
-                  {/* Question List */}
+                  {/* Question List — premium */}
                   <div className="fb-import-question-list">
                     {importPreview.questions.map((q) => (
                       <div key={q.number} className={`fb-import-q-item ${q.errors.length === 0 ? 'valid' : 'error'}`}>
@@ -1644,14 +1859,13 @@ export default function FormBuilderPage() {
                           onChange={() => toggleImportQuestion(q.number)}
                         />
                         <div className="fb-import-q-content">
-                          <div className="fb-import-q-num">Soal {q.number}</div>
+                          <span className="fb-import-q-num">Soal {q.number} {q.errors.length === 0 ? '• Valid' : '• Error'}</span>
                           <div className="fb-import-q-label">{q.label}</div>
                           {q.options.length > 0 && (
                             <div className="fb-import-q-options">
                               {q.options.map((o, i) => (
-                                <span key={i}>
-                                  {String.fromCharCode(65 + o.order_index)}. {o.label}{o.is_correct ? ' ✓' : ''}
-                                  {i < q.options.length - 1 ? ' | ' : ''}
+                                <span key={i} className={`fb-import-q-opt ${o.is_correct ? 'correct' : ''}`}>
+                                  {String.fromCharCode(65 + o.order_index)}. {o.label}{o.is_correct ? ' ★' : ''}
                                 </span>
                               ))}
                             </div>
@@ -1659,7 +1873,10 @@ export default function FormBuilderPage() {
                           {q.errors.length > 0 && (
                             <div className="fb-import-q-errors">
                               {q.errors.map((err, i) => (
-                                <span key={i} className="fb-import-q-error-tag">{err}</span>
+                                <span key={i} className="fb-import-q-error-tag">
+                                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                                  {err}
+                                </span>
                               ))}
                             </div>
                           )}
@@ -1669,13 +1886,10 @@ export default function FormBuilderPage() {
                   </div>
 
                   {importPreview.valid_count === 0 && (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '24px',
-                      color: '#94a3b8',
-                      fontSize: '13px',
-                    }}>
-                      Tidak ada soal yang bisa diimpor. Periksa format penulisan sesuai template.
+                    <div style={{ textAlign: 'center', padding: '28px 16px', color: '#64748b', fontSize: '13px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '12px', marginTop: '10px' }}>
+                      <div style={{ fontSize: '22px', marginBottom: '6px' }}>😕</div>
+                      <strong style={{ color: '#334155' }}>Tidak ada soal valid</strong><br />
+                      Periksa format penulisan — pastikan ada nomor soal &amp; opsi A/B/C/D
                     </div>
                   )}
                 </>
@@ -1684,26 +1898,37 @@ export default function FormBuilderPage() {
               {/* ===== PHASE: IMPORTING ===== */}
               {importPhase === 'importing' && (
                 <div className="fb-import-loading">
-                  <div className="db-spinner" />
-                  <span className="fb-import-loading-text">Mengimpor {importSelected.size} soal...</span>
+                  <div className="fb-import-loading-card">
+                    <div className="db-spinner" />
+                  </div>
+                  <span className="fb-import-loading-text">
+                    Mengimpor {importSelected.size} soal...
+                    <small>Mohon tunggu, jangan tutup halaman</small>
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Footer */}
             <div className="fb-import-modal-footer">
-              <button className="fb-import-cancel-btn" onClick={resetImportModal}>
-                {importPhase === 'preview' ? 'Batal' : 'Tutup'}
-              </button>
-              {importPhase === 'preview' && (
-                <button
-                  className="fb-import-confirm-btn"
-                  onClick={handleImportConfirm}
-                  disabled={importSelected.size === 0 || importLoading}
-                >
-                  Import {importSelected.size} Soal
+              <span className="fb-import-footer-hint">
+                {importPhase === 'upload' ? 'Butuh bantuan? Lihat template Word' : importPhase === 'preview' ? `${importSelected.size} soal siap diimpor` : 'Sedang memproses...'}
+              </span>
+              <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                <button className="fb-import-cancel-btn" onClick={resetImportModal}>
+                  {importPhase === 'preview' ? 'Batal' : 'Tutup'}
                 </button>
-              )}
+                {importPhase === 'preview' && (
+                  <button
+                    className="fb-import-confirm-btn"
+                    onClick={handleImportConfirm}
+                    disabled={importSelected.size === 0 || importLoading}
+                  >
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path d="M20 6L9 17l-5-5" /></svg>
+                    Import {importSelected.size} Soal
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1764,6 +1989,79 @@ export default function FormBuilderPage() {
                 </svg>
                 Buka Form
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirm — Premium Modal */}
+      {showBulkConfirm && (
+        <div className="fb-confirm-overlay" onClick={() => !bulkDeleting && setShowBulkConfirm(false)}>
+          <div className="fb-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <button className="fb-confirm-close" onClick={() => !bulkDeleting && setShowBulkConfirm(false)} disabled={bulkDeleting} aria-label="Tutup">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+            <div className="fb-confirm-icon danger">
+              <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <h3 className="fb-confirm-title">
+              {bulkSelected.size === questions.length ? 'Hapus Semua Soal?' : `Hapus ${bulkSelected.size} Soal Terpilih?`}
+            </h3>
+            <p className="fb-confirm-desc">
+              {bulkSelected.size === questions.length ? (
+                <>Kamu akan menghapus <strong>semua {bulkSelected.size} soal</strong> di form ini. Semua pertanyaan dan kunci jawaban akan hilang permanen.</>
+              ) : (
+                <>Kamu akan menghapus <strong>{bulkSelected.size} soal terpilih</strong>. Tindakan ini tidak bisa dibatalkan.</>
+              )}
+            </p>
+            <div className="fb-confirm-actions">
+              <button className="fb-confirm-btn secondary" onClick={() => setShowBulkConfirm(false)} disabled={bulkDeleting}>Batal</button>
+              <button className="fb-confirm-btn danger" onClick={executeBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting ? (
+                  <>
+                    <span className="fb-confirm-spinner" />
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                    Ya, Hapus
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Confirm — Premium Modal */}
+      {confirmSingleIdx !== null && (
+        <div className="fb-confirm-overlay" onClick={() => setConfirmSingleIdx(null)}>
+          <div className="fb-confirm-card small" onClick={(e) => e.stopPropagation()}>
+            <button className="fb-confirm-close" onClick={() => setConfirmSingleIdx(null)} aria-label="Tutup">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+            <div className="fb-confirm-icon danger small">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </div>
+            <h3 className="fb-confirm-title">Hapus Soal Ini?</h3>
+            <p className="fb-confirm-desc">
+              Soal <strong>Pertanyaan {confirmSingleIdx + 1}</strong> akan dihapus permanen dan tidak bisa dikembalikan.
+            </p>
+            <div className="fb-confirm-actions">
+              <button className="fb-confirm-btn secondary" onClick={() => setConfirmSingleIdx(null)}>Batal</button>
+              <button className="fb-confirm-btn danger" onClick={executeSingleDelete}>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                Hapus
+              </button>
             </div>
           </div>
         </div>
