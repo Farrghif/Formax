@@ -77,7 +77,8 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             return QuestionOptionData(label: opt['label'] ?? 'Opsi', isOther: opt['is_other'] ?? false, isCorrect: opt['is_correct'] ?? false);
           }).toList();
 
-          final settings = (q['settings'] as Map<String, dynamic>?) ?? {};
+          final settingsRaw = q['settings'];
+          final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
           _questions.add(
             QuestionData(
               type: type,

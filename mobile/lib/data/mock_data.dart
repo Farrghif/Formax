@@ -14,10 +14,10 @@ class MockData {
   // agar ketika diklik tidak fallback ke "Opsi 1". Data ini hanya untuk preview lokal;
   // template sistem sebenarnya sebaiknya diambil dari backend via GET /templates (is_system=true).
   static final List<FormTemplate> builtInTemplates = [
-    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago", questionsJson: []),
+    FormTemplate(title: "Empty Form", subtitle: "empty description", questionsJson: []),
     FormTemplate(
       title: "Ujian",
-      subtitle: "Updated 1 week ago",
+      subtitle: "empty description",
       isSystem: true,
       questionsJson: [
         {
@@ -59,7 +59,7 @@ class MockData {
     ),
     FormTemplate(
       title: "Angket Classmeet",
-      subtitle: "Updated 1 month ago",
+      subtitle: "empty description",
       isSystem: true,
       questionsJson: [
         {

@@ -80,7 +80,7 @@ class SearchResultsView extends StatelessWidget {
         if (template.id != null) {
           final res = await ApiService.getTemplate(template.id!);
           if (res['success'] == true && res['data'] != null) {
-            fullTemplate = FormTemplate.fromJson(res['data'] as Map<String, dynamic>);
+            fullTemplate = FormTemplate.fromJson(res['data'] as Map);
           }
         }
         if (!context.mounted) return;

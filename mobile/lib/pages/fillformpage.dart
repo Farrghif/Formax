@@ -23,13 +23,14 @@ class QuestionOption {
     this.isCorrect = false,
   });
 
-  factory QuestionOption.fromJson(Map<String, dynamic> json) {
+  factory QuestionOption.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     return QuestionOption(
-      id: json['id'] ?? '',
-      label: json['label'] ?? '',
-      value: json['value'],
-      orderIndex: json['order_index'] ?? 0,
-      isCorrect: json['is_correct'] ?? false,
+      id: map['id'] ?? '',
+      label: map['label'] ?? '',
+      value: map['value'],
+      orderIndex: map['order_index'] ?? 0,
+      isCorrect: map['is_correct'] ?? false,
     );
   }
 }
@@ -56,18 +57,21 @@ class Question {
     this.options = const [],
   });
 
-  factory Question.fromJson(Map<String, dynamic> json) {
+  factory Question.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
+    final settingsRaw = map['settings'];
+    final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
     return Question(
-      id: json['id'] ?? '',
-      type: json['type'] ?? 'text',
-      label: json['label'] ?? '',
-      placeholder: json['placeholder'],
-      isRequired: json['is_required'] ?? false,
-      orderIndex: json['order_index'] ?? 0,
-      settings: json['settings'] ?? {},
+      id: map['id'] ?? '',
+      type: map['type'] ?? 'text',
+      label: map['label'] ?? '',
+      placeholder: map['placeholder'],
+      isRequired: map['is_required'] ?? false,
+      orderIndex: map['order_index'] ?? 0,
+      settings: settings,
       options:
-          (json['options'] as List<dynamic>?)
-              ?.map((o) => QuestionOption.fromJson(o))
+          (map['options'] as List<dynamic>?)
+              ?.map((o) => QuestionOption.fromJson(o as Map))
               .toList() ??
           [],
     );
@@ -99,20 +103,21 @@ class FormData {
     this.questions = const [],
   });
 
-  factory FormData.fromJson(Map<String, dynamic> json) {
+  factory FormData.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     return FormData(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'],
-      bannerUrl: json['banner_url'],
-      slug: json['slug'] ?? '',
-      joinToken: json['join_token'],
-      acceptResponses: json['accept_responses'] ?? true,
-      startDate: json['start_date'],
-      endDate: json['end_date'],
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'],
+      bannerUrl: map['banner_url'],
+      slug: map['slug'] ?? '',
+      joinToken: map['join_token'],
+      acceptResponses: map['accept_responses'] ?? true,
+      startDate: map['start_date'],
+      endDate: map['end_date'],
       questions:
-          (json['questions'] as List<dynamic>?)
-              ?.map((q) => Question.fromJson(q))
+          (map['questions'] as List<dynamic>?)
+              ?.map((q) => Question.fromJson(q as Map))
               .toList() ??
           [],
     );

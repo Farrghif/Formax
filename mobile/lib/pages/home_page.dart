@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
       _isLoadingTemplates = false;
       if (res['success'] == true) {
         final rawList = res['data'] as List<dynamic>;
-        _myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map<String, dynamic>)).toList();
+        _myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map)).toList();
       } else {
         debugPrint('[Home] getMyTemplates gagal: ${res['message']}');
       }
@@ -120,7 +120,8 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _isLoadingSearch = false;
           if (result['success'] == true) {
-            _searchData = result['data'] as Map<String, dynamic>;
+            final raw = result['data'];
+            _searchData = raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map);
           } else {
             _searchData = {};
           }
@@ -317,7 +318,7 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.data?['success'] == true) {
           final rawList = snapshot.data!['data'] as List<dynamic>;
           forms = rawList
-              .map((e) => FormModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => FormModel.fromJson(e as Map))
               .toList();
           // Sort by createdAt DESC, take 10
           forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));

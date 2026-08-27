@@ -29,19 +29,21 @@ class FormTemplate {
         .trim();
   }
 
-  factory FormTemplate.fromJson(Map<String, dynamic> json) {
-    // questions mungkin null jika backend lama tidak eager-load — normalisasi ke List
-    final rawQuestions = json['questions'];
+  factory FormTemplate.fromJson(Map<dynamic, dynamic> json) {
+    // FIX: handle LinkedMap<dynamic,dynamic> dari jsonDecode/database
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
+    final rawQuestions = map['questions'];
     List<dynamic>? qs;
     if (rawQuestions is List) {
-      qs = rawQuestions;
+      // Pastikan tiap question juga jadi Map<String,dynamic> agar q['type'] aman
+      qs = rawQuestions.map((e) => e is Map ? Map<String, dynamic>.from(e as Map) : e).toList();
     }
     return FormTemplate(
-      id: json['id']?.toString(),
-      title: (json['title'] as String?)?.trim().isEmpty == true ? 'Tanpa Judul' : (json['title'] ?? 'Tanpa Judul'),
-      subtitle: json['description'] ?? '',
+      id: map['id']?.toString(),
+      title: (map['title'] as String?)?.trim().isEmpty == true ? 'Tanpa Judul' : (map['title'] ?? 'Tanpa Judul'),
+      subtitle: map['description'] ?? '',
       questionsJson: qs,
-      isSystem: json['is_system'] ?? false,
+      isSystem: map['is_system'] ?? false,
     );
   }
 }

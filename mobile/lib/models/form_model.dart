@@ -20,17 +20,18 @@ class FormModel {
     this.totalSubmissions = 0,
   });
 
-  factory FormModel.fromJson(Map<String, dynamic> json) {
+  factory FormModel.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     return FormModel(
-      id: json['id'] ?? '',
-      title: json['title'] ?? 'Tanpa Judul',
-      description: json['description'] ?? '',
-      slug: json['slug'] ?? '',
-      status: json['status'] ?? 'draft',
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
+      id: map['id'] ?? '',
+      title: map['title'] ?? 'Tanpa Judul',
+      description: map['description'] ?? '',
+      slug: map['slug'] ?? '',
+      status: map['status'] ?? 'draft',
+      createdAt: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at']) ?? DateTime.now()
           : DateTime.now(),
-      totalSubmissions: json['total_submissions'] ?? 0,
+      totalSubmissions: map['total_submissions'] ?? 0,
     );
   }
 }
@@ -52,20 +53,22 @@ class SubmissionModel {
     this.answers = const [],
   });
 
-  factory SubmissionModel.fromJson(Map<String, dynamic> json) {
-    final user = json['user'] as Map<String, dynamic>?;
-    final answersList = json['answers'] as List<dynamic>? ?? [];
+  factory SubmissionModel.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
+    final userRaw = map['user'];
+    final user = userRaw is Map ? Map<String, dynamic>.from(userRaw as Map) : null;
+    final answersList = map['answers'] as List<dynamic>? ?? [];
 
     return SubmissionModel(
-      id: json['id'] ?? '',
+      id: map['id'] ?? '',
       respondentName: user?['full_name'] ?? 'Anonim',
       respondentEmail: user?['email'] ?? '-',
-      submittedAt: json['submitted_at'] != null
-          ? DateTime.tryParse(json['submitted_at']) ?? DateTime.now()
+      submittedAt: map['submitted_at'] != null
+          ? DateTime.tryParse(map['submitted_at']) ?? DateTime.now()
           : DateTime.now(),
-      isAutoSubmitted: json['is_auto_submitted'] ?? false,
+      isAutoSubmitted: map['is_auto_submitted'] ?? false,
       answers: answersList
-          .map((a) => AnswerModel.fromJson(a as Map<String, dynamic>))
+          .map((a) => AnswerModel.fromJson(a as Map))
           .toList(),
     );
   }
@@ -77,11 +80,13 @@ class AnswerModel {
 
   AnswerModel({required this.questionLabel, required this.answer});
 
-  factory AnswerModel.fromJson(Map<String, dynamic> json) {
-    final question = json['question'] as Map<String, dynamic>?;
+  factory AnswerModel.fromJson(Map<dynamic, dynamic> json) {
+    final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
+    final qRaw = map['question'];
+    final question = qRaw is Map ? Map<String, dynamic>.from(qRaw as Map) : null;
     return AnswerModel(
       questionLabel: question?['label'] ?? 'Pertanyaan',
-      answer: json['value'] ?? '-',
+      answer: map['value'] ?? '-',
     );
   }
 }
