@@ -148,50 +148,83 @@ class ApiService {
     }
   }
 
-  // Fungsi Create Template
+  // Fungsi Create Template — DIPERBAIKI: timeout, logging, validasi 422
   static Future<Map<String, dynamic>> createTemplate(Map<String, dynamic> payload) async {
     try {
       final token = await getToken();
       if (token == null) {
-        return {'success': false, 'message': 'No token found'};
+        debugPrint('[ApiService] createTemplate gagal: No token (belum login?)');
+        return {'success': false, 'message': 'No token found — silakan login ulang'};
       }
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/templates'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(payload),
-      );
+      debugPrint('[ApiService] POST $baseUrl/templates payload=${jsonEncode(payload).substring(0, payload.toString().length > 500 ? 500 : payload.toString().length)}... token=${token.substring(0, 8)}...');
 
-      final data = jsonDecode(response.body);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/templates'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      debugPrint('[ApiService] createTemplate status=${response.statusCode} body=${response.body.substring(0, response.body.length > 800 ? 800 : response.body.length)}');
+
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Failed to create template'};
+        // Tampilkan detail validasi Pydantic (422) yang sering jadi penyebab draft tidak tersimpan
+        String detail = 'Failed to create template';
+        if (data is Map) {
+          if (data['detail'] is String) {
+            detail = data['detail'];
+          } else if (data['detail'] is List) {
+            // FastAPI 422 returns list of errors
+            try {
+              detail = (data['detail'] as List).map((e) => '${e['loc']?.last ?? 'field'}: ${e['msg']}').join(', ');
+            } catch (_) {
+              detail = data['detail'].toString();
+            }
+          } else if (data['message'] != null) {
+            detail = data['message'].toString();
+          }
+        }
+        if (response.statusCode == 401) detail = 'Sesi habis / token tidak valid — login ulang. ($detail)';
+        if (response.statusCode == 422) detail = 'Format data tidak valid (422): $detail';
+        return {'success': false, 'message': detail};
       }
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
+    } catch (e, stack) {
+      debugPrint('[ApiService] createTemplate exception: $e\n$stack');
+      String msg = e.toString();
+      if (msg.contains('TimeoutException')) msg = 'Timeout koneksi ke $baseUrl — cek backend jalan & adb reverse / API_URL';
+      return {'success': false, 'message': msg};
     }
   }
 
-  // Fungsi Get My Templates
+  // Fungsi Get My Templates — DIPERBAIKI: timeout + logging
   static Future<Map<String, dynamic>> getMyTemplates() async {
     try {
       final token = await getToken();
       if (token == null) return {'success': false, 'message': 'No token found'};
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/templates/mine'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      );
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/templates/mine'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
 
+      debugPrint('[ApiService] GET $baseUrl/templates/mine status=${response.statusCode}');
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
-      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+      final body = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      return {'success': false, 'message': body['detail'] ?? 'Failed: ${response.statusCode}'};
     } catch (e) {
+      debugPrint('[ApiService] getMyTemplates exception: $e');
       return {'success': false, 'message': e.toString()};
     }
   }

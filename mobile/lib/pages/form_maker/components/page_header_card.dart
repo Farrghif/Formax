@@ -106,6 +106,7 @@ class PageHeaderCard extends StatelessWidget {
                       // --- Title Field ---
                       isActive
                           ? RichTextField(
+                              key: ValueKey('page_title_${page.id}'),
                               initialHtml: page.title,
                               onChanged: (html) {
                                 page.title = html;
@@ -120,6 +121,7 @@ class PageHeaderCard extends StatelessWidget {
                       // --- Description Field ---
                       isActive
                           ? RichTextField(
+                              key: ValueKey('page_desc_${page.id}'),
                               initialHtml: page.description,
                               onChanged: (html) {
                                 page.description = html;

@@ -57,7 +57,7 @@ class TemplateCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    template.title,
+                    template.plainTitle.isNotEmpty ? template.plainTitle : template.title,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -68,7 +68,7 @@ class TemplateCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    template.subtitle,
+                    template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

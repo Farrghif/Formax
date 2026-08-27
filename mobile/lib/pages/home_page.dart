@@ -587,17 +587,19 @@ class _HomePageState extends State<HomePage> {
                       builder: (_) => const FormMakerPage(),
                     ),
                   );
+                  // Selalu refresh setelah kembali dari FormMaker, bahkan jika result null
+                  // (user mungkin save draft tapi tidak return value; atau backend belum eager-load)
+                  if (!mounted) return;
+                  setState(() {
+                    _myTemplatesFuture = ApiService.getMyTemplates();
+                  });
                   if (result != null) {
-                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${result.title} berhasil disimpan!'),
+                        content: Text('${FormTemplate(title: result.title, subtitle: result.subtitle).plainTitle} berhasil disimpan!'),
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
-                    setState(() {
-                      _myTemplatesFuture = ApiService.getMyTemplates();
-                    }); // Refresh FutureBuilder
                   }
                 },
                 icon: const Icon(Icons.add, size: 16),
@@ -629,14 +631,10 @@ class _HomePageState extends State<HomePage> {
               List<FormTemplate> myTemplates = [];
               if (snapshot.data?['success'] == true) {
                 final rawList = snapshot.data!['data'] as List<dynamic>;
-                myTemplates = rawList.map((e) {
-                  return FormTemplate(
-                    title: e['title'] ?? 'Tanpa Judul',
-                    subtitle: e['description'] ?? 'Template kustom',
-                    id: e['id'],
-                    questionsJson: e['questions'],
-                  );
-                }).toList();
+                myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map<String, dynamic>)).toList();
+              } else if (snapshot.data != null && snapshot.data?['success'] == false) {
+                // Tampilkan error koneksi agar tidak dikira data hilang padahal GET gagal
+                debugPrint('[Home] getMyTemplates gagal: ${snapshot.data?['message']}');
               }
 
               if (myTemplates.isEmpty) {

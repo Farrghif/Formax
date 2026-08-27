@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/form_template.dart';
 import '../services/api_service.dart';
+import '../utils/quill_html.dart';
 import '../widgets/share_form_dialog.dart';
 import 'form_maker/models/form_builder_state.dart';
 import 'form_maker/editor_canvas.dart';
@@ -70,39 +72,67 @@ class _FormMakerPageState extends State<FormMakerPage>
     if (_builderState.isSaving) return;
     setState(() => _builderState.isSaving = true);
 
+    // Always sync the form title from the first page header (RichText HTML -> plain)
+    if (_builderState.pages.isNotEmpty) {
+      final firstTitleHtml = _builderState.pages[0].title;
+      final firstTitlePlain = QuillHtml.htmlToPlainText(firstTitleHtml);
+      if (firstTitlePlain.isNotEmpty) {
+        _builderState.formTitle = firstTitlePlain;
+      }
+      // description simpan sebagai plain juga untuk konsistensi list
+      _builderState.formDescription = QuillHtml.htmlToPlainText(_builderState.pages[0].description);
+    }
+
+    final title = QuillHtml.titleToPlain(_builderState.formTitle, fallback: 'Form Tanpa Judul');
+    final descriptionPlain = QuillHtml.htmlToPlainText(_builderState.formDescription);
+
+    final questionsPayload = _builderState.buildApiPayload();
+    // Log detail payload untuk diagnosa mapping hilang (cek label/options/settings)
+    debugPrint('[FormMaker] Draft title="$title" questions=${questionsPayload.length}');
+    for (var i = 0; i < questionsPayload.length && i < 3; i++) {
+      debugPrint('[FormMaker] Q$i type=${questionsPayload[i]['type']} label=${(questionsPayload[i]['label'] as String).substring(0, (questionsPayload[i]['label'] as String).length > 60 ? 60 : (questionsPayload[i]['label'] as String).length)} opts=${(questionsPayload[i]['options'] as List).length} settings=${questionsPayload[i]['settings']}');
+    }
+
     final payload = {
-      'title': _builderState.formTitle.isNotEmpty
-          ? _builderState.formTitle
-          : 'Form Tanpa Judul',
-      'description': _builderState.formDescription,
-      'questions': _builderState.buildApiPayload(),
+      'title': title,
+      'description': descriptionPlain,
+      'questions': questionsPayload,
     };
 
+    debugPrint('[FormMaker] Simpan draft payload -> ${ApiService.baseUrl}/templates title="$title"');
+
     final res = await ApiService.createTemplate(payload);
+    if (!mounted) return;
     setState(() => _builderState.isSaving = false);
 
     if (res['success'] == true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Draft berhasil disimpan!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(
-          context,
-          FormTemplate(
-            title: payload['title'] as String,
-            subtitle: 'Baru saja disimpan',
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draft berhasil disimpan ke Template Saya!'),
+          backgroundColor: Color(0xFF059669),
+        ),
+      );
+      Navigator.pop(
+        context,
+        FormTemplate(
+          title: title,
+          subtitle: 'Baru saja disimpan',
+          questionsJson: questionsPayload,
+        ),
+      );
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: ${res['message']}')),
-        );
-      }
+      final msg = res['message']?.toString() ?? 'Unknown error';
+      final hint = msg.contains('SocketException') || msg.contains('Failed host') || msg.contains('Connection refused') || msg.contains('No token')
+          ? '\n\nCek: backend jalan di ${ApiService.baseUrl}?\nEmulator: 10.0.2.2:8000 | HP fisik: adb reverse tcp:8000 tcp:8000 + --dart-define=API_URL=http://127.0.0.1:8000'
+          : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $msg$hint'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint('[FormMaker] Gagal simpan draft: $msg');
     }
   }
 

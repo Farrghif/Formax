@@ -57,7 +57,9 @@ class QuillHtml {
       }
       if (closeBlock && listTag != null && listItems.isNotEmpty) {
         out.write('<$listTag>');
-        for (final it in listItems) out.write('<li>$it</li>');
+        for (final it in listItems) {
+          out.write('<li>$it</li>');
+        }
         out.write('</$listTag>');
         listItems.clear();
         listTag = null;
@@ -117,4 +119,33 @@ class QuillHtml {
 
   static String _escape(String text) =>
       text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+  /// Strip HTML tags untuk field yang harus plain text (mis. title template).
+  /// "<p>hhhh\n</p>" -> "hhhh"
+  static String htmlToPlainText(String? html) {
+    if (html == null || html.trim().isEmpty) return '';
+    // Gunakan documentToPlain via delta parsing agar lebih akurat
+    try {
+      final doc = documentFromHtml(html);
+      final plain = doc.toPlainText().trim();
+      // toPlainText biasanya ada trailing \n
+      return plain.replaceAll(RegExp(r'\n+'), ' ').trim();
+    } catch (_) {
+      // fallback regex strip
+      return html
+          .replaceAll(RegExp(r'<[^>]*>'), ' ')
+          .replaceAll('&nbsp;', ' ')
+          .replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+    }
+  }
+
+  /// Alias untuk kasus title — jaga agar tidak kosong
+  static String titleToPlain(String? html, {String fallback = 'Form Tanpa Judul'}) {
+    final plain = htmlToPlainText(html);
+    return plain.isEmpty ? fallback : plain;
+  }
 }

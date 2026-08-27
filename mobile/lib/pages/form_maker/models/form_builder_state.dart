@@ -10,7 +10,7 @@ class FormPageModel {
 
   FormPageModel({
     String? id,
-    this.title = 'Bagian Tanpa Judul',
+    this.title = '',
     this.description = '',
     List<QuestionData>? questions,
   })  : id = id ?? UniqueKey().toString(),
@@ -37,15 +37,18 @@ class FormBuilderState extends ChangeNotifier {
   bool isSaving = false;
 
   FormBuilderState({
-    this.formTitle = 'Form Tanpa Judul',
+    this.formTitle = '',
     this.formDescription = '',
     List<FormPageModel>? pages,
-  }) : pages = pages ?? [FormPageModel(title: 'Form Tanpa Judul', description: '')] {
+  }) : pages = pages ?? [FormPageModel()] {
     if (this.pages.isEmpty) {
-      this.pages.add(FormPageModel(title: formTitle, description: formDescription));
-    } else {
-      // Ensure the first page syncs with the form's title and description
+      this.pages.add(FormPageModel());
+    }
+    // Always sync formTitle/formDescription with the first page
+    if (formTitle.isNotEmpty) {
       this.pages[0].title = formTitle;
+    }
+    if (formDescription.isNotEmpty) {
       this.pages[0].description = formDescription;
     }
   }
@@ -61,6 +64,8 @@ class FormBuilderState extends ChangeNotifier {
     final questionsJson = template.questionsJson;
     if (questionsJson == null || questionsJson.isEmpty) {
       state.pages.add(FormPageModel(
+        title: state.formTitle,
+        description: state.formDescription,
         questions: [
           QuestionData(
             type: QuestionType.multipleChoice,
@@ -71,7 +76,7 @@ class FormBuilderState extends ChangeNotifier {
       return state;
     }
 
-    FormPageModel currentPage = FormPageModel(title: 'Bagian 1');
+    FormPageModel currentPage = FormPageModel(title: state.formTitle, description: state.formDescription);
     for (var q in questionsJson) {
       final typeStr = q['type'] as String? ?? 'text';
       if (typeStr == 'page_break') {
@@ -98,9 +103,19 @@ class FormBuilderState extends ChangeNotifier {
         );
       }).toList();
 
-      // Extract image_url from settings if present
+      // Extract settings if present
       final settings = (q['settings'] as Map<String, dynamic>?) ?? {};
       final imageUrl = settings['image_url'] as String?;
+      final rowLabels = (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
+      final scaleMin = (settings['scale_min'] as int?) ?? 1;
+      final scaleMax = (settings['scale_max'] as int?) ?? 5;
+      final minLabel = settings['min_label'] as String? ?? '';
+      final maxLabel = settings['max_label'] as String? ?? '';
+      final ratingCount = (settings['rating_count'] as int?) ?? 5;
+      final ratingIcon = settings['rating_icon'] as String? ?? 'star';
+      final allowedFileTypes = (settings['allowed_file_types'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
+      final maxFileSizeMB = (settings['max_file_size_mb'] as int?) ?? 10;
+      final maxFileCount = (settings['max_file_count'] as int?) ?? 1;
 
       currentPage.questions.add(
         QuestionData(
@@ -110,6 +125,16 @@ class FormBuilderState extends ChangeNotifier {
           isRequired: q['is_required'] ?? false,
           options: options,
           imageUrl: imageUrl,
+          rowLabels: rowLabels,
+          scaleMin: scaleMin,
+          scaleMax: scaleMax,
+          minLabel: minLabel,
+          maxLabel: maxLabel,
+          ratingCount: ratingCount,
+          ratingIcon: ratingIcon,
+          allowedFileTypes: allowedFileTypes,
+          maxFileSizeMB: maxFileSizeMB,
+          maxFileCount: maxFileCount,
         ),
       );
     }
@@ -273,20 +298,22 @@ class FormBuilderState extends ChangeNotifier {
   }
 
   // --- API Payload Builder ---
+  // Dipakai untuk createTemplate & createForm — harus 100% kompatibel dengan backend QuestionType enum
   List<Map<String, dynamic>> buildApiPayload() {
     final List<Map<String, dynamic>> result = [];
     int orderIndex = 0;
     for (int i = 0; i < pages.length; i++) {
       final page = pages[i];
 
-      // Add page break if it's not the first page
+      // Add page break if it's not the first page — backend type = page_break
       if (i > 0) {
         result.add({
           'type': QuestionType.pageBreak.apiValue,
-          'label': page.title,
+          'label': page.title.isNotEmpty ? page.title : 'Bagian ${i + 1}',
           'placeholder': page.description,
           'is_required': false,
           'order_index': orderIndex++,
+          'settings': {},
           'options': [],
         });
       }
@@ -295,7 +322,9 @@ class FormBuilderState extends ChangeNotifier {
         final opts = q.options.asMap().entries.map((e) {
           return {
             'label': e.value.label,
+            'value': e.value.label,
             'order_index': e.key,
+            'is_correct': false,
             'is_other': e.value.isOther,
           };
         }).toList();

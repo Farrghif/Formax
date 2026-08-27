@@ -68,6 +68,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
               child: Column(
                 children: [
                   RichTextField(
+                    key: ValueKey('q_label_${widget.question.id}'),
                     initialHtml: widget.question.label,
                     onChanged: (html) {
                       widget.question.label = html;
@@ -83,6 +84,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
                   ),
                   const SizedBox(height: 8),
                   RichTextField(
+                    key: ValueKey('q_desc_${widget.question.id}'),
                     initialHtml: widget.question.description,
                     onChanged: (html) {
                       widget.question.description = html;

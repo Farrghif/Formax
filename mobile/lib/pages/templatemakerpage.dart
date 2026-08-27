@@ -2,10 +2,12 @@
 // Halaman form builder lengkap — mendukung 12 tipe pertanyaan,
 // drag & drop reorder, multi-page (section break), dan publish ke backend.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/question_model.dart';
 import '../models/form_template.dart';
 import '../services/api_service.dart';
+import '../utils/quill_html.dart';
 import '../widgets/share_form_dialog.dart';
 
 class TemplateMakerPage extends StatefulWidget {
@@ -121,15 +123,48 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     final List<Map<String, dynamic>> result = [];
     int orderIndex = 0;
     for (final q in _questions) {
-      if (q.type == QuestionType.pageBreak) continue;
+      if (q.type == QuestionType.pageBreak) {
+        // pageBreak disimpan sebagai question bertipe page_break agar backend bisa merekonstruksi halaman
+        result.add({
+          'type': QuestionType.pageBreak.apiValue,
+          'label': q.label.isNotEmpty ? q.label : 'Section',
+          'placeholder': '',
+          'is_required': false,
+          'order_index': orderIndex++,
+          'settings': {},
+          'options': [],
+        });
+        continue;
+      }
       final opts = q.options.asMap().entries.map((e) {
-        return {'label': e.value.label, 'order_index': e.key};
+        return {
+          'label': e.value.label,
+          'value': e.value.label,
+          'order_index': e.key,
+          'is_correct': false,
+          'is_other': e.value.isOther,
+        };
       }).toList();
+
+      final settings = <String, dynamic>{};
+      if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
+        settings['image_url'] = q.imageUrl;
+      }
+      if (q.scaleMin != 1) settings['scale_min'] = q.scaleMin;
+      if (q.scaleMax != 5) settings['scale_max'] = q.scaleMax;
+      if (q.minLabel.isNotEmpty) settings['min_label'] = q.minLabel;
+      if (q.maxLabel.isNotEmpty) settings['max_label'] = q.maxLabel;
+      if (q.ratingCount != 5) settings['rating_count'] = q.ratingCount;
+      if (q.ratingIcon != 'star') settings['rating_icon'] = q.ratingIcon;
+      if (q.rowLabels.isNotEmpty) settings['row_labels'] = q.rowLabels;
+
       result.add({
         'type': q.type.apiValue,
-        'label': q.label,
+        'label': q.label.isNotEmpty ? q.label : 'Pertanyaan Tanpa Judul',
+        'placeholder': q.description,
         'is_required': q.isRequired,
         'order_index': orderIndex++,
+        'settings': settings,
         'options': opts,
       });
     }
@@ -140,33 +175,56 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
+    // Title dari TextField plain, tapi kalau diisi via paste HTML tetap di-strip
+    final rawTitle = _titleController.text.trim();
+    final title = rawTitle.isNotEmpty
+        ? QuillHtml.titleToPlain(rawTitle, fallback: 'Form Tanpa Judul')
+        : 'Form Tanpa Judul';
+    // Pastikan format form benar-benar dipetakan: gunakan payload builder yang sudah mencakup
+    // label/placeholder/is_required/order_index/settings/options lengkap
+    final questionsPayload = _buildQuestionPayload();
+    debugPrint('[TemplateMaker] title="$title" questions=${questionsPayload.length}');
+
     final payload = {
-      'title': _titleController.text.isNotEmpty
-          ? _titleController.text
-          : 'Form Tanpa Judul',
-      'description': _descController.text,
-      'questions': _buildQuestionPayload(),
+      'title': title,
+      'description': _descController.text.trim(),
+      'questions': questionsPayload,
     };
 
+    debugPrint('[TemplateMaker] Simpan draft payload: $payload -> ${ApiService.baseUrl}/templates');
+
     final res = await ApiService.createTemplate(payload);
+    if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (res['success'] == true) {
-      if (mounted) {
-        Navigator.pop(
-          context,
-          FormTemplate(
-            title: payload['title'] as String,
-            subtitle: 'Baru saja disimpan',
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draft berhasil disimpan ke Template Saya!'),
+          backgroundColor: Color(0xFF059669),
+        ),
+      );
+      Navigator.pop(
+        context,
+        FormTemplate(
+          title: title,
+          subtitle: 'Baru saja disimpan',
+        ),
+      );
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: ${res['message']}')),
-        );
-      }
+      final msg = res['message']?.toString() ?? 'Unknown error';
+      // Beri hint jika error koneksi
+      final hint = msg.contains('SocketException') || msg.contains('Failed host') || msg.contains('Connection refused')
+          ? '\n\nCek koneksi backend: ${ApiService.baseUrl}\nUntuk emulator gunakan 10.0.2.2, HP fisik via adb reverse / --dart-define=API_URL'
+          : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $msg$hint'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint('[TemplateMaker] Gagal simpan template: $msg');
     }
   }
 
