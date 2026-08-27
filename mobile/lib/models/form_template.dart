@@ -13,12 +13,34 @@ class FormTemplate {
     this.isSystem = false,
   });
 
+  /// Plain text untuk display list — strip HTML "<p>hhhh</p>" -> "hhhh"
+  String get plainTitle => _stripHtml(title);
+  String get plainSubtitle => _stripHtml(subtitle);
+
+  static String _stripHtml(String? html) {
+    if (html == null || html.trim().isEmpty) return '';
+    return html
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   factory FormTemplate.fromJson(Map<String, dynamic> json) {
+    // questions mungkin null jika backend lama tidak eager-load — normalisasi ke List
+    final rawQuestions = json['questions'];
+    List<dynamic>? qs;
+    if (rawQuestions is List) {
+      qs = rawQuestions;
+    }
     return FormTemplate(
       id: json['id']?.toString(),
-      title: json['title'] ?? 'Tanpa Judul',
+      title: (json['title'] as String?)?.trim().isEmpty == true ? 'Tanpa Judul' : (json['title'] ?? 'Tanpa Judul'),
       subtitle: json['description'] ?? '',
-      questionsJson: json['questions'] as List<dynamic>?,
+      questionsJson: qs,
       isSystem: json['is_system'] ?? false,
     );
   }

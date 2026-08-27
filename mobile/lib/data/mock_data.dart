@@ -10,10 +10,91 @@ class MockData {
     Project(title: "Website SMK 10", status: "Active", icon: Icons.edit),
   ];
 
+  // BUG FIX #3: built-in templates sekarang punya struktur questionsJson
+  // agar ketika diklik tidak fallback ke "Opsi 1". Data ini hanya untuk preview lokal;
+  // template sistem sebenarnya sebaiknya diambil dari backend via GET /templates (is_system=true).
   static final List<FormTemplate> builtInTemplates = [
-    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago"),
-    FormTemplate(title: "Ujian", subtitle: "Updated 1 week ago"),
-    FormTemplate(title: "Angket Classmeet", subtitle: "Updated 1 month ago"),
+    FormTemplate(title: "Empty Form", subtitle: "Updated 2 days ago", questionsJson: []),
+    FormTemplate(
+      title: "Ujian",
+      subtitle: "Updated 1 week ago",
+      isSystem: true,
+      questionsJson: [
+        {
+          'type': 'single_choice',
+          'label': 'Departemen Anda?',
+          'placeholder': '',
+          'is_required': true,
+          'order_index': 0,
+          'settings': {},
+          'options': [
+            {'label': 'Marketing', 'value': 'Marketing', 'order_index': 0, 'is_correct': false, 'is_other': false},
+            {'label': 'Engineering', 'value': 'Engineering', 'order_index': 1, 'is_correct': false, 'is_other': false},
+            {'label': 'HR', 'value': 'HR', 'order_index': 2, 'is_correct': false, 'is_other': false},
+          ]
+        },
+        {
+          'type': 'single_choice',
+          'label': 'Tingkat Kepuasan?',
+          'placeholder': '',
+          'is_required': false,
+          'order_index': 1,
+          'settings': {},
+          'options': [
+            {'label': 'Sangat Puas', 'value': 'Sangat Puas', 'order_index': 0, 'is_correct': false, 'is_other': false},
+            {'label': 'Puas', 'value': 'Puas', 'order_index': 1, 'is_correct': false, 'is_other': false},
+            {'label': 'Cukup Puas', 'value': 'Cukup Puas', 'order_index': 2, 'is_correct': false, 'is_other': false},
+          ]
+        },
+        {
+          'type': 'paragraph',
+          'label': 'Masukan untuk tim?',
+          'placeholder': 'Tulis masukan Anda...',
+          'is_required': false,
+          'order_index': 2,
+          'settings': {},
+          'options': []
+        },
+      ],
+    ),
+    FormTemplate(
+      title: "Angket Classmeet",
+      subtitle: "Updated 1 month ago",
+      isSystem: true,
+      questionsJson: [
+        {
+          'type': 'single_choice',
+          'label': 'Acara mana yang paling kamu suka?',
+          'placeholder': '',
+          'is_required': true,
+          'order_index': 0,
+          'settings': {},
+          'options': [
+            {'label': 'Futsal', 'value': 'Futsal', 'order_index': 0, 'is_correct': false, 'is_other': false},
+            {'label': 'Lomba Menyanyi', 'value': 'Lomba Menyanyi', 'order_index': 1, 'is_correct': false, 'is_other': false},
+            {'label': 'Bazaar', 'value': 'Bazaar', 'order_index': 2, 'is_correct': false, 'is_other': false},
+          ]
+        },
+        {
+          'type': 'rating',
+          'label': 'Rating keseluruhan acara?',
+          'placeholder': '',
+          'is_required': false,
+          'order_index': 1,
+          'settings': {'rating_count': 5, 'rating_icon': 'star'},
+          'options': []
+        },
+        {
+          'type': 'paragraph',
+          'label': 'Saran untuk acara selanjutnya?',
+          'placeholder': '',
+          'is_required': false,
+          'order_index': 2,
+          'settings': {},
+          'options': []
+        },
+      ],
+    ),
   ];
 
   static final List<Map<String, dynamic>> historyItems = [

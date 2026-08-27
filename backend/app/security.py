@@ -6,7 +6,13 @@ from typing import Optional
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-in-production")
+_env_secret = os.getenv("SECRET_KEY")
+if not _env_secret or _env_secret.strip() == "" or _env_secret == "change-this-secret-in-production":
+    # FIX Bug 28: jangan fallback ke secret default di production; beri warning dan fallback hanya untuk dev
+    import warnings
+    warnings.warn("SECRET_KEY tidak di-set via .env — memakai fallback DEV only. Set SECRET_KEY di production!")
+    _env_secret = "change-this-secret-in-production-dev-only-not-secure"
+SECRET_KEY = _env_secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 hari
 

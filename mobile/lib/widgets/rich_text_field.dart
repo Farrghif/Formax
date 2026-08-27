@@ -37,7 +37,7 @@ class RichTextField extends StatefulWidget {
 }
 
 class _RichTextFieldState extends State<RichTextField> {
-  late final QuillController _controller;
+  late QuillController _controller;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   bool _showToolbar = false;
@@ -51,15 +51,41 @@ class _RichTextFieldState extends State<RichTextField> {
       document: QuillHtml.documentFromHtml(widget.initialHtml),
       selection: const TextSelection.collapsed(offset: 0),
     );
-    _controller.document.changes.listen((_) {
+    // FIX Bug 7: hanya satu listener (controller.addListener) untuk hindari double emit.
+    // document.changes sudah ter-cover oleh controller listener, jangan duplikat.
+    void emitHtml() {
       final html = QuillHtml.documentToHtml(_controller.document);
       widget.onChanged(html);
-    });
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _showToolbar) {
-        setState(() => _showToolbar = false);
+    }
+    _controller.addListener(emitHtml);
+    // Listener lama yang menyembunyikan toolbar saat focus hilang dihapus
+    // karena toolbar QuillSimpleToolbar butuh focus editor tetap terjaga.
+    // Jika auto-hide dibutuhkan, gunakan TapRegion di build, bukan focus listener,
+    // agar tap di toolbar (bold/italic) tidak membuat field ter-unselect.
+  }
+
+  @override
+  void didUpdateWidget(covariant RichTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialHtml != widget.initialHtml) {
+      // FIX Bug 8: bandingkan HTML penuh, bukan plain text — agar perubahan formatting terdeteksi
+      final newHtml = (widget.initialHtml).trim();
+      final oldHtml = QuillHtml.documentToHtml(_controller.document).trim();
+      if (newHtml != oldHtml) {
+        final oldController = _controller;
+        _controller = QuillController(
+          document: QuillHtml.documentFromHtml(widget.initialHtml),
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+        void emitHtml2() {
+          final html = QuillHtml.documentToHtml(_controller.document);
+          widget.onChanged(html);
+        }
+        _controller.addListener(emitHtml2);
+        WidgetsBinding.instance.addPostFrameCallback((_) => oldController.dispose());
+        setState(() {});
       }
-    });
+    }
   }
 
   @override
@@ -167,18 +193,34 @@ class _RichTextFieldState extends State<RichTextField> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // ── Toolbar (collapsible) ──
+              // FIX: Bungkus toolbar dengan TapRegion + FocusScope agar tap bold/italic
+              // tidak membuat _focusNode kehilangan focus/selection (bug ter-unselect).
               if (_showToolbar) ...[
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF0F1F4),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: QuillSimpleToolbar(
-                      controller: _controller,
-                      config: _buildToolbarConfig(),
+                TapRegion(
+                  // Tap di dalam toolbar tidak dianggap outside, jadi editor tidak kehilangan focus
+                  onTapOutside: (_) {},
+                  child: FocusScope(
+                    canRequestFocus: false,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Jaga focus tetap di editor saat toolbar disentuh
+                        if (!_focusNode.hasFocus) _focusNode.requestFocus();
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF0F1F4),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
+                        ),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: QuillSimpleToolbar(
+                            controller: _controller,
+                            config: _buildToolbarConfig(),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List
 
 import qrcode
@@ -8,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas, security
 from ..deps import get_db, get_current_user
+
+_SLUG_RE = re.compile(r'^[a-z0-9-]+$')
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
@@ -34,8 +37,13 @@ def create_form(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    if db.query(models.Form).filter(models.Form.slug == str(payload.slug)).first():
+    # FIX Bug 30: validasi slug
+    raw_slug = str(payload.slug).strip().lower()
+    if not _SLUG_RE.match(raw_slug):
+        raise HTTPException(status_code=422, detail="Slug tidak valid — hanya a-z, 0-9, dan -")
+    if db.query(models.Form).filter(models.Form.slug == raw_slug).first():
         raise HTTPException(status_code=400, detail="Slug sudah dipakai, pilih yang lain")
+    payload.slug = raw_slug  # normalisasi
 
     form = models.Form(
         owner_id=current_user.id,
@@ -56,16 +64,23 @@ def create_form(
     db.flush()
 
     if payload.template_id:
+        # FIX Bug 15 & 16: cek ownership + 404 jika template tidak ada / bukan milik user
         template = db.query(models.Template).filter(models.Template.id == str(payload.template_id)).first()
-        if not form.banner_url and template and template.banner_url:
-            form.banner_url = template.banner_url  # salin banner template sebagai default
-        # copy questions dari template ke form ini (snapshot, bukan reference)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template tidak ditemukan")
+        if not template.is_system and template.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Bukan template milikmu")
+        if not form.banner_url and template.banner_url:
+            form.banner_url = template.banner_url
         template_questions = (
             db.query(models.Question)
             .filter(models.Question.template_id == str(payload.template_id))
             .order_by(models.Question.order_index)
             .all()
         )
+        if not template_questions:
+            # Jika template kosong, tetap lanjut tapi warn — jangan buat form 0 pertanyaan tanpa alasan
+            pass
         for tq in template_questions:
             new_q = models.Question(
                 form_id=form.id, type=tq.type, label=tq.label, placeholder=tq.placeholder,
@@ -157,12 +172,23 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
 @router.get("/public/{slug}", response_model=schemas.FormOut)
 def get_form_by_slug(slug: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
-    Dipanggil pas orang buka link form. TETAP wajib login (sesuai requirement kelompok kamu),
-    tapi belum bikin submission — cuma buat nampilin pertanyaan form-nya.
+    Dipanggil pas orang buka link form. TETAP wajib login, tapi cek juga window waktu & accept_responses.
     """
     form = db.query(models.Form).filter(models.Form.slug == slug).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form tidak ditemukan")
     if form.status != models.FormStatus.published:
         raise HTTPException(status_code=403, detail="Form ini belum/tidak lagi menerima jawaban")
+    # FIX Bug 31: cek window waktu & accept_responses juga di get_form_by_slug
+    if not form.accept_responses:
+        raise HTTPException(status_code=403, detail="Form tidak menerima jawaban saat ini")
+    from datetime import datetime, timezone, timedelta
+    WIB = timezone(timedelta(hours=7))
+    def _now(): return datetime.now(WIB)
+    def _dt(dt): return dt.replace(tzinfo=WIB) if dt is not None and dt.tzinfo is None else dt
+    now = _now()
+    if form.start_date and now < _dt(form.start_date):
+        raise HTTPException(status_code=403, detail="Form belum dibuka")
+    if form.end_date and now > _dt(form.end_date):
+        raise HTTPException(status_code=403, detail="Waktu pengisian form sudah berakhir")
     return form

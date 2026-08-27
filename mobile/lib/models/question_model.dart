@@ -42,20 +42,41 @@ extension QuestionTypeExtension on QuestionType {
   String get apiValue {
     switch (this) {
       case QuestionType.shortAnswer: return 'text';
-      case QuestionType.paragraph: return 'text';
+      case QuestionType.paragraph: return 'paragraph';
       case QuestionType.multipleChoice: return 'single_choice';
       case QuestionType.checkboxes: return 'checkbox';
       case QuestionType.dropdown: return 'dropdown';
       case QuestionType.fileUpload: return 'file_upload';
-      case QuestionType.linearScale: return 'text';
-      case QuestionType.rating: return 'text';
-      case QuestionType.multipleChoiceGrid: return 'text';
-      case QuestionType.tickBoxGrid: return 'text';
+      case QuestionType.linearScale: return 'linear_scale';
+      case QuestionType.rating: return 'rating';
+      case QuestionType.multipleChoiceGrid: return 'multiple_choice_grid';
+      case QuestionType.tickBoxGrid: return 'tick_box_grid';
       case QuestionType.date: return 'date';
-      case QuestionType.time: return 'text';
-      case QuestionType.pageBreak: return 'page_break'; // Custom handling for backend
-      case QuestionType.image: return 'image'; // Sent as image block
-      case QuestionType.text: return 'text_block'; // Sent as static text block
+      case QuestionType.time: return 'time';
+      case QuestionType.pageBreak: return 'page_break';
+      case QuestionType.image: return 'image';
+      case QuestionType.text: return 'text_block';
+    }
+  }
+
+  static QuestionType fromApiValue(String apiValue) {
+    switch (apiValue) {
+      case 'text': return QuestionType.shortAnswer;
+      case 'paragraph': return QuestionType.paragraph;
+      case 'single_choice': return QuestionType.multipleChoice;
+      case 'checkbox': return QuestionType.checkboxes;
+      case 'dropdown': return QuestionType.dropdown;
+      case 'file_upload': return QuestionType.fileUpload;
+      case 'linear_scale': return QuestionType.linearScale;
+      case 'rating': return QuestionType.rating;
+      case 'multiple_choice_grid': return QuestionType.multipleChoiceGrid;
+      case 'tick_box_grid': return QuestionType.tickBoxGrid;
+      case 'date': return QuestionType.date;
+      case 'time': return QuestionType.time;
+      case 'page_break': return QuestionType.pageBreak;
+      case 'image': return QuestionType.image;
+      case 'text_block': return QuestionType.text;
+      default: return QuestionType.shortAnswer;
     }
   }
 
@@ -72,11 +93,12 @@ class QuestionOptionData {
   String id;
   String label;
   bool isOther;
-  QuestionOptionData({String? id, required this.label, this.isOther = false}) 
+  bool isCorrect;
+  QuestionOptionData({String? id, required this.label, this.isOther = false, this.isCorrect = false})
       : id = id ?? UniqueKey().toString();
 
   QuestionOptionData clone() {
-    return QuestionOptionData(id: UniqueKey().toString(), label: label, isOther: isOther);
+    return QuestionOptionData(id: UniqueKey().toString(), label: label, isOther: isOther, isCorrect: isCorrect);
   }
 }
 

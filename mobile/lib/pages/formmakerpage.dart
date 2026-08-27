@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/form_template.dart';
 import '../services/api_service.dart';
+import '../utils/quill_html.dart';
 import '../widgets/share_form_dialog.dart';
 import 'form_maker/models/form_builder_state.dart';
 import 'form_maker/editor_canvas.dart';
@@ -22,6 +24,7 @@ class _FormMakerPageState extends State<FormMakerPage>
   late FormBuilderState _builderState;
   late TabController _tabController;
   bool _isPreviewMode = false;
+  String? _draftTemplateId; // untuk PATCH bukan POST berulang (fix duplikat)
 
   final Color _primaryColor = const Color(0xFF4F46E5);
   final Color _bgColor = const Color(0xFFE8EEF7);
@@ -45,6 +48,7 @@ class _FormMakerPageState extends State<FormMakerPage>
   final TextEditingController _durationCtrl = TextEditingController(
     text: '1 hari',
   );
+  final TextEditingController _pointValueCtrl = TextEditingController(text: '0');
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _FormMakerPageState extends State<FormMakerPage>
 
     if (widget.initialTemplate != null) {
       _builderState = FormBuilderState.fromTemplate(widget.initialTemplate!);
+      _draftTemplateId = widget.initialTemplate!.id;
     } else {
       _builderState = FormBuilderState();
     }
@@ -63,46 +68,108 @@ class _FormMakerPageState extends State<FormMakerPage>
     _builderState.dispose();
     _tabController.dispose();
     _durationCtrl.dispose();
+    _pointValueCtrl.dispose();
     super.dispose();
   }
 
   void _saveDraft() async {
     if (_builderState.isSaving) return;
+    // FIX Bug A: unfocus dulu agar RichTextField flush HTML terakhir (ketik lalu langsung Save)
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+
     setState(() => _builderState.isSaving = true);
 
+    // Always sync the form title from the first page header (RichText HTML -> plain)
+    if (_builderState.pages.isNotEmpty) {
+      final firstTitleHtml = _builderState.pages[0].title;
+      final firstTitlePlain = QuillHtml.htmlToPlainText(firstTitleHtml);
+      if (firstTitlePlain.isNotEmpty) {
+        _builderState.formTitle = firstTitlePlain;
+      }
+      // description simpan sebagai plain juga untuk konsistensi list
+      _builderState.formDescription = QuillHtml.htmlToPlainText(
+        _builderState.pages[0].description,
+      );
+    }
+
+    final title = QuillHtml.titleToPlain(
+      _builderState.formTitle,
+      fallback: 'Form Tanpa Judul',
+    );
+    final descriptionPlain = QuillHtml.htmlToPlainText(
+      _builderState.formDescription,
+    );
+
+    final questionsPayload = _builderState.buildApiPayload();
+    // Log detail payload untuk diagnosa mapping hilang (cek label/options/settings)
+    debugPrint(
+      '[FormMaker] Draft title="$title" questions=${questionsPayload.length} _draftId=$_draftTemplateId',
+    );
+    for (var i = 0; i < questionsPayload.length && i < 3; i++) {
+      debugPrint(
+        '[FormMaker] Q$i type=${questionsPayload[i]['type']} label=${(questionsPayload[i]['label'] as String).substring(0, (questionsPayload[i]['label'] as String).length > 60 ? 60 : (questionsPayload[i]['label'] as String).length)} opts=${(questionsPayload[i]['options'] as List).length} settings=${questionsPayload[i]['settings']}',
+      );
+    }
+
     final payload = {
-      'title': _builderState.formTitle.isNotEmpty
-          ? _builderState.formTitle
-          : 'Form Tanpa Judul',
-      'description': _builderState.formDescription,
-      'questions': _builderState.buildApiPayload(),
+      'title': title,
+      'description': descriptionPlain,
+      'questions': questionsPayload,
     };
 
-    final res = await ApiService.createTemplate(payload);
+    debugPrint(
+      '[FormMaker] Simpan draft payload -> ${ApiService.baseUrl}/templates title="$title"',
+    );
+
+    // FIX Bug B: jangan selalu POST (bikin duplikat ID be4e... vs 31e95...), pakai PATCH jika sudah pernah create/edit
+    final String? targetId = _draftTemplateId ?? widget.initialTemplate?.id;
+    final res = targetId != null
+        ? await ApiService.updateTemplate(targetId, payload)
+        : await ApiService.createTemplate(payload);
+    if (!mounted) return;
     setState(() => _builderState.isSaving = false);
 
     if (res['success'] == true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Draft berhasil disimpan!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(
-          context,
-          FormTemplate(
-            title: payload['title'] as String,
-            subtitle: 'Baru saja disimpan',
-          ),
-        );
+      // simpan id agar save berikutnya jadi PATCH bukan POST duplikat
+      if (_draftTemplateId == null && widget.initialTemplate?.id == null) {
+        final data = res['data'];
+        if (data is Map && data['id'] != null) {
+          _draftTemplateId = data['id'].toString();
+        }
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draft berhasil disimpan ke Template Saya!'),
+          backgroundColor: Color(0xFF059669),
+        ),
+      );
+      Navigator.pop(
+        context,
+        FormTemplate(
+          title: title,
+          subtitle: 'Baru saja disimpan',
+          id: _draftTemplateId ?? widget.initialTemplate?.id,
+          questionsJson: questionsPayload,
+        ),
+      );
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: ${res['message']}')),
-        );
-      }
+      final msg = res['message']?.toString() ?? 'Unknown error';
+      final hint =
+          msg.contains('SocketException') ||
+              msg.contains('Failed host') ||
+              msg.contains('Connection refused') ||
+              msg.contains('No token')
+          ? '\n\nCek: backend jalan di ${ApiService.baseUrl}?\nEmulator: 10.0.2.2:8000 | HP fisik: adb reverse tcp:8000 tcp:8000 + --dart-define=API_URL=http://127.0.0.1:8000'
+          : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $msg$hint'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint('[FormMaker] Gagal simpan draft: $msg');
     }
   }
 
@@ -119,20 +186,49 @@ class _FormMakerPageState extends State<FormMakerPage>
 
     setState(() => _builderState.isSaving = true);
 
-    final title = _builderState.formTitle;
-    final slug =
-        '${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final title = QuillHtml.htmlToPlainText(_builderState.formTitle).isNotEmpty
+        ? QuillHtml.htmlToPlainText(_builderState.formTitle)
+        : _builderState.formTitle;
+    // Slug sanitized: hanya a-z0-9 dan hyphen (bug #30)
+    final baseSlug = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+    final slug = '$baseSlug-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+
+    // FIX Bug 11 & 19: kirim settings yang sebelumnya hanya UI semu
+    DateTime? startDate;
+    DateTime? endDate;
+    if (_enableTimer) {
+      startDate = DateTime.now();
+      // parse _durationCtrl e.g. "1 hari" -> 1 day
+      final durText = _durationCtrl.text.trim();
+      final num = int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ?? 1;
+      if (durText.contains('jam')) {
+        endDate = startDate.add(Duration(hours: num));
+      } else if (durText.contains('menit')) {
+        endDate = startDate.add(Duration(minutes: num));
+      } else {
+        endDate = startDate.add(Duration(days: num));
+      }
+    }
 
     final payload = {
       'title': title,
-      'description': _builderState.formDescription,
+      'description': QuillHtml.htmlToPlainText(_builderState.formDescription),
       'slug': slug,
       'questions': _builderState.buildApiPayload(),
+      'allow_see_result': _correctAnswers,
+      'max_submissions': _limitOneResponse ? 1 : 0,
+      'require_fullscreen': false,
+      'reveal_answers': _correctAnswers,
+      if (startDate != null) 'start_date': startDate.toIso8601String(),
+      if (endDate != null) 'end_date': endDate.toIso8601String(),
+      'use_join_token': false,
     };
 
     final res = await ApiService.createForm(payload);
     if (res['success'] == true) {
       final formId = res['data']['id'] as String;
+      // FIX Bug 17-18: createForm selalu draft, maka PATCH status menjadi published
+      await ApiService.updateForm(formId, {'status': 'published'});
       final qrRes = await ApiService.generateQrCode(formId);
       setState(() => _builderState.isSaving = false);
 
@@ -598,7 +694,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      controller: TextEditingController(text: '0'),
+                      controller: _pointValueCtrl,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -994,9 +1090,11 @@ class _FormMakerPageState extends State<FormMakerPage>
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Settings Saved')));
+                // FIX Bug 12: sebelumnya hanya snackbar ilusi; sekarang settings sudah sinkron
+                // ke payload publish (allow_see_result, max_submissions, timer). SnackBar konfirmasi.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Pengaturan disimpan — akan diterapkan saat Publish (timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'}, batas 1x: $_limitOneResponse)')),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,

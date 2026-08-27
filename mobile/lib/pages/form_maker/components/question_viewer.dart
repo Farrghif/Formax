@@ -111,10 +111,15 @@ class QuestionViewer extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      opt.label.isEmpty ? 'Opsi' : opt.label,
-                      style: const TextStyle(fontSize: 14)
-                    ),
+                    child: opt.label.isEmpty
+                        ? const Text('Opsi', style: TextStyle(fontSize: 14))
+                        : (_looksLikeHtml(opt.label)
+                            ? RichTextView(
+                                html: opt.label,
+                                textStyle: const TextStyle(fontSize: 14),
+                              )
+                            : Text(opt.label,
+                                style: const TextStyle(fontSize: 14))),
                   ),
                 ],
               ),

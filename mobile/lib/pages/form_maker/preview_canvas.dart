@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/form_builder_state.dart';
 import 'components/question_viewer.dart';
+import '../../../widgets/rich_text_view.dart';
 
 class PreviewCanvas extends StatelessWidget {
   final FormBuilderState state;
@@ -49,16 +50,17 @@ class PreviewCanvas extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      page.title.isEmpty ? (isFirst ? state.formTitle : 'Bagian') : page.title,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    // FIX Bug 9: render HTML via RichTextView, bukan raw Text
+                    RichTextView(
+                      html: page.title.isEmpty ? (isFirst ? state.formTitle : 'Bagian') : page.title,
+                      textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                     if (page.description.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(page.description, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                      RichTextView(html: page.description, textStyle: const TextStyle(fontSize: 14, color: Colors.black54)),
                     ] else if (isFirst && state.formDescription.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(state.formDescription, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                      RichTextView(html: state.formDescription, textStyle: const TextStyle(fontSize: 14, color: Colors.black54)),
                     ]
                   ],
                 ),
