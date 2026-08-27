@@ -37,10 +37,13 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingSearch = false;
   Map<String, dynamic> _searchData = {};
 
+  late Future<Map<String, dynamic>> _myTemplatesFuture;
+
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _myTemplatesFuture = ApiService.getMyTemplates();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -592,7 +595,9 @@ class _HomePageState extends State<HomePage> {
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
-                    setState(() {}); // Refresh FutureBuilder
+                    setState(() {
+                      _myTemplatesFuture = ApiService.getMyTemplates();
+                    }); // Refresh FutureBuilder
                   }
                 },
                 icon: const Icon(Icons.add, size: 16),
@@ -610,7 +615,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 12),
           FutureBuilder<Map<String, dynamic>>(
-            future: ApiService.getMyTemplates(),
+            future: _myTemplatesFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
