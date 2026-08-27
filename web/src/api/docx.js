@@ -1,10 +1,10 @@
-import { API_BASE_URL, readJsonResponse } from './config';
+import { API_BASE_URL, apiFetch, readJsonResponse } from './config';
 
 /**
  * Download template Word (.docx) untuk import soal
  */
 export async function downloadTemplateDocx(token) {
-  const res = await fetch(`${API_BASE_URL}/import/template-docx`, {
+  const res = await apiFetch(`${API_BASE_URL}/import/template-docx`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -31,7 +31,7 @@ export async function previewDocxImport(token, formId, file) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/questions/import-docx/preview`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/questions/import-docx/preview`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -44,7 +44,7 @@ export async function previewDocxImport(token, formId, file) {
  * Confirm import — kirim soal-soal yang dipilih ke server
  */
 export async function confirmDocxImport(token, formId, questions) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/questions/import-docx/confirm`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/questions/import-docx/confirm`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

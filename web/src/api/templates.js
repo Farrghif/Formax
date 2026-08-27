@@ -1,10 +1,10 @@
-import { API_BASE_URL, readJsonResponse } from './config';
+import { API_BASE_URL, apiFetch, readJsonResponse } from './config';
 
 /**
  * List semua template (system + user templates)
  */
 export async function getTemplates(token) {
-  const res = await fetch(`${API_BASE_URL}/templates`, {
+  const res = await apiFetch(`${API_BASE_URL}/templates`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil templates');
@@ -14,7 +14,7 @@ export async function getTemplates(token) {
  * Get detail template (termasuk questions)
  */
 export async function getTemplate(token, templateId) {
-  const res = await fetch(`${API_BASE_URL}/templates/${templateId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/templates/${templateId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil template');
@@ -24,7 +24,7 @@ export async function getTemplate(token, templateId) {
  * List template buatan sendiri saja
  */
 export async function getMyTemplates(token) {
-  const res = await fetch(`${API_BASE_URL}/templates/mine`, {
+  const res = await apiFetch(`${API_BASE_URL}/templates/mine`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil templates');
@@ -34,7 +34,7 @@ export async function getMyTemplates(token) {
  * Buat template baru (judul, deskripsi, dan daftar soal+opsi)
  */
 export async function createTemplate(token, data) {
-  const res = await fetch(`${API_BASE_URL}/templates`, {
+  const res = await apiFetch(`${API_BASE_URL}/templates`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ export async function createTemplate(token, data) {
  * Hapus template milik sendiri
  */
 export async function deleteTemplate(token, templateId) {
-  const res = await fetch(`${API_BASE_URL}/templates/${templateId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/templates/${templateId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });

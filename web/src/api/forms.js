@@ -1,10 +1,10 @@
-import { API_BASE_URL, readJsonResponse } from './config';
+import { API_BASE_URL, apiFetch, readJsonResponse } from './config';
 
 /**
  * List semua form milik user (untuk halaman History / Recent History)
  */
 export async function getMyForms(token) {
-  const res = await fetch(`${API_BASE_URL}/forms`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil daftar form');
@@ -14,7 +14,7 @@ export async function getMyForms(token) {
  * Buat form baru (blank atau dari template)
  */
 export async function createForm(token, data) {
-  const res = await fetch(`${API_BASE_URL}/forms`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ export async function createForm(token, data) {
  * Get detail form (owner only)
  */
 export async function getForm(token, formId) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil form');
@@ -39,7 +39,7 @@ export async function getForm(token, formId) {
  * Update form (title, description, status, dates, etc.)
  */
 export async function updateForm(token, formId, data) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export async function updateForm(token, formId, data) {
  * Hapus form
  */
 export async function deleteForm(token, formId) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -65,7 +65,7 @@ export async function deleteForm(token, formId) {
  * Generate QR code untuk form
  */
 export async function generateQR(token, formId) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/generate-qr`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/generate-qr`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -76,7 +76,7 @@ export async function generateQR(token, formId) {
  * Get daftar submission untuk form tertentu (Owner only)
  */
 export async function getFormSubmissions(token, formId) {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/submissions`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/submissions`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return readJsonResponse(res, 'Gagal mengambil hasil respons');
@@ -86,7 +86,7 @@ export async function getFormSubmissions(token, formId) {
  * Ekspor jawaban form ke file Excel (.xlsx)
  */
 export async function exportSubmissions(token, formId, formSlug = 'form') {
-  const res = await fetch(`${API_BASE_URL}/forms/${formId}/export`, {
+  const res = await apiFetch(`${API_BASE_URL}/forms/${formId}/export`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {

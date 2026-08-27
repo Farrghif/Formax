@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, apiFetch } from './config';
 
 /**
  * Upload file (banner form, avatar, dll). Kembalikan { file_url }.
@@ -6,7 +6,7 @@ import { API_BASE_URL } from './config';
 export async function uploadFile(token, file) {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch(`${API_BASE_URL}/uploads`, {
+  const res = await apiFetch(`${API_BASE_URL}/uploads`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
