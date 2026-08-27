@@ -5,24 +5,34 @@ import '../pages/formmakerpage.dart';
 class TemplateCard extends StatelessWidget {
   final FormTemplate template;
   final bool isBuiltIn;
+  final Future<void> Function(FormTemplate? result)? onSaved;
+  final bool handleNavigation;
 
   const TemplateCard({
     super.key,
     required this.template,
     this.isBuiltIn = false,
+    this.onSaved,
+    this.handleNavigation = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FormMakerPage(initialTemplate: template),
-          ),
-        );
-      },
+      onTap: handleNavigation
+          ? () async {
+              final result = await Navigator.push<FormTemplate>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FormMakerPage(initialTemplate: template),
+                ),
+              );
+              // FIX: reload di tombol back — back dari FormMaker (result null) tetap trigger reload di Home
+              if (onSaved != null) {
+                await onSaved!(result);
+              }
+            }
+          : null,
       child: Container(
         width: 150,
         decoration: BoxDecoration(

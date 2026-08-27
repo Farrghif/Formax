@@ -157,8 +157,6 @@ class ApiService {
         return {'success': false, 'message': 'No token found — silakan login ulang'};
       }
 
-      debugPrint('[ApiService] POST $baseUrl/templates payload=${jsonEncode(payload).substring(0, payload.toString().length > 500 ? 500 : payload.toString().length)}... token=[REDACTED]');
-
       final response = await http
           .post(
             Uri.parse('$baseUrl/templates'),
@@ -169,8 +167,6 @@ class ApiService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-
-      debugPrint('[ApiService] createTemplate status=${response.statusCode} body=${response.body.substring(0, response.body.length > 800 ? 800 : response.body.length)}');
 
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -209,7 +205,6 @@ class ApiService {
     try {
       final token = await getToken();
       if (token == null) return {'success': false, 'message': 'No token found'};
-      debugPrint('[ApiService] PATCH $baseUrl/templates/$id payload=${jsonEncode(payload).length} chars token=[REDACTED]');
       final response = await http
           .patch(
             Uri.parse('$baseUrl/templates/$id'),
@@ -217,7 +212,6 @@ class ApiService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-      debugPrint('[ApiService] updateTemplate status=${response.statusCode} body=${response.body.substring(0, response.body.length > 800 ? 800 : response.body.length)}');
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       if (response.statusCode == 200) return {'success': true, 'data': data};
       String detail = data is Map && data['detail'] is String ? data['detail'] : 'Failed to update template';
@@ -260,7 +254,6 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 10));
 
-      debugPrint('[ApiService] GET $baseUrl/templates/mine status=${response.statusCode}');
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }

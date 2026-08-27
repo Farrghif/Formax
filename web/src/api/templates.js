@@ -6,6 +6,7 @@ import { API_BASE_URL, readJsonResponse } from './config';
 export async function getTemplates(token) {
   const res = await fetch(`${API_BASE_URL}/templates`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
   return readJsonResponse(res, 'Gagal mengambil templates');
 }
@@ -26,6 +27,7 @@ export async function getTemplate(token, templateId) {
 export async function getMyTemplates(token) {
   const res = await fetch(`${API_BASE_URL}/templates/mine`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
   return readJsonResponse(res, 'Gagal mengambil templates');
 }
