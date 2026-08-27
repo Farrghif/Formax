@@ -297,6 +297,43 @@ class SubmissionOut(BaseModel):
 
 
 # ============================================================
+# AKTIVITAS SAYA — daftar form yang pernah/lagi diisi sebagai responden
+# ============================================================
+class FormBriefOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    slug: str
+    banner_url: Optional[str] = None
+    status: FormStatus
+    created_at: datetime
+    owner_id: uuid.UUID
+    owner_name: Optional[str] = None
+    allow_see_result: bool = False
+    reveal_answers: bool = False
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MySubmissionOut(BaseModel):
+    id: uuid.UUID
+    form_id: uuid.UUID
+    user_id: uuid.UUID
+    started_at: datetime
+    submitted_at: Optional[datetime]
+    is_auto_submitted: bool = False
+    is_cheated: bool = False
+    answers: List[AnswerOut] = []
+    form: Optional[FormBriefOut] = None
+    total_questions: int = 0
+    answered_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
 # RESULT (Responden lihat hasil sendiri)
 # ============================================================
 class AnswerResultOut(BaseModel):

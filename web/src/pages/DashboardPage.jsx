@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { getMe, logout } from '../api/auth';
 import { getMyForms, deleteForm, getForm, getFormSubmissions, exportSubmissions } from '../api/forms';
 import { getTemplates, deleteTemplate } from '../api/templates';
+import { getMySubmissions, getSubmissionResult } from '../api/submissions';
 import { parseServerTime } from '../utils/date';
 import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/dashboard.css';
 
 // Helper: ubah HTML WYSIWYG (Quill) menjadi teks polos agar tidak bocor tag di riwayat
@@ -60,6 +62,15 @@ export default function DashboardPage() {
   const [selectedRespondent, setSelectedRespondent] = useState(null);
   const [confirmDeleteForm, setConfirmDeleteForm] = useState(null); // objek form yang mau dihapus
 
+  // Aktivitas Saya (baru) — daftar form yang pernah/lagi diisi sebagai responden
+  const [mySubmissions, setMySubmissions] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityFilter, setActivityFilter] = useState('all'); // all | completed | in_progress | cheated
+  const [activityResult, setActivityResult] = useState(null);
+  const [activityResultLoading, setActivityResultLoading] = useState(false);
+  const [activityDetailSub, setActivityDetailSub] = useState(null); // submission yang sedang dilihat detail/bukti
+
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -100,6 +111,47 @@ export default function DashboardPage() {
   const showToast = (msg, isError = false) => {
     setToast({ msg, isError });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Fetch Aktivitas Saya ketika tab dibuka
+  const fetchMyActivity = async () => {
+    if (!token) return;
+    setActivityLoading(true);
+    try {
+      const data = await getMySubmissions(token);
+      // sort terbaru di atas
+      const sorted = [...(data || [])].sort((a, b) => parseServerTime(b.started_at) - parseServerTime(a.started_at));
+      setMySubmissions(sorted);
+    } catch (err) {
+      showToast(err.message || 'Gagal memuat Aktivitas Saya', true);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeNav === 'activity' && mySubmissions.length === 0 && !activityLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchMyActivity();
+    }
+  }, [activeNav]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleViewMyResult = async (sub) => {
+    if (!sub?.id) return;
+    if (!sub.form?.allow_see_result) {
+      showToast('Pembuat form tidak mengizinkan melihat hasil', true);
+      return;
+    }
+    setActivityResultLoading(true);
+    try {
+      const data = await getSubmissionResult(token, sub.id);
+      setActivityResult(data);
+      setActivityDetailSub(sub);
+    } catch (err) {
+      showToast(err.message || 'Gagal mengambil hasil', true);
+    } finally {
+      setActivityResultLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -335,7 +387,7 @@ export default function DashboardPage() {
           {[
             {
               key: 'dashboard',
-              label: 'Dashboard',
+              label: 'Dasbor',
               icon: (
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -347,7 +399,7 @@ export default function DashboardPage() {
             },
             {
               key: 'template',
-              label: 'Template',
+              label: 'Templat',
               icon: (
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -357,11 +409,22 @@ export default function DashboardPage() {
             },
             {
               key: 'history',
-              label: 'History',
+              label: 'Riwayat',
               icon: (
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <polyline points="1 4 1 10 7 10" />
                   <path d="M3.51 15a9 9 0 1 0 .49-4.39" />
+                </svg>
+              ),
+            },
+            {
+              key: 'activity',
+              label: 'Aktivitas Saya',
+              icon: (
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+                  <rect x="8" y="2" width="8" height="4" rx="1" />
+                  <path d="M9 14l2 2 4-4" />
                 </svg>
               ),
             },
@@ -373,6 +436,8 @@ export default function DashboardPage() {
               onClick={() => {
                 setActiveNav(item.key);
                 setHistorySubView('list');
+                setActivityResult(null);
+                setActivityDetailSub(null);
               }}
             >
               {item.icon}
@@ -401,6 +466,7 @@ export default function DashboardPage() {
               <span className="db-user-email">{user?.email}</span>
             </div>
           </div>
+          <ThemeToggle size="sidebar" title="Ganti tema" />
           <button id="btn-logout" className="db-logout-btn" onClick={handleLogout} aria-label="Logout">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -424,11 +490,12 @@ export default function DashboardPage() {
               id="search-input"
               className="db-search"
               type="text"
-              placeholder="Search"
+              placeholder="Cari formulir..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <ThemeToggle />
         </header>
 
         {/* Content Area */}
@@ -445,13 +512,13 @@ export default function DashboardPage() {
                       <line x1="8" y1="12" x2="16" y2="12" />
                     </svg>
                   </div>
-                  <span>Create New Template</span>
+                  <span>Buat Templat Baru</span>
                 </button>
 
                 {systemTemplates.length > 0 ? (
                   systemTemplates.map((tpl, idx) => {
                     const bgClass = idx === 0 ? 'blank-bg' : idx === 1 ? 'attendance-bg' : 'exam-bg';
-                    const subtitles = ['Start from scratch', 'Event or class tracking', 'Assessments & Quizzes'];
+                    const subtitles = ['Mulai dari kosong', 'Pelacakan acara atau kelas', 'Penilaian & Kuis'];
                     return (
                       <div
                         key={tpl.id}
@@ -465,7 +532,7 @@ export default function DashboardPage() {
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12 6 12 12 16 14" />
                               </svg>
-                              Timer Enabled
+                              Timer Aktif
                             </span>
                           )}
                           <div className="db-preview-doc">
@@ -485,9 +552,9 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     {[
-                      { title: 'Blank Form', subtitle: 'Start from scratch', bg: 'blank-bg' },
-                      { title: 'Attendance Form', subtitle: 'Event or class tracking', bg: 'attendance-bg' },
-                      { title: 'Exam Form', subtitle: 'Assessments & Quizzes', bg: 'exam-bg', badge: true },
+                      { title: 'Form Kosong', subtitle: 'Mulai dari kosong', bg: 'blank-bg' },
+                      { title: 'Form Kehadiran', subtitle: 'Pelacakan acara atau kelas', bg: 'attendance-bg' },
+                      { title: 'Form Ujian', subtitle: 'Penilaian & Kuis', bg: 'exam-bg', badge: true },
                     ].map((card, idx) => (
                       <div key={idx} className="db-card-system" onClick={handleCreateBlank}>
                         <div className={`db-card-preview ${card.bg}`}>
@@ -497,7 +564,7 @@ export default function DashboardPage() {
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12 6 12 12 16 14" />
                               </svg>
-                              Timer Enabled
+                              Timer Aktif
                             </span>
                           )}
                           <div className="db-preview-doc">
@@ -517,8 +584,8 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Recent History */}
-              <h2 className="db-section-title">Recent History</h2>
+              {/* Riwayat Terbaru */}
+              <h2 className="db-section-title">Riwayat Terbaru</h2>
               {recentForms.length > 0 ? (
                 <div className="db-recent-grid">
                   {recentForms.map((form) => (
@@ -537,7 +604,7 @@ export default function DashboardPage() {
                       <div className="db-recent-footer">
                         <div>
                           <p className="db-recent-title">{form.title}</p>
-                          <p className="db-recent-date">Updated {formatTimeAgo(form.created_at)}</p>
+                          <p className="db-recent-date">Diperbarui {formatTimeAgo(form.created_at)}</p>
                         </div>
                         <div style={{ position: 'relative' }}>
                           <button
@@ -592,7 +659,7 @@ export default function DashboardPage() {
           {/* ===== TEMPLATE VIEW ===== */}
           {activeNav === 'template' && (
             <>
-              <h2 className="db-section-title">Semua Template</h2>
+              <h2 className="db-section-title">Semua Templat</h2>
               {templates.length > 0 ? (
                 <div className="db-recent-grid">
                   {templates.map((tpl) => (
@@ -611,7 +678,7 @@ export default function DashboardPage() {
                       <div className="db-recent-footer">
                         <div>
                           <p className="db-recent-title">{tpl.title}</p>
-                          <p className="db-recent-date">{tpl.is_system ? 'System Template' : 'My Template'}</p>
+                          <p className="db-recent-date">{tpl.is_system ? 'Templat Sistem' : 'Templat Saya'}</p>
                         </div>
                         {!tpl.is_system && (
                           <div style={{ position: 'relative' }}>
@@ -1252,6 +1319,274 @@ export default function DashboardPage() {
                       })}
                   </div>
                 </div>
+              )}
+            </>
+          )}
+
+          {/* ===== AKTIVITAS SAYA VIEW (Baru) ===== */}
+          {activeNav === 'activity' && (
+            <>
+              {activityDetailSub && activityResult ? (
+                // Detail hasil / bukti submit untuk satu aktivitas
+                <div className="results-page-container">
+                  <button className="back-nav-btn" onClick={() => { setActivityResult(null); setActivityDetailSub(null); }}>
+                    ← Kembali ke Aktivitas Saya
+                  </button>
+
+                  {/* Header bukti */}
+                  <div className="detail-header-card">
+                    <div>
+                      <p className="detail-header-formtitle">{activityResult.form_title}</p>
+                      <h2 className="detail-header-name">Bukti Pengisian Form</h2>
+                      <div className="detail-header-metarow">
+                        <span className="detail-meta-item">
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Submit: {formatDateString(activityResult.submitted_at)} WIB
+                        </span>
+                        <span className="detail-meta-item">
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Mulai: {formatDateString(activityDetailSub.started_at)} WIB
+                        </span>
+                        <span className="detail-meta-item" title={activityDetailSub.id}>
+                          ID: {activityDetailSub.id.slice(0, 8)}…
+                        </span>
+                      </div>
+                      {activityDetailSub.is_auto_submitted && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#b45309', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <span>⚡ Auto-submit (waktu habis)</span>
+                        </div>
+                      )}
+                      {activityDetailSub.is_cheated && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#b91c1c', background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <span>⚠️ Ditandai curang (keluar fullscreen)</span>
+                        </div>
+                      )}
+                    </div>
+                    {activityResult.score_percent !== null && (
+                      <div className="detail-score-box">
+                        <p className="detail-score-label">Skor</p>
+                        <h3 className="detail-score-num">{activityResult.score_percent}/100</h3>
+                        <p style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{activityResult.correct_count}/{activityResult.total_graded} benar</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rincian jawaban */}
+                  <div>
+                    {activityResult.answers.map((a, idx) => (
+                      <div key={a.question_id} className="detail-question-card">
+                        <div className="detail-question-header">
+                          <h3 className="detail-question-title">{idx + 1}. {plainLabel(a.label)}</h3>
+                          {a.is_correct !== null && a.is_correct !== undefined && (
+                            <span className={`correct-tag ${a.is_correct ? '' : 'incorrect-tag'}`} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px', background: a.is_correct ? '#dcfce7' : '#fee2e2', color: a.is_correct ? '#15803d' : '#b91c1c' }}>
+                              {a.is_correct ? '✓ Benar' : '✕ Salah'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="resp-answer-value">
+                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Jawaban kamu: </span>
+                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{a.user_answer || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}</span>
+                        </div>
+                        {a.correct_answer && (
+                          <div className="resp-answer-value" style={{ marginTop: '8px', background: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                            <span style={{ fontSize: '12px', color: '#15803d', fontWeight: 600 }}>Kunci: </span>
+                            <span style={{ color: '#15803d' }}>{a.correct_answer}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="results-header-row">
+                    <div className="results-header-titles">
+                      <h2>Aktivitas Saya</h2>
+                      <p>Daftar form yang pernah / sedang kamu isi sebagai responden — bukti kapan submit dan statusnya</p>
+                    </div>
+                    <button className="btn-export-excel" style={{ background: '#2563eb' }} onClick={fetchMyActivity} disabled={activityLoading}>
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{activityLoading ? 'Memuat...' : 'Muat Ulang'}</span>
+                    </button>
+                  </div>
+
+                  {/* Stats */}
+                  {(() => {
+                    const total = mySubmissions.length;
+                    const completed = mySubmissions.filter(s => !!s.submitted_at).length;
+                    const inProgress = mySubmissions.filter(s => !s.submitted_at).length;
+                    const cheated = mySubmissions.filter(s => !!s.is_cheated).length;
+                    return (
+                      <div className="stats-cards-grid">
+                        <div className="stat-card">
+                          <div className="stat-icon-box"><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div>
+                          <div className="stat-info-wrap"><span className="stat-label">TOTAL AKTIVITAS</span><span className="stat-value">{total}</span></div>
+                        </div>
+                        <div className="stat-card">
+                          <div className="stat-icon-box" style={{ background: '#dcfce7', color: '#15803d' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                          <div className="stat-info-wrap"><span className="stat-label">SELESAI</span><span className="stat-value">{completed}</span></div>
+                        </div>
+                        <div className="stat-card">
+                          <div className="stat-icon-box" style={{ background: '#fef3c7', color: '#b45309' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                          <div className="stat-info-wrap"><span className="stat-label">SEDANG DIISI</span><span className="stat-value">{inProgress}</span></div>
+                        </div>
+                        <div className="stat-card" style={{ display: cheated > 0 ? 'flex' : 'none' }}>
+                          <div className="stat-icon-box" style={{ background: '#fee2e2', color: '#b91c1c' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" /></svg></div>
+                          <div className="stat-info-wrap"><span className="stat-label">CURANG</span><span className="stat-value">{cheated}</span></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Filters */}
+                  <div className="table-card-container">
+                    <div className="table-card-header">
+                      <h3 className="table-card-title">Riwayat Pengisian</h3>
+                      <div className="table-header-filters">
+                        <input type="text" className="db-search" placeholder="Cari judul form..." value={activitySearch} onChange={(e) => setActivitySearch(e.target.value)} style={{ width: '220px', padding: '6px 12px', fontSize: '13px' }} />
+                        <select className="filter-select" value={activityFilter} onChange={(e) => setActivityFilter(e.target.value)}>
+                          <option value="all">Semua Status</option>
+                          <option value="completed">Selesai</option>
+                          <option value="in_progress">Sedang Diisi</option>
+                          <option value="cheated">Curang</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {activityLoading ? (
+                      <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
+                        <div className="db-spinner" style={{ margin: '0 auto 12px' }} />
+                        <p>Memuat aktivitas...</p>
+                      </div>
+                    ) : (() => {
+                      const filtered = mySubmissions.filter((sub) => {
+                        const title = sub.form?.title || '(Form terhapus)';
+                        const slug = sub.form?.slug || '';
+                        const owner = sub.form?.owner_name || '';
+                        const q = activitySearch.toLowerCase();
+                        const matchesSearch = !q || title.toLowerCase().includes(q) || slug.toLowerCase().includes(q) || owner.toLowerCase().includes(q);
+                        if (!matchesSearch) return false;
+                        if (activityFilter === 'completed') return !!sub.submitted_at && !sub.is_cheated;
+                        if (activityFilter === 'in_progress') return !sub.submitted_at && !sub.is_cheated;
+                        if (activityFilter === 'cheated') return !!sub.is_cheated;
+                        return true;
+                      });
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="db-empty-state" style={{ padding: '40px 0' }}>
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <p>{mySubmissions.length === 0 ? 'Belum ada aktivitas. Coba isi form orang lain via link /f/{slug}' : 'Tidak ada aktivitas yang sesuai filter'}</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <>
+                          {/* Desktop table */}
+                          <div className="resp-table-wrap activity-table-wrap">
+                            <table className="resp-data-table">
+                              <thead>
+                                <tr>
+                                  <th>FORM</th>
+                                  <th>PEMILIK</th>
+                                  <th>MULAI</th>
+                                  <th>SUBMIT</th>
+                                  <th>PROGRES</th>
+                                  <th>STATUS</th>
+                                  <th style={{ textAlign: 'right' }}>AKSI</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {filtered.map((sub) => {
+                                  const isCompleted = !!sub.submitted_at;
+                                  const durationStr = (() => {
+                                    if (!sub.started_at || !sub.submitted_at) return '-';
+                                    const diffMs = parseServerTime(sub.submitted_at).getTime() - parseServerTime(sub.started_at).getTime();
+                                    const s = Math.max(0, Math.floor(diffMs / 1000));
+                                    const m = Math.floor(s / 60);
+                                    const sec = s % 60;
+                                    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                                  })();
+                                  return (
+                                    <tr key={sub.id}>
+                                      <td>
+                                        <div style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={sub.form?.title || '(Form terhapus)'}>
+                                          {sub.form?.title || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>(Form terhapus)</span>}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                          {sub.form?.slug ? `/${sub.form.slug}` : ''} {sub.is_auto_submitted ? '• auto' : ''} {durationStr !== '-' ? `• ${durationStr}` : ''}
+                                        </div>
+                                      </td>
+                                      <td className="td-user-email">{sub.form?.owner_name || '-'}</td>
+                                      <td style={{ fontSize: '13px' }}>{formatDateString(sub.started_at)}</td>
+                                      <td style={{ fontSize: '13px' }}>{sub.submitted_at ? formatDateString(sub.submitted_at) : <span style={{ color: '#b45309' }}>Belum submit</span>}</td>
+                                      <td style={{ fontSize: '13px', fontWeight: 600 }}>{sub.answered_count}/{sub.total_questions}</td>
+                                      <td>
+                                        {sub.is_cheated ? (
+                                          <span className="status-pill cheated">• Curang</span>
+                                        ) : isCompleted ? (
+                                          <span className="status-pill completed">• Selesai</span>
+                                        ) : (
+                                          <span className="status-pill process">• Proses</span>
+                                        )}
+                                      </td>
+                                      <td style={{ textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                          {!isCompleted && sub.form?.slug && (
+                                            <button className="btn-table-view" onClick={() => navigate(`/f/${sub.form.slug}`)} title="Lanjutkan mengisi form">
+                                              Lanjutkan »
+                                            </button>
+                                          )}
+                                          {isCompleted && sub.form?.allow_see_result && (
+                                            <button className="btn-table-view" onClick={() => handleViewMyResult(sub)} disabled={activityResultLoading} style={{ background: '#eff6ff', color: '#0053db' }}>
+                                              {activityResultLoading ? '...' : 'Lihat Hasil »'}
+                                            </button>
+                                          )}
+                                          {isCompleted && !sub.form?.allow_see_result && (
+                                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>Hasil tertutup</span>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile cards fallback */}
+                          <div className="activity-cards-mobile" style={{ display: 'none' }}>
+                            {filtered.map((sub) => {
+                              const isCompleted = !!sub.submitted_at;
+                              return (
+                                <div key={sub.id} className="activity-mobile-card">
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{sub.form?.title || '(Form terhapus)'}</div>
+                                  <div style={{ fontSize: '12px', color: '#64748b' }}>{sub.form?.owner_name || '-'} • {sub.answered_count}/{sub.total_questions} terjawab</div>
+                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Mulai: {formatDateString(sub.started_at)} • Submit: {sub.submitted_at ? formatDateString(sub.submitted_at) : 'Belum'}</div>
+                                  <div style={{ marginTop: '8px' }}>
+                                    {sub.is_cheated ? <span className="status-pill cheated">Curang</span> : isCompleted ? <span className="status-pill completed">Selesai</span> : <span className="status-pill process">Proses</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="table-card-footer">
+                            <span>Menampilkan {filtered.length} dari {mySubmissions.length} aktivitas</span>
+                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>ID bukti: potongan UUID submission</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </>
               )}
             </>
           )}

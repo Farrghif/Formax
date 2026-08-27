@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, signup, sendOtp } from '../api/auth';
 import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/auth.css';
 
 export default function AuthPage() {
@@ -158,6 +159,9 @@ export default function AuthPage() {
 
   return (
     <div className="auth-bg">
+      <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 5 }}>
+        <ThemeToggle />
+      </div>
       {/* Wave image top */}
       <img
         src="/images/auth-wave-top.png"

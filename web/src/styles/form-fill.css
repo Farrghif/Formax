@@ -4,8 +4,8 @@
 
 .form-fill-container {
   min-height: 100vh;
-  background-color: #f4f7fc;
-  color: #1e293b;
+  background-color: var(--bg-form-fill);
+  color: var(--text-body);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   flex-direction: column;

@@ -86,3 +86,14 @@ export async function flagCheated(token, submissionId) {
   });
   return readJsonResponse(res, 'Gagal menandai submission');
 }
+
+/**
+ * Aktivitas Saya — daftar submission milik user login sebagai responden
+ * GET /submissions/me  (auth required)
+ */
+export async function getMySubmissions(token) {
+  const res = await fetch(`${API_BASE_URL}/submissions/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return readJsonResponse(res, 'Gagal mengambil aktivitas saya');
+}

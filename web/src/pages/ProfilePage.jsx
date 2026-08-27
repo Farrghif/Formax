@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMe, updateMe, logout } from '../api/auth';
 import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/dashboard.css';
 
 export default function ProfilePage() {
@@ -140,6 +141,7 @@ export default function ProfilePage() {
               <span className="db-user-email">{displayEmail}</span>
             </div>
           </div>
+          <ThemeToggle size="sidebar" />
           <button className="db-logout-btn" onClick={handleLogout} aria-label="Logout" title="Keluar">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -152,10 +154,11 @@ export default function ProfilePage() {
 
       {/* Main Content Area */}
       <main className="db-main">
-        <header className="db-topbar" style={{ justifyContent: 'flex-start' }}>
+        <header className="db-topbar" style={{ justifyContent: 'space-between' }}>
           <button className="back-nav-btn" onClick={() => navigate('/dashboard')}>
             ← Kembali ke Dashboard
           </button>
+          <ThemeToggle />
         </header>
 
         <section className="db-content">

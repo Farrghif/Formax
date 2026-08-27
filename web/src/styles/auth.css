@@ -15,7 +15,7 @@
   font-family: 'Inter', system-ui, sans-serif;
   min-height: 100vh;
   width: 100%;
-  background: #ebf5ff;
+  background: var(--bg-auth);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -46,13 +46,13 @@
 .auth-card {
   position: relative;
   z-index: 1;
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 22px;
   padding: 0 40px 32px;
   width: 100%;
   max-width: 440px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(25, 118, 210, 0.15), 0 4px 16px rgba(25, 118, 210, 0.08);
+  box-shadow: var(--shadow-lg);
   animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

@@ -17,6 +17,7 @@ import {
 import { downloadTemplateDocx, previewDocxImport, confirmDocxImport } from '../api/docx';
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Register custom fonts with Quill
 const Quill = ReactQuill.Quill;
@@ -473,7 +474,7 @@ export default function FormBuilderPage() {
           })),
         })),
       });
-      showToast('Template berhasil disimpan! Muncul di Dashboard > Template', 'success');
+      showToast('Template berhasil disimpan! Muncul di Dasbor > Templat', 'success');
     } catch (err) {
       showToast(err.message || 'Gagal menyimpan template', 'error');
     } finally {
@@ -913,19 +914,19 @@ export default function FormBuilderPage() {
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
             </svg>
-            <span>Dashboard</span>
+            <span>Dasbor</span>
           </button>
           <button className="db-nav-item" onClick={() => navigate('/dashboard')}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" />
             </svg>
-            <span>Template</span>
+            <span>Templat</span>
           </button>
           <button className="db-nav-item" onClick={() => navigate('/dashboard')}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.39" />
             </svg>
-            <span>History</span>
+            <span>Riwayat</span>
           </button>
         </nav>
 
@@ -939,6 +940,7 @@ export default function FormBuilderPage() {
               <span className="db-user-email">{user?.email}</span>
             </div>
           </div>
+          <ThemeToggle size="sidebar" />
           <button className="db-logout-btn" onClick={() => { logout(); navigate('/auth'); }} aria-label="Logout">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
@@ -969,6 +971,7 @@ export default function FormBuilderPage() {
           </div>
 
           <div className="fb-topbar-actions">
+            <ThemeToggle />
             <button
               className="fb-import-btn"
               onClick={() => {

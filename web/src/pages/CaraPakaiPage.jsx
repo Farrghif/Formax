@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import '../styles/landing.css'
-import logoForm4x from '../assets/logo_form4x.png'; 
+import logoForm4x from '../assets/logo_form4x.png';
+import ThemeToggle from '../components/ThemeToggle';
 
 /* ─── Shared Navbar Component ─── */
 function LandingNav({ active = 'cara-pakai' }) {
@@ -35,6 +36,7 @@ function LandingNav({ active = 'cara-pakai' }) {
           </Link>
         </nav>
         <div className="hp-header-actions">
+          <ThemeToggle />
           <Link to="/auth" className="hp-btn-login">Login</Link>
           <Link to="/auth" className="hp-btn-register">Register</Link>
         </div>

@@ -201,6 +201,78 @@ def submit_final(
     return submission
 
 
+@router.get("/submissions/me", response_model=List[schemas.MySubmissionOut])
+def list_my_submissions(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Aktivitas Saya — daftar form yang pernah/sedang diisi oleh user login sebagai responden.
+    Menampilkan bukti kapan submit (started_at/submitted_at), durasi, status, skor bisa dihitung di frontend.
+    Diurutkan started_at terbaru di atas.
+    """
+    subs = (
+        db.query(models.Submission)
+        .filter(models.Submission.user_id == current_user.id)
+        .order_by(models.Submission.started_at.desc())
+        .all()
+    )
+    result = []
+    for sub in subs:
+        form = db.query(models.Form).filter(models.Form.id == sub.form_id).first()
+        if not form:
+            # form sudah dihapus — tetap tampilkan submission tanpa form
+            result.append(
+                schemas.MySubmissionOut(
+                    id=sub.id,
+                    form_id=sub.form_id,
+                    user_id=sub.user_id,
+                    started_at=sub.started_at,
+                    submitted_at=sub.submitted_at,
+                    is_auto_submitted=bool(sub.is_auto_submitted),
+                    is_cheated=bool(sub.is_cheated),
+                    answers=[schemas.AnswerOut.model_validate(a) for a in (sub.answers or [])],
+                    form=None,
+                    total_questions=0,
+                    answered_count=len(sub.answers or []),
+                )
+            )
+            continue
+
+        owner = db.query(models.User).filter(models.User.id == form.owner_id).first() if form.owner_id else None
+        total_q = db.query(func.count(models.Question.id)).filter(models.Question.form_id == form.id).scalar() or 0
+
+        form_brief = schemas.FormBriefOut(
+            id=form.id,
+            title=form.title,
+            slug=form.slug,
+            banner_url=form.banner_url,
+            status=form.status,
+            created_at=form.created_at,
+            owner_id=form.owner_id,
+            owner_name=owner.full_name if owner else None,
+            allow_see_result=bool(form.allow_see_result),
+            reveal_answers=bool(form.reveal_answers),
+            description=form.description,
+        )
+        result.append(
+            schemas.MySubmissionOut(
+                id=sub.id,
+                form_id=sub.form_id,
+                user_id=sub.user_id,
+                started_at=sub.started_at,
+                submitted_at=sub.submitted_at,
+                is_auto_submitted=bool(sub.is_auto_submitted),
+                is_cheated=bool(sub.is_cheated),
+                answers=[schemas.AnswerOut.model_validate(a) for a in (sub.answers or [])],
+                form=form_brief,
+                total_questions=total_q,
+                answered_count=len(sub.answers or []),
+            )
+        )
+    return result
+
+
 @router.get("/forms/{form_id}/submissions", response_model=List[schemas.SubmissionOut])
 def list_submissions_for_form(
     form_id: str,

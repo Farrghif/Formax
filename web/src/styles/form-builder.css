@@ -235,8 +235,8 @@
   font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   min-height: 100vh;
-  background: #e8eef6;
-  color: #1e293b;
+  background: var(--bg-form-builder);
+  color: var(--text-body);
 }
 
 .fb-main {
