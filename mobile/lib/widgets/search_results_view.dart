@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/form_model.dart';
 import '../models/form_template.dart';
+import '../services/api_service.dart';
 import '../pages/historypage.dart';
 import '../pages/formmakerpage.dart';
 
@@ -74,10 +75,19 @@ class SearchResultsView extends StatelessWidget {
   Widget _buildTemplateResult(BuildContext context, FormTemplate template, bool isBuiltIn) {
     return InkWell(
       onTap: () async {
+        // FIX Bug 4 & 21: fetch full template dengan questions, lalu buka FormMakerPage
+        FormTemplate fullTemplate = template;
+        if (template.id != null) {
+          final res = await ApiService.getTemplate(template.id!);
+          if (res['success'] == true && res['data'] != null) {
+            fullTemplate = FormTemplate.fromJson(res['data'] as Map<String, dynamic>);
+          }
+        }
+        if (!context.mounted) return;
         final result = await Navigator.push<FormTemplate>(
           context,
           MaterialPageRoute(
-            builder: (_) => const FormMakerPage(),
+            builder: (_) => FormMakerPage(initialTemplate: fullTemplate),
           ),
         );
         if (result != null) {

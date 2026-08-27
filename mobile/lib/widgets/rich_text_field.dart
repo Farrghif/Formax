@@ -51,10 +51,13 @@ class _RichTextFieldState extends State<RichTextField> {
       document: QuillHtml.documentFromHtml(widget.initialHtml),
       selection: const TextSelection.collapsed(offset: 0),
     );
-    _controller.document.changes.listen((_) {
+    // FIX Bug 7: hanya satu listener (controller.addListener) untuk hindari double emit.
+    // document.changes sudah ter-cover oleh controller listener, jangan duplikat.
+    void emitHtml() {
       final html = QuillHtml.documentToHtml(_controller.document);
       widget.onChanged(html);
-    });
+    }
+    _controller.addListener(emitHtml);
     // Listener lama yang menyembunyikan toolbar saat focus hilang dihapus
     // karena toolbar QuillSimpleToolbar butuh focus editor tetap terjaga.
     // Jika auto-hide dibutuhkan, gunakan TapRegion di build, bukan focus listener,
@@ -65,20 +68,20 @@ class _RichTextFieldState extends State<RichTextField> {
   void didUpdateWidget(covariant RichTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialHtml != widget.initialHtml) {
-      final newPlain = QuillHtml.htmlToPlainText(widget.initialHtml);
-      final oldPlain = _controller.document.toPlainText().trim().replaceAll(RegExp(r'\n+'), ' ').trim();
-      if (newPlain != oldPlain) {
-        // Recreate controller untuk sinkronisasi HTML dari backend (fix bug payload default)
+      // FIX Bug 8: bandingkan HTML penuh, bukan plain text — agar perubahan formatting terdeteksi
+      final newHtml = (widget.initialHtml).trim();
+      final oldHtml = QuillHtml.documentToHtml(_controller.document).trim();
+      if (newHtml != oldHtml) {
         final oldController = _controller;
         _controller = QuillController(
           document: QuillHtml.documentFromHtml(widget.initialHtml),
           selection: const TextSelection.collapsed(offset: 0),
         );
-        _controller.document.changes.listen((_) {
+        void emitHtml2() {
           final html = QuillHtml.documentToHtml(_controller.document);
           widget.onChanged(html);
-        });
-        // dispose old setelah frame
+        }
+        _controller.addListener(emitHtml2);
         WidgetsBinding.instance.addPostFrameCallback((_) => oldController.dispose());
         setState(() {});
       }

@@ -114,7 +114,12 @@ def update_template(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    template = db.query(models.Template).filter(models.Template.id == template_id).first()
+    template = (
+        db.query(models.Template)
+        .options(selectinload(models.Template.questions).selectinload(models.Question.options))
+        .filter(models.Template.id == template_id)
+        .first()
+    )
     if not template:
         raise HTTPException(status_code=404, detail="Template tidak ditemukan")
     if template.is_system:
@@ -122,12 +127,72 @@ def update_template(
     if template.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan template milikmu")
 
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    # pisahkan questions dari field biasa
+    data = payload.model_dump(exclude_unset=True)
+    questions_data = data.pop("questions", None)
+
+    for key, value in data.items():
         setattr(template, key, value)
 
-    db.commit()
-    db.refresh(template)
-    return template
+    # jika questions ikut dikirim (draft save), replace semua questions lama
+    if questions_data is not None:
+        # FIX Bug 25: sentuh updated_at parent agar perubahan question tercermin
+        from datetime import datetime
+        template.updated_at = datetime.utcnow()
+        for q in list(template.questions):
+            db.delete(q)
+        db.flush()
+        for q in questions_data:
+            # q adalah dict dari QuestionCreate
+            q_type = q.get("type") if isinstance(q, dict) else q.type
+            # handle jika masih dict (exclude_unset) -> pydantic dump
+            if isinstance(q, dict):
+                label = (q.get("label") or "").strip() or "Pertanyaan Tanpa Judul"
+                placeholder = q.get("placeholder")
+                is_required = q.get("is_required", False)
+                order_index = q.get("order_index", 0)
+                settings = q.get("settings") or {}
+                options = q.get("options") or []
+            else:
+                label = (q.label or "").strip() or "Pertanyaan Tanpa Judul"
+                placeholder = q.placeholder
+                is_required = q.is_required
+                order_index = q.order_index
+                settings = q.settings or {}
+                options = q.options
+            question = models.Question(
+                template_id=template.id,
+                type=q_type, label=label, placeholder=placeholder,
+                is_required=is_required, order_index=order_index, settings=settings,
+            )
+            db.add(question)
+            db.flush()
+            for opt in options:
+                if isinstance(opt, dict):
+                    db.add(models.QuestionOption(
+                        question_id=question.id,
+                        label=(opt.get("label") or "Opsi").strip(),
+                        value=opt.get("value"),
+                        order_index=opt.get("order_index", 0),
+                        is_correct=opt.get("is_correct", False),
+                        is_other=opt.get("is_other", False),
+                    ))
+                else:
+                    db.add(models.QuestionOption(
+                        question_id=question.id, label=(opt.label or "Opsi").strip(),
+                        value=opt.value, order_index=opt.order_index,
+                        is_correct=opt.is_correct, is_other=opt.is_other,
+                    ))
+
+    try:
+        db.commit()
+        db.refresh(template)
+        db.refresh(template, attribute_names=["questions"])
+        return template
+    except Exception as e:
+        db.rollback()
+        print(f"[templates] update_template error: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal update template: {str(e)}")
 
 
 @router.delete("/{template_id}")

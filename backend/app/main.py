@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -51,13 +52,13 @@ with engine.begin() as conn:
     conn.execute(text("UPDATE question_options SET is_correct = FALSE WHERE is_correct IS NULL;"))
     conn.execute(text("UPDATE question_options SET is_other = FALSE WHERE is_other IS NULL;"))
 
-    # Tambah nilai enum baru untuk PostgreSQL (image & text_block)
+    # Tambah nilai enum baru untuk PostgreSQL (semua tipe baru)
     if dialect == "postgresql":
         raw = engine.raw_connection()
         try:
             raw_cursor = raw.cursor()
-            raw_cursor.execute("ALTER TYPE questiontype ADD VALUE IF NOT EXISTS 'image'")
-            raw_cursor.execute("ALTER TYPE questiontype ADD VALUE IF NOT EXISTS 'text_block'")
+            for val in ['image', 'text_block', 'paragraph', 'time', 'linear_scale', 'rating', 'multiple_choice_grid', 'tick_box_grid']:
+                raw_cursor.execute(f"ALTER TYPE questiontype ADD VALUE IF NOT EXISTS '{val}'")
             raw.commit()
             raw_cursor.close()
         finally:
@@ -110,9 +111,11 @@ with engine.begin() as conn:
 
 app = FastAPI(title="Form Maker API", version="2.0.0")
 
+_allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",  # ganti ke domain React/Flutter kamu pas production
+    allow_origins=[o.strip() for o in _allowed_origins if o.strip()] if _allowed_origins else [],
+    allow_origin_regex=None if _allowed_origins else ".*",  # dev: open, prod: isi ALLOWED_ORIGINS
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

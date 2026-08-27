@@ -85,21 +85,14 @@ class FormBuilderState extends ChangeNotifier {
         continue;
       }
 
-      QuestionType type = QuestionType.shortAnswer;
-      if (typeStr == 'single_choice') type = QuestionType.multipleChoice;
-      if (typeStr == 'checkbox') type = QuestionType.checkboxes;
-      if (typeStr == 'dropdown') type = QuestionType.dropdown;
-      if (typeStr == 'file_upload') type = QuestionType.fileUpload;
-      if (typeStr == 'date') type = QuestionType.date;
-      if (typeStr == 'time') type = QuestionType.time;
-      if (typeStr == 'image') type = QuestionType.image;
-      if (typeStr == 'text_block') type = QuestionType.text;
+      final QuestionType type = QuestionTypeExtension.fromApiValue(typeStr);
 
       final optionsList = (q['options'] as List<dynamic>?) ?? [];
       final options = optionsList.map((opt) {
         return QuestionOptionData(
           label: opt['label'] ?? 'Opsi',
           isOther: opt['is_other'] ?? false,
+          isCorrect: opt['is_correct'] ?? false,
         );
       }).toList();
 
@@ -324,7 +317,7 @@ class FormBuilderState extends ChangeNotifier {
             'label': e.value.label,
             'value': e.value.label,
             'order_index': e.key,
-            'is_correct': false,
+            'is_correct': e.value.isCorrect,
             'is_other': e.value.isOther,
           };
         }).toList();
@@ -360,6 +353,9 @@ class FormBuilderState extends ChangeNotifier {
         }
         if (q.maxFileCount != 1) {
           settings['max_file_count'] = q.maxFileCount;
+        }
+        if (q.rowLabels.isNotEmpty) {
+          settings['row_labels'] = q.rowLabels;
         }
 
         result.add({

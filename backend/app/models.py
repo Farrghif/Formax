@@ -20,11 +20,17 @@ def gen_uuid():
 # ============================================================
 class QuestionType(str, enum.Enum):
     text = "text"
+    paragraph = "paragraph"
     single_choice = "single_choice"
     checkbox = "checkbox"
     dropdown = "dropdown"
     date = "date"
+    time = "time"
     file_upload = "file_upload"
+    linear_scale = "linear_scale"
+    rating = "rating"
+    multiple_choice_grid = "multiple_choice_grid"
+    tick_box_grid = "tick_box_grid"
     page_break = "page_break"
     image = "image"
     text_block = "text_block"

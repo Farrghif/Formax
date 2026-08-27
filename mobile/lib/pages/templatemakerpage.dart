@@ -23,10 +23,40 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late List<QuestionData> _questions;
+  // FIX Bug 6: cache controllers untuk hindari pembuatan baru di build()
+  final Map<String, TextEditingController> _qLabelCtrls = {};
+  final Map<String, TextEditingController> _optCtrls = {};
+  final Map<String, TextEditingController> _pointCtrls = {};
+  late TextEditingController _pointValueCtrl;
+
+  TextEditingController _getQLabelCtrl(QuestionData q) {
+    var c = _qLabelCtrls[q.id];
+    if (c == null) {
+      c = TextEditingController(text: q.label);
+      final ctrl = c;
+      ctrl.addListener(() => q.label = ctrl.text);
+      _qLabelCtrls[q.id] = ctrl;
+    } else if (c.text != q.label && !c.selection.isValid) {
+      c.text = q.label;
+    }
+    return c;
+  }
+
+  TextEditingController _getOptCtrl(QuestionOptionData opt) {
+    var c = _optCtrls[opt.id];
+    if (c == null) {
+      c = TextEditingController(text: opt.label);
+      final ctrl = c;
+      ctrl.addListener(() => opt.label = ctrl.text);
+      _optCtrls[opt.id] = ctrl;
+    }
+    return c;
+  }
 
   @override
   void initState() {
     super.initState();
+    _draftTemplateId = widget.initialTemplate?.id;
     if (widget.initialTemplate != null) {
       _titleController = TextEditingController(
         text: widget.initialTemplate!.title,
@@ -40,18 +70,14 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       if (qJson != null && qJson.isNotEmpty) {
         for (var q in qJson) {
           final typeStr = q['type'] as String? ?? 'text';
-          QuestionType type = QuestionType.shortAnswer;
-          if (typeStr == 'single_choice') type = QuestionType.multipleChoice;
-          if (typeStr == 'checkbox') type = QuestionType.checkboxes;
-          if (typeStr == 'dropdown') type = QuestionType.dropdown;
-          if (typeStr == 'file_upload') type = QuestionType.fileUpload;
-          if (typeStr == 'date') type = QuestionType.date;
+          final QuestionType type = QuestionTypeExtension.fromApiValue(typeStr);
 
           final optionsList = (q['options'] as List<dynamic>?) ?? [];
           final options = optionsList.map((opt) {
-            return QuestionOptionData(label: opt['label'] ?? 'Opsi');
+            return QuestionOptionData(label: opt['label'] ?? 'Opsi', isOther: opt['is_other'] ?? false, isCorrect: opt['is_correct'] ?? false);
           }).toList();
 
+          final settings = (q['settings'] as Map<String, dynamic>?) ?? {};
           _questions.add(
             QuestionData(
               type: type,
@@ -59,6 +85,17 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               description: q['placeholder'] ?? '',
               isRequired: q['is_required'] ?? false,
               options: options,
+              imageUrl: settings['image_url'] as String?,
+              rowLabels: (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[],
+              scaleMin: (settings['scale_min'] as int?) ?? 1,
+              scaleMax: (settings['scale_max'] as int?) ?? 5,
+              minLabel: settings['min_label'] as String? ?? '',
+              maxLabel: settings['max_label'] as String? ?? '',
+              ratingCount: (settings['rating_count'] as int?) ?? 5,
+              ratingIcon: settings['rating_icon'] as String? ?? 'star',
+              allowedFileTypes: (settings['allowed_file_types'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[],
+              maxFileSizeMB: (settings['max_file_size_mb'] as int?) ?? 10,
+              maxFileCount: (settings['max_file_count'] as int?) ?? 1,
             ),
           );
         }
@@ -85,9 +122,11 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         ),
       ];
     }
+    _pointValueCtrl = TextEditingController(text: '0');
   }
 
   bool _isSaving = false;
+  String? _draftTemplateId;
 
   // State untuk Setelan
   bool _isQuiz = true;
@@ -114,6 +153,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     _titleController.dispose();
     _descController.dispose();
     _durationCtrl.dispose();
+    for (var c in _qLabelCtrls.values) { c.dispose(); }
+    for (var c in _optCtrls.values) { c.dispose(); }
+    for (var c in _pointCtrls.values) { c.dispose(); }
     super.dispose();
   }
 
@@ -141,7 +183,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
           'label': e.value.label,
           'value': e.value.label,
           'order_index': e.key,
-          'is_correct': false,
+          'is_correct': e.value.isCorrect,
           'is_other': e.value.isOther,
         };
       }).toList();
@@ -157,6 +199,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       if (q.ratingCount != 5) settings['rating_count'] = q.ratingCount;
       if (q.ratingIcon != 'star') settings['rating_icon'] = q.ratingIcon;
       if (q.rowLabels.isNotEmpty) settings['row_labels'] = q.rowLabels;
+      if (q.allowedFileTypes.isNotEmpty) settings['allowed_file_types'] = q.allowedFileTypes;
+      if (q.maxFileSizeMB != 10) settings['max_file_size_mb'] = q.maxFileSizeMB;
+      if (q.maxFileCount != 1) settings['max_file_count'] = q.maxFileCount;
 
       result.add({
         'type': q.type.apiValue,
@@ -173,6 +218,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
 
   void _saveTemplate() async {
     if (_isSaving) return;
+    // flush focus agar TextField/RichText terakhir tersimpan
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
     setState(() => _isSaving = true);
 
     // Title dari TextField plain, tapi kalau diisi via paste HTML tetap di-strip
@@ -183,7 +231,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     // Pastikan format form benar-benar dipetakan: gunakan payload builder yang sudah mencakup
     // label/placeholder/is_required/order_index/settings/options lengkap
     final questionsPayload = _buildQuestionPayload();
-    debugPrint('[TemplateMaker] title="$title" questions=${questionsPayload.length}');
+    debugPrint('[TemplateMaker] title="$title" questions=${questionsPayload.length} draftId=$_draftTemplateId');
 
     final payload = {
       'title': title,
@@ -193,11 +241,17 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
 
     debugPrint('[TemplateMaker] Simpan draft payload: $payload -> ${ApiService.baseUrl}/templates');
 
-    final res = await ApiService.createTemplate(payload);
+    final res = _draftTemplateId != null
+        ? await ApiService.updateTemplate(_draftTemplateId!, payload)
+        : await ApiService.createTemplate(payload);
     if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (res['success'] == true) {
+      if (_draftTemplateId == null) {
+        final data = res['data'];
+        if (data is Map && data['id'] != null) _draftTemplateId = data['id'].toString();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Draft berhasil disimpan ke Template Saya!'),
@@ -209,6 +263,8 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
         FormTemplate(
           title: title,
           subtitle: 'Baru saja disimpan',
+          id: _draftTemplateId,
+          questionsJson: questionsPayload,
         ),
       );
     } else {
@@ -233,21 +289,40 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     setState(() => _isSaving = true);
 
     final title = _titleController.text.isNotEmpty
-        ? _titleController.text
+        ? QuillHtml.titleToPlain(_titleController.text, fallback: 'Form Tanpa Judul')
         : 'Form Tanpa Judul';
-    final slug =
-        '${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final baseSlug = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+    final slug = '$baseSlug-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+
+    DateTime? startDate;
+    DateTime? endDate;
+    if (_enableTimer) {
+      startDate = DateTime.now();
+      final durText = _durationCtrl.text.trim();
+      final num = int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ?? 1;
+      if (durText.contains('jam')) endDate = startDate.add(Duration(hours: num));
+      else if (durText.contains('menit')) endDate = startDate.add(Duration(minutes: num));
+      else endDate = startDate.add(Duration(days: num));
+    }
 
     final payload = {
       'title': title,
-      'description': _descController.text,
+      'description': _descController.text.trim(),
       'slug': slug,
       'questions': _buildQuestionPayload(),
+      'allow_see_result': _correctAnswers,
+      'max_submissions': _limitOneResponse ? 1 : 0,
+      'require_fullscreen': false,
+      'reveal_answers': _correctAnswers,
+      if (startDate != null) 'start_date': startDate.toIso8601String(),
+      if (endDate != null) 'end_date': endDate.toIso8601String(),
+      'use_join_token': false,
     };
 
     final res = await ApiService.createForm(payload);
     if (res['success'] == true) {
       final formId = res['data']['id'] as String;
+      await ApiService.updateForm(formId, {'status': 'published'});
       final qrRes = await ApiService.generateQrCode(formId);
       setState(() => _isSaving = false);
 
@@ -565,11 +640,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 Expanded(
                   flex: 2,
                   child: TextField(
-                    controller: TextEditingController(text: q.label)
-                      ..selection = TextSelection.collapsed(
-                        offset: q.label.length,
-                      ),
-                    onChanged: (v) => q.label = v,
+                    controller: _getQLabelCtrl(q),
                     style: const TextStyle(fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Pertanyaan',
@@ -745,11 +816,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    controller: TextEditingController(text: opt.label)
-                      ..selection = TextSelection.collapsed(
-                        offset: opt.label.length,
-                      ),
-                    onChanged: (v) => opt.label = v,
+                    controller: _getOptCtrl(opt),
                     style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
                       hintText: 'Opsi',
@@ -767,7 +834,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                   constraints: const BoxConstraints(),
                   onPressed: () {
                     if (q.options.length > 1) {
-                      setState(() => q.options.removeAt(i));
+                      setState(() {
+                        _optCtrls.remove(opt.id)?.dispose();
+                        q.options.removeAt(i);
+                      });
                     }
                   },
                 ),
@@ -832,11 +902,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  controller: TextEditingController(text: opt.label)
-                    ..selection = TextSelection.collapsed(
-                      offset: opt.label.length,
-                    ),
-                  onChanged: (v) => opt.label = v,
+                  controller: _getOptCtrl(opt),
                   style: const TextStyle(fontSize: 13),
                   decoration: const InputDecoration(
                     hintText: 'Opsi',
@@ -852,7 +918,10 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                 constraints: const BoxConstraints(),
                 onPressed: () {
                   if (q.options.length > 1) {
-                    setState(() => q.options.removeAt(i));
+                    setState(() {
+                      _optCtrls.remove(opt.id)?.dispose();
+                      q.options.removeAt(i);
+                    });
                   }
                 },
               ),
@@ -1045,11 +1114,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ...q.options.asMap().entries.map(
               (e) => Expanded(
                 child: TextField(
-                  controller: TextEditingController(text: e.value.label)
-                    ..selection = TextSelection.collapsed(
-                      offset: e.value.label.length,
-                    ),
-                  onChanged: (v) => e.value.label = v,
+                  controller: _getOptCtrl(e.value),
                   style: const TextStyle(fontSize: 11),
                   decoration: InputDecoration(
                     hintText: 'Kolom ${e.key + 1}',
@@ -1247,7 +1312,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      controller: TextEditingController(text: '0'),
+                      controller: _pointValueCtrl,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1646,9 +1711,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Settings Saved')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Pengaturan disimpan — akan diterapkan saat Publish (timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'})')),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),

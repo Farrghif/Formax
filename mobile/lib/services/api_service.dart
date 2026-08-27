@@ -157,7 +157,7 @@ class ApiService {
         return {'success': false, 'message': 'No token found — silakan login ulang'};
       }
 
-      debugPrint('[ApiService] POST $baseUrl/templates payload=${jsonEncode(payload).substring(0, payload.toString().length > 500 ? 500 : payload.toString().length)}... token=${token.substring(0, 8)}...');
+      debugPrint('[ApiService] POST $baseUrl/templates payload=${jsonEncode(payload).substring(0, payload.toString().length > 500 ? 500 : payload.toString().length)}... token=[REDACTED]');
 
       final response = await http
           .post(
@@ -201,6 +201,49 @@ class ApiService {
       String msg = e.toString();
       if (msg.contains('TimeoutException')) msg = 'Timeout koneksi ke $baseUrl — cek backend jalan & adb reverse / API_URL';
       return {'success': false, 'message': msg};
+    }
+  }
+
+  // Fungsi Update Template (PATCH) — untuk draft save berikutnya, cegah duplikat POST
+  static Future<Map<String, dynamic>> updateTemplate(String id, Map<String, dynamic> payload) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      debugPrint('[ApiService] PATCH $baseUrl/templates/$id payload=${jsonEncode(payload).length} chars token=[REDACTED]');
+      final response = await http
+          .patch(
+            Uri.parse('$baseUrl/templates/$id'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+      debugPrint('[ApiService] updateTemplate status=${response.statusCode} body=${response.body.substring(0, response.body.length > 800 ? 800 : response.body.length)}');
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      String detail = data is Map && data['detail'] is String ? data['detail'] : 'Failed to update template';
+      if (data is Map && data['detail'] is List) {
+        try { detail = (data['detail'] as List).map((e) => '${e['loc']?.last ?? 'field'}: ${e['msg']}').join(', '); } catch (_) {}
+      }
+      return {'success': false, 'message': detail};
+    } catch (e, stack) {
+      debugPrint('[ApiService] updateTemplate exception: $e\n$stack');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // FIX: ambil detail template lengkap dengan questions (untuk search -> edit)
+  static Future<Map<String, dynamic>> getTemplate(String id) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .get(Uri.parse('$baseUrl/templates/$id'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) return {'success': true, 'data': jsonDecode(response.body)};
+      final body = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      return {'success': false, 'message': body['detail'] ?? 'Failed: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 
@@ -252,6 +295,20 @@ class ApiService {
       } else {
         return {'success': false, 'message': data['detail'] ?? 'Failed to create form'};
       }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // FIX Bug 18: PATCH status form menjadi published setelah create
+  static Future<Map<String, dynamic>> updateForm(String formId, Map<String, dynamic> payload) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http.patch(Uri.parse('$baseUrl/forms/$formId'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode(payload)).timeout(const Duration(seconds: 10));
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      return {'success': false, 'message': data['detail'] ?? 'Failed to update form'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

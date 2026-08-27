@@ -63,6 +63,7 @@ class QuestionOptionUpdate(BaseModel):
     value: Optional[str] = None
     order_index: Optional[int] = None
     is_correct: Optional[bool] = None
+    is_other: Optional[bool] = None
 
 
 class QuestionOptionOut(QuestionOptionCreate):
@@ -123,6 +124,7 @@ class TemplateUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     banner_url: Optional[str] = None
+    questions: Optional[List[QuestionCreate]] = None  # untuk draft update, replace semua questions
 
 
 class TemplateOut(BaseModel):

@@ -143,6 +143,8 @@ class _FillFormPageState extends State<FillFormPage> {
 
   // Answers: { questionId: { "answer_text": ..., "answer_options": [...] } }
   final Map<String, Map<String, dynamic>> _answers = {};
+  // FIX Bug 32: cache TextEditingController per question agar cursor tidak lompat tiap rebuild
+  final Map<String, TextEditingController> _textCtrls = {};
 
   // Join Token
   bool _showJoinTokenDialog = false;
@@ -162,7 +164,23 @@ class _FillFormPageState extends State<FillFormPage> {
   @override
   void dispose() {
     _joinTokenController.dispose();
+    for (var c in _textCtrls.values) { c.dispose(); }
     super.dispose();
+  }
+
+  TextEditingController _getTextCtrl(Question q) {
+    var ctrl = _textCtrls[q.id];
+    final cur = _answers[q.id]?['answer_text'] ?? '';
+    if (ctrl == null) {
+      ctrl = TextEditingController(text: cur);
+      ctrl.addListener(() => _answers[q.id] = {'answer_text': ctrl!.text});
+      _textCtrls[q.id] = ctrl;
+    } else if (ctrl.text != cur) {
+      // sync jika jawaban diupdate dari luar (misal load draft)
+      ctrl.text = cur;
+      ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
+    }
+    return ctrl;
   }
 
   // ============================================================
@@ -937,6 +955,7 @@ class _FillFormPageState extends State<FillFormPage> {
   Widget _buildAnswerInput(Question question) {
     switch (question.type) {
       case 'text':
+      case 'paragraph':
         return _buildTextInput(question);
       case 'single_choice':
         return _buildSingleChoiceInput(question);
@@ -946,8 +965,20 @@ class _FillFormPageState extends State<FillFormPage> {
         return _buildDropdownInput(question);
       case 'date':
         return _buildDateInput(question);
+      case 'time':
+        return _buildTextInput(question);
+      case 'linear_scale':
+        return _buildLinearScaleInput(question);
+      case 'rating':
+        return _buildRatingInput(question);
+      case 'multiple_choice_grid':
+      case 'tick_box_grid':
+        return _buildGridInput(question);
       case 'file_upload':
         return _buildFileUploadInput(question);
+      case 'image':
+      case 'text_block':
+        return const SizedBox.shrink();
       default:
         return _buildTextInput(question);
     }
@@ -955,13 +986,9 @@ class _FillFormPageState extends State<FillFormPage> {
 
   // --- TEXT INPUT ---
   Widget _buildTextInput(Question question) {
-    final currentAnswer = _answers[question.id]?['answer_text'] ?? '';
-
+    final ctrl = _getTextCtrl(question);
     return TextField(
-      controller: TextEditingController(text: currentAnswer)
-        ..selection = TextSelection.fromPosition(
-          TextPosition(offset: currentAnswer.length),
-        ),
+      controller: ctrl,
       onChanged: (value) => _updateAnswer(question.id, text: value),
       maxLines: 3,
       decoration: InputDecoration(
@@ -1199,6 +1226,78 @@ class _FillFormPageState extends State<FillFormPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // --- LINEAR SCALE ---
+  Widget _buildLinearScaleInput(Question question) {
+    final settings = question.settings;
+    final min = settings['scale_min'] ?? 1;
+    final max = settings['scale_max'] ?? 5;
+    final current = int.tryParse(_answers[question.id]?['answer_text'] ?? '') ?? -1;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(settings['min_label'] ?? '$min', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(settings['max_label'] ?? '$max', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: List.generate(max - min + 1, (i) {
+            final val = min + i;
+            final selected = current == val;
+            return ChoiceChip(
+              label: Text('$val'),
+              selected: selected,
+              onSelected: (_) => _updateAnswer(question.id, text: '$val'),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingInput(Question question) {
+    final count = (question.settings['rating_count'] as int?) ?? 5;
+    final current = int.tryParse(_answers[question.id]?['answer_text'] ?? '') ?? 0;
+    return Row(
+      children: List.generate(count, (i) {
+        final filled = i < current;
+        return IconButton(icon: Icon(filled ? Icons.star : Icons.star_border, color: const Color(0xFFF59E0B)), onPressed: () => _updateAnswer(question.id, text: '${i + 1}'));
+      }),
+    );
+  }
+
+  Widget _buildGridInput(Question question) {
+    final rowLabels = (question.settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? ['Baris 1'];
+    final isRadio = question.type == 'multiple_choice_grid';
+    final selected = _answers[question.id]?['answer_options'] as List<dynamic>? ?? [];
+    return Column(
+      children: rowLabels.map((row) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(row, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              children: question.options.map((opt) {
+                final isSel = selected.contains(opt.label);
+                return FilterChip(label: Text(opt.label), selected: isSel, onSelected: (_) {
+                  final cur = List<String>.from(selected.map((e) => e.toString()));
+                  if (isRadio) { cur.clear(); cur.add(opt.label); } else { if (cur.contains(opt.label)) cur.remove(opt.label); else cur.add(opt.label); }
+                  _updateAnswer(question.id, text: null, options: cur);
+                });
+              }).toList(),
+            ),
+          ]),
+        );
+      }).toList(),
     );
   }
 
