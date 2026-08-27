@@ -3,9 +3,9 @@
 // menampilkan email read-only, dan menyimpan perubahan ke backend.
 
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -166,6 +166,22 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _getImage(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      if (kIsWeb) {
+        // On web, it might fall back to file picker if camera is blocked/unavailable.
+      } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kamera tidak didukung pada platform desktop, membuka file explorer...'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        source = ImageSource.gallery;
+      }
+    }
+
     try {
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: source, maxWidth: 512, maxHeight: 512, imageQuality: 80);

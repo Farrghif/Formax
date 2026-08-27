@@ -40,9 +40,13 @@ class FormBuilderState extends ChangeNotifier {
     this.formTitle = 'Form Tanpa Judul',
     this.formDescription = '',
     List<FormPageModel>? pages,
-  }) : pages = pages ?? [FormPageModel()] {
+  }) : pages = pages ?? [FormPageModel(title: 'Form Tanpa Judul', description: '')] {
     if (this.pages.isEmpty) {
-      this.pages.add(FormPageModel());
+      this.pages.add(FormPageModel(title: formTitle, description: formDescription));
+    } else {
+      // Ensure the first page syncs with the form's title and description
+      this.pages[0].title = formTitle;
+      this.pages[0].description = formDescription;
     }
   }
 

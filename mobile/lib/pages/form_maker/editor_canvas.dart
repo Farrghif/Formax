@@ -76,6 +76,11 @@ class _EditorCanvasState extends State<EditorCanvas> {
           widget.state.setActiveQuestion(null, page.id);
         },
         onChanged: () {
+          if (pageIndex == 0) {
+            // Sync the first page's title/description to the form's title/description
+            widget.state.formTitle = page.title;
+            widget.state.formDescription = page.description;
+          }
           widget.state.triggerUpdate();
         },
         onDelete: () {

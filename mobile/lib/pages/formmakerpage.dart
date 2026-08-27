@@ -17,7 +17,8 @@ class FormMakerPage extends StatefulWidget {
   State<FormMakerPage> createState() => _FormMakerPageState();
 }
 
-class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProviderStateMixin {
+class _FormMakerPageState extends State<FormMakerPage>
+    with SingleTickerProviderStateMixin {
   late FormBuilderState _builderState;
   late TabController _tabController;
   bool _isPreviewMode = false;
@@ -70,7 +71,9 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     setState(() => _builderState.isSaving = true);
 
     final payload = {
-      'title': _builderState.formTitle.isNotEmpty ? _builderState.formTitle : 'Form Tanpa Judul',
+      'title': _builderState.formTitle.isNotEmpty
+          ? _builderState.formTitle
+          : 'Form Tanpa Judul',
       'description': _builderState.formDescription,
       'questions': _builderState.buildApiPayload(),
     };
@@ -81,7 +84,10 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     if (res['success'] == true) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Draft berhasil disimpan!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Draft berhasil disimpan!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(
           context,
@@ -102,17 +108,20 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
 
   void _publishForm() async {
     if (_builderState.isSaving) return;
-    
+
     // Simple Validation
     if (_builderState.formTitle.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul formulir tidak boleh kosong')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul formulir tidak boleh kosong')),
+      );
       return;
     }
 
     setState(() => _builderState.isSaving = true);
 
     final title = _builderState.formTitle;
-    final slug = '${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final slug =
+        '${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
     final payload = {
       'title': title,
@@ -171,17 +180,24 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-      
+      final activePageId =
+          _builderState.activePageId ?? _builderState.pages.first.id;
+
       // Upload the image to the backend first
       final uploadResult = await ApiService.uploadFile(pickedFile);
       if (uploadResult['success'] == true) {
         final fileUrl = uploadResult['file_url'] as String;
-        _builderState.addQuestion(activePageId, QuestionType.image, imageUrl: fileUrl);
+        _builderState.addQuestion(
+          activePageId,
+          QuestionType.image,
+          imageUrl: fileUrl,
+        );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal unggah gambar: ${uploadResult['message']}')),
+            SnackBar(
+              content: Text('Gagal unggah gambar: ${uploadResult['message']}'),
+            ),
           );
         }
       }
@@ -191,41 +207,61 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
   void _showAddQuestionSheet() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          children: QuestionType.values.where((t) => t != QuestionType.pageBreak).map((type) {
-            return ListTile(
-              leading: Icon(_getIconForType(type), color: Colors.black54),
-              title: Text(type.label),
-              onTap: () {
-                final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-                _builderState.addQuestion(activePageId, type);
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+          children: QuestionType.values
+              .where((t) => t != QuestionType.pageBreak)
+              .map((type) {
+                return ListTile(
+                  leading: Icon(_getIconForType(type), color: Colors.black54),
+                  title: Text(type.label),
+                  onTap: () {
+                    final activePageId =
+                        _builderState.activePageId ??
+                        _builderState.pages.first.id;
+                    _builderState.addQuestion(activePageId, type);
+                    Navigator.pop(context);
+                  },
+                );
+              })
+              .toList(),
         );
-      }
+      },
     );
   }
 
   IconData _getIconForType(QuestionType type) {
     switch (type) {
-      case QuestionType.shortAnswer: return Icons.short_text;
-      case QuestionType.paragraph: return Icons.notes;
-      case QuestionType.multipleChoice: return Icons.radio_button_checked;
-      case QuestionType.checkboxes: return Icons.check_box;
-      case QuestionType.dropdown: return Icons.arrow_drop_down_circle;
-      case QuestionType.fileUpload: return Icons.cloud_upload;
-      case QuestionType.linearScale: return Icons.linear_scale;
-      case QuestionType.rating: return Icons.star;
-      case QuestionType.date: return Icons.event;
-      case QuestionType.time: return Icons.access_time;
-      case QuestionType.image: return Icons.image_outlined;
-      case QuestionType.text: return Icons.title;
-      default: return Icons.widgets;
+      case QuestionType.shortAnswer:
+        return Icons.short_text;
+      case QuestionType.paragraph:
+        return Icons.notes;
+      case QuestionType.multipleChoice:
+        return Icons.radio_button_checked;
+      case QuestionType.checkboxes:
+        return Icons.check_box;
+      case QuestionType.dropdown:
+        return Icons.arrow_drop_down_circle;
+      case QuestionType.fileUpload:
+        return Icons.cloud_upload;
+      case QuestionType.linearScale:
+        return Icons.linear_scale;
+      case QuestionType.rating:
+        return Icons.star;
+      case QuestionType.date:
+        return Icons.event;
+      case QuestionType.time:
+        return Icons.access_time;
+      case QuestionType.image:
+        return Icons.image_outlined;
+      case QuestionType.text:
+        return Icons.title;
+      default:
+        return Icons.widgets;
     }
   }
 
@@ -237,70 +273,88 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
         return Scaffold(
           backgroundColor: _bgColor,
           appBar: _buildAppBar(),
-          body: _isPreviewMode 
-            ? PreviewCanvas(state: _builderState)
-            : TabBarView(
-                controller: _tabController,
-                children: [
-                  EditorCanvas(state: _builderState),
-                  _buildSettingsTab(),
-                ],
-              ),
-          floatingActionButton: (!_isPreviewMode && _tabController.index == 0) 
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
-                      ],
+          body: _isPreviewMode
+              ? PreviewCanvas(state: _builderState)
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    EditorCanvas(state: _builderState),
+                    _buildSettingsTab(),
+                  ],
+                ),
+          floatingActionButton: (!_isPreviewMode && _tabController.index == 0)
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.title,
+                              color: Colors.black87,
+                            ),
+                            onPressed: () {
+                              final activePageId =
+                                  _builderState.activePageId ??
+                                  _builderState.pages.first.id;
+                              _builderState.addQuestion(
+                                activePageId,
+                                QuestionType.text,
+                              );
+                            },
+                            tooltip: 'Tambah Judul/Deskripsi',
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.image_outlined,
+                              color: Colors.black87,
+                            ),
+                            onPressed: _pickImage,
+                            tooltip: 'Tambah Gambar',
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.view_agenda_outlined,
+                              color: Colors.black87,
+                            ),
+                            onPressed: () {
+                              _builderState.addPage();
+                            },
+                            tooltip: 'Tambah Bagian',
+                          ),
+                        ],
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.title, color: Colors.black87),
-                          onPressed: () {
-                            final activePageId = _builderState.activePageId ?? _builderState.pages.first.id;
-                            _builderState.addQuestion(activePageId, QuestionType.text);
-                          },
-                          tooltip: 'Tambah Judul/Deskripsi',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.image_outlined, color: Colors.black87),
-                          onPressed: _pickImage,
-                          tooltip: 'Tambah Gambar',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.view_agenda_outlined, color: Colors.black87),
-                          onPressed: () {
-                            _builderState.addPage();
-                          },
-                          tooltip: 'Tambah Bagian',
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    FloatingActionButton(
+                      heroTag: 'add_question_btn',
+                      onPressed: _showAddQuestionSheet,
+                      backgroundColor: _primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      child: const Icon(Icons.add, size: 28),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  FloatingActionButton(
-                    heroTag: 'add_question_btn',
-                    onPressed: _showAddQuestionSheet,
-                    backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    child: const Icon(Icons.add, size: 28),
-                  ),
-                ],
-              )
-            : null,
+                  ],
+                )
+              : null,
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
-      }
+      },
     );
   }
 
@@ -317,38 +371,44 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 18),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black87,
+              size: 18,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
       ),
       title: null,
-      bottom: _isPreviewMode ? null : PreferredSize(
-        preferredSize: const Size.fromHeight(kTextTabBarHeight),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: _primaryColor,
-            unselectedLabelColor: Colors.black54,
-            indicatorColor: _primaryColor,
-            indicatorWeight: 3,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            onTap: (index) {
-              setState(() {}); // refresh floating button
-            },
-            tabs: const [
-              Tab(text: 'Soal'),
-              Tab(text: 'Setelan'),
-            ],
-          ),
-        ),
-      ),
+      bottom: _isPreviewMode
+          ? null
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(kTextTabBarHeight),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: TabBar(
+                  controller: _tabController,
+                  labelColor: _primaryColor,
+                  unselectedLabelColor: Colors.black54,
+                  indicatorColor: _primaryColor,
+                  indicatorWeight: 3,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  onTap: (index) {
+                    setState(() {}); // refresh floating button
+                  },
+                  tabs: const [
+                    Tab(text: 'Soal'),
+                    Tab(text: 'Setelan'),
+                  ],
+                ),
+              ),
+            ),
       actions: [
         IconButton(
           icon: Icon(
-            _isPreviewMode ? Icons.edit_outlined : Icons.visibility_outlined, 
-            color: Colors.black54
+            _isPreviewMode ? Icons.edit_outlined : Icons.visibility_outlined,
+            color: Colors.black54,
           ),
           onPressed: () {
             setState(() {
@@ -369,13 +429,25 @@ class _FormMakerPageState extends State<FormMakerPage> with SingleTickerProvider
           padding: const EdgeInsets.only(right: 16.0, top: 10, bottom: 10),
           child: FilledButton.icon(
             onPressed: _builderState.isSaving ? null : _publishForm,
-            icon: _builderState.isSaving 
-              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-              : const Icon(Icons.send, size: 16),
-            label: const Text('Publish', style: TextStyle(fontWeight: FontWeight.bold)),
+            icon: _builderState.isSaving
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.send, size: 16),
+            label: const Text(
+              'Publish',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: _primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
             ),
           ),
