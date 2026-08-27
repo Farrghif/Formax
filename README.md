@@ -2,7 +2,7 @@
 
 Formax adalah aplikasi pembuat formulir digital yang tersedia dalam versi **web** dan **mobile**. Aplikasi ini memungkinkan pengguna untuk membuat, mengelola, dan membagikan formulir secara mudah, mulai dari survei, pendaftaran, kuis, absensi, hingga pengumpulan data umum lainnya.
 
-----
+-----
 
 ## Fitur Utama
 
