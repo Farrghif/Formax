@@ -17,7 +17,7 @@
   --bg-input-alt: #f2f8ff;
   --bg-hover: #f1f5f9;
   --bg-hover-strong: #e2e8f0;
-  --bg-sidebar: linear-gradient(180deg, #A2B8CD 0%, #A2B8CD 100%);
+  --bg-sidebar: #0B76D4;
   --bg-landing: #ffffff;
   --bg-auth: #ebf5ff;
   --bg-form-fill: #f4f7fc;
@@ -49,14 +49,14 @@
   --accent-border: #bfdbfe;
   --accent-bg-soft: rgba(37, 99, 235, 0.08);
 
-  /* Sidebar specifics */
-  --sidebar-text: rgba(30, 58, 95, 0.65);
-  --sidebar-text-active: #2563eb;
-  --sidebar-bg-active: rgba(255, 255, 255, 0.35);
-  --sidebar-bg-hover: rgba(255, 255, 255, 0.25);
-  --sidebar-logo-name: #1e3a5f;
-  --sidebar-logo-tagline: rgba(30, 58, 95, 0.6);
-  --sidebar-footer-border: rgba(30, 58, 95, 0.15);
+  /* Sidebar specifics — navbar #0B76D4 teks putih */
+  --sidebar-text: rgba(255, 255, 255, 0.85);
+  --sidebar-text-active: #ffffff;
+  --sidebar-bg-active: rgba(255, 255, 255, 0.18);
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.12);
+  --sidebar-logo-name: #ffffff;
+  --sidebar-logo-tagline: rgba(255, 255, 255, 0.75);
+  --sidebar-footer-border: rgba(255, 255, 255, 0.18);
 
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -106,7 +106,7 @@
   --bg-input-alt: #252545;
   --bg-hover: #2e2e55;
   --bg-hover-strong: #38386a;
-  --bg-sidebar: linear-gradient(180deg, #1e1e3a 0%, #16162a 100%);
+  --bg-sidebar: #0B76D4;
   --bg-landing: #1a1a2e;
   --bg-auth: #1a1a2e;
   --bg-form-fill: #1a1a2e;
@@ -135,13 +135,13 @@
   --accent-border: #334155;
   --accent-bg-soft: rgba(96, 165, 250, 0.12);
 
-  --sidebar-text: rgba(226, 232, 240, 0.7);
-  --sidebar-text-active: #60a5fa;
-  --sidebar-bg-active: rgba(96, 165, 250, 0.18);
-  --sidebar-bg-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-logo-name: #eef2ff;
-  --sidebar-logo-tagline: rgba(226, 232, 240, 0.6);
-  --sidebar-footer-border: rgba(255, 255, 255, 0.08);
+  --sidebar-text: rgba(255, 255, 255, 0.85);
+  --sidebar-text-active: #ffffff;
+  --sidebar-bg-active: rgba(255, 255, 255, 0.18);
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.12);
+  --sidebar-logo-name: #ffffff;
+  --sidebar-logo-tagline: rgba(255, 255, 255, 0.75);
+  --sidebar-footer-border: rgba(255, 255, 255, 0.18);
 
   --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
