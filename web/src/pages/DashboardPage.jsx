@@ -7,6 +7,7 @@ import { getMySubmissions, getSubmissionResult } from '../api/submissions';
 import { parseServerTime } from '../utils/date';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
+import NgrokImage from '../components/NgrokImage';
 import '../styles/dashboard.css';
 
 // Helper: ubah HTML WYSIWYG (Quill) menjadi teks polos agar tidak bocor tag di riwayat
@@ -681,7 +682,7 @@ export default function DashboardPage() {
                     <div key={form.id} className="db-recent-card" onClick={() => handleFormClick(form)}>
                       <div className="db-recent-preview">
                         {form.banner_url ? (
-                          <img src={form.banner_url} alt={form.title} className="db-recent-banner" />
+                          <NgrokImage src={form.banner_url} alt={form.title} className="db-recent-banner" />
                         ) : (
                           <div className="db-preview-doc">
                             <div className="db-preview-line db-line-wide" />
@@ -755,7 +756,7 @@ export default function DashboardPage() {
                     <div key={tpl.id} className="db-recent-card" onClick={() => handleTemplateClick(tpl)}>
                       <div className="db-recent-preview">
                         {tpl.banner_url ? (
-                          <img src={tpl.banner_url} alt={tpl.title} className="db-recent-banner" />
+                          <NgrokImage src={tpl.banner_url} alt={tpl.title} className="db-recent-banner" />
                         ) : (
                           <div className="db-preview-doc">
                             <div className="db-preview-line db-line-wide" />
@@ -827,7 +828,7 @@ export default function DashboardPage() {
                         <div key={form.id} className="history-card">
                           <div className="history-card-preview">
                             {form.banner_url ? (
-                              <img src={form.banner_url} alt={form.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <NgrokImage src={form.banner_url} alt={form.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                               <div className="db-preview-doc">
                                 <div className="db-preview-line db-line-wide" />

@@ -135,6 +135,25 @@ else:
         allow_headers=["*"],
     )
 
+# Fix OpaqueResponseBlocking untuk <img> dari Vercel → ngrok
+# CORP header wajib agar browser tidak block opaque image meskipun COEP aktif
+@app.middleware("http")
+async def add_corp_header(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static"):
+        # Izinkan embed cross-origin untuk banner & upload
+        response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
+        # Pastikan CORS tetap ada untuk static (StaticFiles tidak lewat CORSMiddleware di beberapa versi)
+        origin = request.headers.get("origin")
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        else:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
 # Serve file QR code & hasil upload
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

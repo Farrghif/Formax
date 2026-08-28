@@ -18,6 +18,7 @@ import { downloadTemplateDocx, previewDocxImport, confirmDocxImport } from '../a
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
+import NgrokImage from '../components/NgrokImage';
 
 // Register custom fonts with Quill
 const Quill = ReactQuill.Quill;
@@ -1030,15 +1031,11 @@ export default function FormBuilderPage() {
                   {/* Banner */}
                   {formData.banner_url ? (
                     <div className="fb-banner-wrap">
-                      <img
-                        src={formData.banner_url?.trim()}
+                      <NgrokImage
+                        src={formData.banner_url}
                         alt="Banner form"
                         className="fb-banner-img"
-                        onError={(ev) => {
-                          console.error('[Banner] gagal load:', formData.banner_url);
-                          ev.target.style.display = 'none';
-                          showToast('Gambar banner gagal dimuat — coba Simpan lalu refresh', 'error');
-                        }}
+                        onError={() => showToast('Gambar banner gagal dimuat — coba Simpan lalu refresh', 'error')}
                       />
                       <div className="fb-banner-actions">
                         <label className="fb-banner-btn">

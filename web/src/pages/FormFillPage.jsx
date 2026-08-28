@@ -4,6 +4,7 @@ import { getPublicFormBySlug, joinForm, saveAnswer, submitFinal, getSubmissionRe
 import { uploadFile } from '../api/uploads';
 import { getMe } from '../api/auth';
 import ThemeToggle from '../components/ThemeToggle';
+import NgrokImage from '../components/NgrokImage';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 4;
@@ -923,7 +924,7 @@ export default function FormFillPage() {
         <section className="form-content-area">
           {form?.banner_url && (
             <div className="form-fill-banner">
-              <img src={form.banner_url} alt="Banner form" className="form-fill-banner-img" />
+              <NgrokImage src={form.banner_url} alt="Banner form" className="form-fill-banner-img" />
             </div>
           )}
           <div className="form-header-details">

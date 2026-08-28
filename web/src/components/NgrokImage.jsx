@@ -1,0 +1,86 @@
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../api/config';
+
+// Komponen <img> yang aman untuk ngrok-free.dev
+// Bypass OpaqueResponseBlocking dengan fetch + header + blob URL
+// Jika src bukan ngrok, render <img> biasa
+export default function NgrokImage({ src, alt, className, style, onError }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  const cleanSrc = (src || '').trim();
+  const isNgrok = cleanSrc.includes('ngrok-free.dev') || cleanSrc.includes('ngrok-free.app');
+
+  useEffect(() => {
+    if (!cleanSrc || !isNgrok) {
+      setBlobUrl(null);
+      setFailed(false);
+      return;
+    }
+
+    let objectUrl = null;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    apiFetch(cleanSrc, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        // Validasi blob adalah image, bukan HTML warning ngrok
+        if (blob.type && blob.type.startsWith('text/html')) {
+          throw new Error('Ngrok returned HTML (check header)');
+        }
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch((err) => {
+        if (cancelled || err.name === 'AbortError') return;
+        console.error('[NgrokImage] gagal load:', cleanSrc, err);
+        setFailed(true);
+        if (onError) onError(err);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [cleanSrc, isNgrok]);
+
+  // Gagal total -> jangan render apa-apa (parent bisa show placeholder)
+  if (failed) {
+    return null;
+  }
+
+  // Ngrok + blob ready -> pakai blob URL (sudah bypass ORB)
+  if (isNgrok && blobUrl) {
+    return <img src={blobUrl} alt={alt} className={className} style={style} onError={onError} />;
+  }
+
+  // Ngrok tapi masih loading -> render sizer/loading
+  if (isNgrok && !blobUrl) {
+    return (
+      <div
+        className={className}
+        style={{
+          ...style,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f1f5f9',
+          color: '#94a3b8',
+          fontSize: '12px',
+          minHeight: style?.minHeight || '120px',
+        }}
+      >
+        Memuat banner...
+      </div>
+    );
+  }
+
+  // Non-ngrok -> direct <img>
+  return <img src={cleanSrc} alt={alt} className={className} style={style} onError={onError} />;
+}
