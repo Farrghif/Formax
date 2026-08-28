@@ -273,11 +273,13 @@ export default function FormBuilderPage() {
   // ============================================================
   // SAVE / CREATE FORM
   // ============================================================
-  const handleSave = async () => {
+  const handleSave = async (publish = false) => {
     if (!formData.title.trim()) {
       showToast('Judul form tidak boleh kosong', 'error');
       return;
     }
+
+    const statusToSave = publish ? 'published' : formData.status;
 
     setSaving(true);
     try {
@@ -286,7 +288,7 @@ export default function FormBuilderPage() {
         await updateForm(token, formData.id, {
           title: formData.title,
           description: formData.description,
-          status: formData.status,
+          status: statusToSave,
           accept_responses: formData.accept_responses,
           allow_see_result: formData.allow_see_result,
           max_submissions: formData.max_submissions,
@@ -355,14 +357,26 @@ export default function FormBuilderPage() {
           updatedQuestions[i] = q;
         }
 
-        showToast('Form berhasil disimpan!', 'success');
+        if (publish) {
+          setFormData((prev) => ({ ...prev, status: 'published' }));
+          showToast('Form berhasil dipublikasikan! Link siap dibagikan.', 'success');
+          // Auto-generate QR jika belum ada
+          if (formData.id) {
+            try {
+              const qr = await generateQR(token, formData.id);
+              setFormData((prev) => ({ ...prev, qr_code_url: qr.qr_code_url }));
+            } catch { /* ignore */ }
+          }
+        } else {
+          showToast('Form berhasil disimpan!', 'success');
+        }
       } else {
         // Create new form
         const slug = formData.slug || generateSlug(formData.title);
         const payload = {
           title: formData.title,
           description: formData.description,
-          status: formData.status,
+          status: statusToSave,
           accept_responses: formData.accept_responses,
           allow_see_result: formData.allow_see_result,
           max_submissions: formData.max_submissions,
@@ -437,7 +451,18 @@ export default function FormBuilderPage() {
 
         // Update URL to edit mode without reloading
         window.history.replaceState(null, '', `/form-builder/${created.id}`);
-        showToast('Form berhasil disimpan!', 'success');
+        if (publish) {
+          setFormData((prev) => ({ ...prev, status: 'published' }));
+          showToast('Form berhasil dipublikasikan! Link siap dibagikan.', 'success');
+        } else {
+          showToast('Form berhasil disimpan!', 'success');
+        }
+        if (publish && created.id) {
+          try {
+            const qr = await generateQR(token, created.id);
+            setFormData((prev) => ({ ...prev, qr_code_url: qr.qr_code_url }));
+          } catch { /* ignore */ }
+        }
       }
     } catch (err) {
       showToast(err.message || 'Gagal menyimpan form', 'error');
@@ -1006,8 +1031,20 @@ export default function FormBuilderPage() {
             <button className="fb-template-btn" onClick={handleSaveAsTemplate} disabled={templateSaving} title="Simpan soal-soal ini sebagai template baru">
               {templateSaving ? 'Menyimpan...' : 'Simpan sebagai Template'}
             </button>
-            <button className="fb-save-btn" onClick={handleSave} disabled={saving}>
+            <button className="fb-save-btn" onClick={() => handleSave(false)} disabled={saving}>
               {saving ? 'Menyimpan...' : 'Simpan Draf'}
+            </button>
+            <button
+              className={`fb-publish-btn ${formData.status === 'published' ? 'is-published' : ''}`}
+              onClick={() => handleSave(true)}
+              disabled={saving}
+              title={formData.status === 'published' ? 'Perbarui publikasi' : 'Publikasikan agar link bisa diisi responden (Status → Published)'}
+            >
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {formData.status === 'published' ? 'Perbarui Publikasi' : 'Publikasikan'}
             </button>
           </div>
         </header>

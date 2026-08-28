@@ -336,6 +336,42 @@
   transform: none;
 }
 
+.fb-publish-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+  white-space: nowrap;
+}
+.fb-publish-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 14px rgba(16,185,129,0.4);
+  transform: translateY(-1px);
+}
+.fb-publish-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.fb-publish-btn.is-published {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+}
+.fb-publish-btn.is-published:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 14px rgba(245,158,11,0.4);
+}
+
 .fb-topbar-actions {
   display: flex;
   align-items: center;

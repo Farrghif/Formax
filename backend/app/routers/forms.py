@@ -177,11 +177,15 @@ def get_form_by_slug(slug: str, db: Session = Depends(get_db), current_user: mod
     form = db.query(models.Form).filter(models.Form.slug == slug).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form tidak ditemukan")
+    if form.status == models.FormStatus.draft:
+        raise HTTPException(status_code=403, detail="Form ini masih draft — buka Form Builder → Setelan → Status → Published lalu Simpan")
+    if form.status == models.FormStatus.closed:
+        raise HTTPException(status_code=403, detail="Form ini sudah ditutup (Closed)")
     if form.status != models.FormStatus.published:
         raise HTTPException(status_code=403, detail="Form ini belum/tidak lagi menerima jawaban")
     # FIX Bug 31: cek window waktu & accept_responses juga di get_form_by_slug
     if not form.accept_responses:
-        raise HTTPException(status_code=403, detail="Form tidak menerima jawaban saat ini")
+        raise HTTPException(status_code=403, detail="Form menutup penerimaan jawaban (Terima Respons dimatikan di Setelan)")
     from datetime import datetime, timezone, timedelta
     WIB = timezone(timedelta(hours=7))
     def _now(): return datetime.now(WIB)
