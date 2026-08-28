@@ -178,8 +178,10 @@ class _FillFormPageState extends State<FillFormPage> {
     final cur = _answers[q.id]?['answer_text'] ?? '';
     if (ctrl == null) {
       ctrl = TextEditingController(text: cur);
-      ctrl.addListener(() => _answers[q.id] = {'answer_text': ctrl!.text});
-      _textCtrls[q.id] = ctrl;
+      // capture local reference agar tidak perlu !
+      final c = ctrl;
+      c.addListener(() => _answers[q.id] = {'answer_text': c.text});
+      _textCtrls[q.id] = c;
     } else if (ctrl.text != cur) {
       // sync jika jawaban diupdate dari luar (misal load draft)
       ctrl.text = cur;
@@ -188,19 +190,32 @@ class _FillFormPageState extends State<FillFormPage> {
     return ctrl;
   }
 
+  /// Safe json decode — return null jika body kosong / bukan JSON
+  dynamic _safeJsonDecode(String body) {
+    if (body.isEmpty) return null;
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ============================================================
   // API CALLS
   // ============================================================
 
   Future<void> _loadForm() async {
-    setState(() {
-      _isLoading = true;
-      _errorMsg = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMsg = null;
+      });
+    }
 
     try {
       final token = await ApiService.getToken();
       if (token == null) {
+        if (!mounted) return;
         setState(() {
           _errorMsg = 'Silakan login terlebih dahulu';
           _isLoading = false;
@@ -217,9 +232,12 @@ class _FillFormPageState extends State<FillFormPage> {
         },
       );
 
+      if (!mounted) return;
       if (formResponse.statusCode != 200) {
-        final detail =
-            jsonDecode(formResponse.body)['detail'] ?? 'Form tidak ditemukan';
+        final decoded = _safeJsonDecode(formResponse.body);
+        final detail = (decoded is Map && decoded['detail'] != null)
+            ? decoded['detail'].toString()
+            : 'Form tidak ditemukan (${formResponse.statusCode})';
         setState(() {
           _errorMsg = detail;
           _isLoading = false;
@@ -227,16 +245,22 @@ class _FillFormPageState extends State<FillFormPage> {
         return;
       }
 
-      final formJson = jsonDecode(formResponse.body);
+      final formJson = _safeJsonDecode(formResponse.body);
+      if (formJson == null) {
+        setState(() => _errorMsg = 'Format data form tidak valid');
+        return;
+      }
       final formData = FormData.fromJson(formJson);
+      if (!mounted) return;
       setState(() => _formData = formData);
 
       // 2. Try joining the form (auto-join if no token required)
       await _joinForm(token, null);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _errorMsg = 'Terjadi kesalahan: ${e.toString()}');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -256,8 +280,13 @@ class _FillFormPageState extends State<FillFormPage> {
         body: jsonEncode(body),
       );
 
+      if (!mounted) return;
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final subJson = jsonDecode(response.body);
+        final subJson = _safeJsonDecode(response.body);
+        if (subJson == null) {
+          setState(() => _errorMsg = 'Format respons tidak valid');
+          return;
+        }
         setState(() {
           _submissionId = subJson['id'];
           _showJoinTokenDialog = false;
@@ -266,12 +295,15 @@ class _FillFormPageState extends State<FillFormPage> {
 
         // Check if already submitted
         if (subJson['submitted_at'] != null) {
+          if (!mounted) return;
           setState(() => _isSubmitted = true);
         }
       } else {
-        final detail =
-            jsonDecode(response.body)['detail'] ?? 'Gagal memulai form';
-        final lowerDetail = detail.toString().toLowerCase();
+        final decoded = _safeJsonDecode(response.body);
+        final detail = (decoded is Map && decoded['detail'] != null)
+            ? decoded['detail'].toString()
+            : 'Gagal memulai form (${response.statusCode})';
+        final lowerDetail = detail.toLowerCase();
 
         if (lowerDetail.contains('token') || (_formData?.joinToken != null)) {
           setState(() {
@@ -285,6 +317,7 @@ class _FillFormPageState extends State<FillFormPage> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _errorMsg = 'Gagal terhubung ke server');
     }
   }
@@ -320,11 +353,14 @@ class _FillFormPageState extends State<FillFormPage> {
   Future<void> _submitForm() async {
     if (_submissionId == null) return;
 
-    setState(() => _isSubmitting = true);
+    if (mounted) setState(() => _isSubmitting = true);
 
     try {
       final token = await ApiService.getToken();
-      if (token == null) return;
+      if (token == null) {
+        if (mounted) setState(() => _isSubmitting = false);
+        return;
+      }
 
       final response = await http.post(
         Uri.parse('${ApiService.baseUrl}/submissions/$_submissionId/submit'),
@@ -334,15 +370,17 @@ class _FillFormPageState extends State<FillFormPage> {
         },
       );
 
+      if (!mounted) return;
       if (response.statusCode == 200) {
         setState(() => _isSubmitted = true);
       } else {
-        final detail = jsonDecode(response.body)['detail'] ?? 'Gagal submit';
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(detail), backgroundColor: Colors.red),
-          );
-        }
+        final decoded = _safeJsonDecode(response.body);
+        final detail = (decoded is Map && decoded['detail'] != null)
+            ? decoded['detail'].toString()
+            : 'Gagal submit (${response.statusCode})';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(detail), backgroundColor: Colors.red),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -354,7 +392,7 @@ class _FillFormPageState extends State<FillFormPage> {
         );
       }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 

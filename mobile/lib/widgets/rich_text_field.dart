@@ -40,7 +40,6 @@ class _RichTextFieldState extends State<RichTextField> {
   late QuillController _controller;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
-  bool _showToolbar = false;
 
   @override
   void initState() {
@@ -51,14 +50,11 @@ class _RichTextFieldState extends State<RichTextField> {
       document: QuillHtml.documentFromHtml(widget.initialHtml),
       selection: const TextSelection.collapsed(offset: 0),
     );
-    // FIX: toolbar otomatis muncul saat field diklik/focus tanpa perlu tekan logo B
+    // Trigger rebuild hanya untuk update border color saat focus berubah
     _focusNode.addListener(() {
-      final shouldShow = _focusNode.hasFocus;
-      if (shouldShow != _showToolbar && mounted) {
-        setState(() => _showToolbar = shouldShow);
-      }
+      if (mounted) setState(() {});
     });
-    // FIX Bug 7: hanya satu listener (controller.addListener) untuk hindari double emit.
+    // Hanya satu listener untuk emit HTML agar tidak double emit
     void emitHtml() {
       final html = QuillHtml.documentToHtml(_controller.document);
       widget.onChanged(html);
@@ -194,40 +190,35 @@ class _RichTextFieldState extends State<RichTextField> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Toolbar (collapsible) ──
-              // FIX: Bungkus toolbar dengan TapRegion + FocusScope agar tap bold/italic
-              // tidak membuat _focusNode kehilangan focus/selection (bug ter-unselect).
-              if (_showToolbar) ...[
-                TapRegion(
-                  // Tap di dalam toolbar tidak dianggap outside, jadi editor tidak kehilangan focus
-                  onTapOutside: (_) {},
-                  child: FocusScope(
-                    canRequestFocus: false,
-                    child: GestureDetector(
-                      onTap: () {
-                        // Jaga focus tetap di editor saat toolbar disentuh
-                        if (!_focusNode.hasFocus) _focusNode.requestFocus();
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF0F1F4),
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
-                        ),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: QuillSimpleToolbar(
-                            controller: _controller,
-                            config: _buildToolbarConfig(),
-                          ),
+              // ── Toolbar (selalu terlihat, tidak perlu tombol B) ──
+              // Tap di toolbar tidak boleh menghilangkan focus/selection editor
+              TapRegion(
+                onTapOutside: (_) {},
+                child: FocusScope(
+                  canRequestFocus: false,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!_focusNode.hasFocus) _focusNode.requestFocus();
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF0F1F4),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: QuillSimpleToolbar(
+                          controller: _controller,
+                          config: _buildToolbarConfig(),
                         ),
                       ),
                     ),
                   ),
                 ),
-                const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-              ],
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
 
               // ── Quill editor area ──
               GestureDetector(
@@ -282,74 +273,10 @@ class _RichTextFieldState extends State<RichTextField> {
                   ),
                 ),
               ),
-
-              // ── Bottom bar with format toggle ──
-              Container(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                child: Row(
-                  children: [
-                    _MiniIconButton(
-                      icon: Icons.format_bold,
-                      tooltip: 'Formatting',
-                      isActive: _showToolbar,
-                      onPressed: () {
-                        setState(() => _showToolbar = !_showToolbar);
-                        if (!_focusNode.hasFocus) _focusNode.requestFocus();
-                      },
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Small icon button used in the bottom bar of the editor.
-class _MiniIconButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final bool isActive;
-  final VoidCallback onPressed;
-
-  const _MiniIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.isActive,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: onPressed,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: isActive ? const Color(0xFF4F46E5).withValues(alpha: 0.1) : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: isActive ? const Color(0xFF4F46E5) : const Color(0xFF6B7280),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -97,6 +97,8 @@ class QuillHtml {
 
       final text = _escape(data.toString());
       final link = attrs['link'] as String?;
+      // Escape style values juga agar tidak inject CSS
+      String escAttr(String s) => s.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
       final style = inlineStyle(attrs);
 
       // List-item markers (e.g. "1." from ordered lists) come through as
@@ -104,9 +106,17 @@ class QuillHtml {
       if (attrs.containsKey('list')) continue;
 
       if (link != null) {
-        inline.write('<a href="$link">$text</a>');
+        final safeLink = escAttr(link);
+        // Blokir javascript: / data: URL untuk cegah XSS
+        final lower = safeLink.toLowerCase().trim();
+        if (lower.startsWith('javascript:') || lower.startsWith('data:')) {
+          inline.write(text);
+        } else {
+          inline.write('<a href="$safeLink">$text</a>');
+        }
       } else if (style.isNotEmpty) {
-        inline.write('<span style="$style">$text</span>');
+        final safeStyle = escAttr(style);
+        inline.write('<span style="$safeStyle">$text</span>');
       } else {
         inline.write(text);
       }
@@ -118,7 +128,7 @@ class QuillHtml {
   }
 
   static String _escape(String text) =>
-      text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+      text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 
   /// Strip HTML tags untuk field yang harus plain text (mis. title template).
   /// "<p>hhhh\n</p>" -> "hhhh"

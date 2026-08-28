@@ -107,6 +107,40 @@ def create_form(
     return form
 
 
+# ── Public form access (MUST be declared before /{form_id} to avoid route conflict) ──
+
+@router.get("/public/{slug}", response_model=schemas.FormOut)
+def get_form_by_slug(slug: str, db: Session = Depends(get_db)):
+    """
+    Dipanggil pas orang buka link form. Tidak wajib login (agar bisa diisi siapa saja
+    seperti Google Forms). Tetap cek window waktu & accept_responses.
+    """
+    form = db.query(models.Form).filter(models.Form.slug == slug).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form tidak ditemukan")
+    if form.status == models.FormStatus.draft:
+        raise HTTPException(status_code=403, detail="Form ini masih draft — buka Form Builder → Setelan → Status → Published lalu Simpan")
+    if form.status == models.FormStatus.closed:
+        raise HTTPException(status_code=403, detail="Form ini sudah ditutup (Closed)")
+    if form.status != models.FormStatus.published:
+        raise HTTPException(status_code=403, detail="Form ini belum/tidak lagi menerima jawaban")
+    # FIX Bug 31: cek window waktu & accept_responses juga di get_form_by_slug
+    if not form.accept_responses:
+        raise HTTPException(status_code=403, detail="Form menutup penerimaan jawaban (Terima Respons dimatikan di Setelan)")
+    from datetime import datetime, timezone, timedelta
+    WIB = timezone(timedelta(hours=7))
+    def _now(): return datetime.now(WIB)
+    def _dt(dt): return dt.replace(tzinfo=WIB) if dt is not None and dt.tzinfo is None else dt
+    now = _now()
+    if form.start_date and now < _dt(form.start_date):
+        raise HTTPException(status_code=403, detail="Form belum dibuka")
+    if form.end_date and now > _dt(form.end_date):
+        raise HTTPException(status_code=403, detail="Waktu pengisian form sudah berakhir")
+    return form
+
+
+# ── Owner-only form access (after /public/{slug} to avoid route conflict) ──
+
 @router.get("/{form_id}", response_model=schemas.FormOut)
 def get_form_for_owner(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
@@ -168,31 +202,3 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
     db.commit()
     return {"qr_code_url": form.qr_code_url, "share_link": public_url}
 
-
-@router.get("/public/{slug}", response_model=schemas.FormOut)
-def get_form_by_slug(slug: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Dipanggil pas orang buka link form. TETAP wajib login, tapi cek juga window waktu & accept_responses.
-    """
-    form = db.query(models.Form).filter(models.Form.slug == slug).first()
-    if not form:
-        raise HTTPException(status_code=404, detail="Form tidak ditemukan")
-    if form.status == models.FormStatus.draft:
-        raise HTTPException(status_code=403, detail="Form ini masih draft — buka Form Builder → Setelan → Status → Published lalu Simpan")
-    if form.status == models.FormStatus.closed:
-        raise HTTPException(status_code=403, detail="Form ini sudah ditutup (Closed)")
-    if form.status != models.FormStatus.published:
-        raise HTTPException(status_code=403, detail="Form ini belum/tidak lagi menerima jawaban")
-    # FIX Bug 31: cek window waktu & accept_responses juga di get_form_by_slug
-    if not form.accept_responses:
-        raise HTTPException(status_code=403, detail="Form menutup penerimaan jawaban (Terima Respons dimatikan di Setelan)")
-    from datetime import datetime, timezone, timedelta
-    WIB = timezone(timedelta(hours=7))
-    def _now(): return datetime.now(WIB)
-    def _dt(dt): return dt.replace(tzinfo=WIB) if dt is not None and dt.tzinfo is None else dt
-    now = _now()
-    if form.start_date and now < _dt(form.start_date):
-        raise HTTPException(status_code=403, detail="Form belum dibuka")
-    if form.end_date and now > _dt(form.end_date):
-        raise HTTPException(status_code=403, detail="Waktu pengisian form sudah berakhir")
-    return form

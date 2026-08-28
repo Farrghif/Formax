@@ -101,7 +101,7 @@ class Form(Base):
 
     # settings tambahan
     allow_see_result = Column(Boolean, default=False)   # responden boleh lihat hasil submit + skor
-    max_submissions = Column(Integer, default=1)        # berapa kali boleh submit (0 = unlimited)
+    max_submissions = Column(Integer, default=0)        # berapa kali boleh submit (0 = unlimited)
     require_fullscreen = Column(Boolean, default=False) # wajib fullscreen, keluar = ditandai curang
     reveal_answers = Column(Boolean, default=False)     # tampilkan kunci jawaban di halaman hasil
 

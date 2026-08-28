@@ -13,6 +13,27 @@ class ShareFormDialog extends StatefulWidget {
 
 class _ShareFormDialogState extends State<ShareFormDialog> {
   int _selectedTab = 0;
+  late final TextEditingController _linkController;
+
+  @override
+  void initState() {
+    super.initState();
+    _linkController = TextEditingController(text: widget.link);
+  }
+
+  @override
+  void dispose() {
+    _linkController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ShareFormDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.link != widget.link) {
+      _linkController.text = widget.link;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +121,7 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: TextEditingController(text: widget.link),
+          controller: _linkController,
           readOnly: true,
           style: const TextStyle(fontSize: 13, color: Color(0xFF2563EB)),
           decoration: const InputDecoration(

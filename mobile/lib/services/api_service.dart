@@ -18,6 +18,17 @@ class ApiService {
 
   static String? _sessionToken;
 
+  // Safe JSON decode — tidak throw jika body kosong / HTML error page
+  static dynamic _safeJson(String body) {
+    if (body.isEmpty) return <String, dynamic>{};
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      // Fallback: body bukan JSON (mis. 502 HTML) → bungkus sebagai detail
+      return {'detail': body.length > 500 ? '${body.substring(0, 500)}...' : body};
+    }
+  }
+
   // Menyimpan token. Jika rememberMe false, token hanya disimpan di memori.
   static Future<void> saveToken(String token, {bool rememberMe = true}) async {
     _sessionToken = token;
@@ -57,14 +68,15 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) {
-        if (data.containsKey('access_token')) {
+        if (data is Map && data.containsKey('access_token')) {
           await saveToken(data['access_token'], rememberMe: rememberMe);
         }
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Login failed'};
+        final msg = data is Map ? (data['detail'] ?? 'Login failed') : 'Login failed';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -82,11 +94,12 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) {
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Failed to send OTP'};
+        final msg = data is Map ? (data['detail'] ?? 'Failed to send OTP') : 'Failed to send OTP';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -107,14 +120,15 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (data.containsKey('access_token')) {
+        if (data is Map && data.containsKey('access_token')) {
            await saveToken(data['access_token']);
         }
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Registration failed'};
+        final msg = data is Map ? (data['detail'] ?? 'Registration failed') : 'Registration failed';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -137,11 +151,12 @@ class ApiService {
         },
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) {
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Failed to get profile'};
+        final msg = data is Map ? (data['detail'] ?? 'Failed to get profile') : 'Failed to get profile';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -168,7 +183,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 15));
 
-      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      final data = _safeJson(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': data};
       } else {
@@ -212,7 +227,7 @@ class ApiService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) return {'success': true, 'data': data};
       String detail = data is Map && data['detail'] is String ? data['detail'] : 'Failed to update template';
       if (data is Map && data['detail'] is List) {
@@ -233,9 +248,10 @@ class ApiService {
       final response = await http
           .get(Uri.parse('$baseUrl/templates/$id'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) return {'success': true, 'data': jsonDecode(response.body)};
-      final body = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-      return {'success': false, 'message': body['detail'] ?? 'Failed: ${response.statusCode}'};
+      if (response.statusCode == 200) return {'success': true, 'data': _safeJson(response.body)};
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed: ${response.statusCode}') : 'Failed: ${response.statusCode}';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -255,10 +271,11 @@ class ApiService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {'success': true, 'data': _safeJson(response.body)};
       }
-      final body = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-      return {'success': false, 'message': body['detail'] ?? 'Failed: ${response.statusCode}'};
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed: ${response.statusCode}') : 'Failed: ${response.statusCode}';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       debugPrint('[ApiService] getMyTemplates exception: $e');
       return {'success': false, 'message': e.toString()};
@@ -282,11 +299,12 @@ class ApiService {
         body: jsonEncode(payload),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Failed to create form'};
+        final msg = data is Map ? (data['detail'] ?? 'Failed to create form') : 'Failed to create form';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -299,9 +317,10 @@ class ApiService {
       final token = await getToken();
       if (token == null) return {'success': false, 'message': 'No token found'};
       final response = await http.patch(Uri.parse('$baseUrl/forms/$formId'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode(payload)).timeout(const Duration(seconds: 10));
-      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) return {'success': true, 'data': data};
-      return {'success': false, 'message': data['detail'] ?? 'Failed to update form'};
+      final msg = data is Map ? (data['detail'] ?? 'Failed to update form') : 'Failed to update form';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -323,11 +342,12 @@ class ApiService {
         },
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': data};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Failed to generate QR code'};
+        final msg = data is Map ? (data['detail'] ?? 'Failed to generate QR code') : 'Failed to generate QR code';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -346,15 +366,15 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {'success': true, 'data': _safeJson(response.body)};
       }
-      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed') : 'Failed';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
-
-  // Fungsi Get Form Submissions (untuk Result Page)
 
   // Fungsi Validate Form Link (untuk Join with Link)
   static Future<Map<String, dynamic>> validateFormLink(String link) async {
@@ -388,11 +408,12 @@ class ApiService {
         },
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) {
-        return {'success': true, 'data': {'slug': slug, ...data}};
+        return {'success': true, 'data': {'slug': slug, if (data is Map) ...data}};
       } else {
-        return {'success': false, 'message': data['detail'] ?? 'Form tidak ditemukan'};
+        final msg = data is Map ? (data['detail'] ?? 'Form tidak ditemukan') : 'Form tidak ditemukan';
+        return {'success': false, 'message': msg.toString()};
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -411,9 +432,11 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {'success': true, 'data': _safeJson(response.body)};
       }
-      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed') : 'Failed';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -438,9 +461,11 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {'success': true, 'data': _safeJson(response.body)};
       }
-      return {'success': false, 'message': jsonDecode(response.body)['detail'] ?? 'Failed'};
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed') : 'Failed';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -461,11 +486,12 @@ class ApiService {
         body: jsonEncode(payload),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _safeJson(response.body);
       if (response.statusCode == 200) {
         return {'success': true, 'data': data};
       }
-      return {'success': false, 'message': data['detail'] ?? 'Failed to update profile'};
+      final msg = data is Map ? (data['detail'] ?? 'Failed to update profile') : 'Failed to update profile';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -479,16 +505,32 @@ class ApiService {
 
       final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/uploads'));
       request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      if (kIsWeb) {
+        // Web: XFile.path adalah blob URL, harus pakai bytes
+        final bytes = await file.readAsBytes();
+        String filename = 'upload';
+        try {
+          filename = file.name as String;
+        } catch (_) {
+          try {
+            filename = file.path.toString().split('/').last;
+          } catch (_) {}
+        }
+        request.files.add(http.MultipartFile.fromBytes('file', bytes as List<int>, filename: filename));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath('file', file.path as String));
+      }
 
       final streamedResponse = await request.send();
       final responseBody = await streamedResponse.stream.bytesToString();
-      final data = jsonDecode(responseBody);
+      final data = _safeJson(responseBody);
 
       if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
-        return {'success': true, 'file_url': data['file_url']};
+        final url = data is Map ? data['file_url'] : null;
+        return {'success': true, 'file_url': url};
       }
-      return {'success': false, 'message': data['detail'] ?? 'Upload failed'};
+      final msg = data is Map ? (data['detail'] ?? 'Upload failed') : 'Upload failed';
+      return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

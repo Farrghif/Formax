@@ -358,6 +358,7 @@ class _LoginPageState extends State<LoginPage> {
 
                                       if (otpCode != null &&
                                           otpCode.isNotEmpty) {
+                                        if (!context.mounted) return;
                                         setState(() {
                                           _isLoading = true;
                                         });
@@ -368,6 +369,9 @@ class _LoginPageState extends State<LoginPage> {
                                           otpCode,
                                         );
                                       } else {
+                                        if (context.mounted) {
+                                          setState(() => _isLoading = false);
+                                        }
                                         return;
                                       }
                                     } else {

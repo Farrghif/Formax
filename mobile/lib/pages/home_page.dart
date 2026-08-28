@@ -57,9 +57,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadMyTemplates() async {
-    setState(() {
-      _isLoadingTemplates = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoadingTemplates = true;
+      });
+    }
     final res = await ApiService.getMyTemplates();
     if (!mounted) return;
     setState(() {

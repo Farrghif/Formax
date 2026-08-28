@@ -148,7 +148,7 @@ export default function FormBuilderPage() {
     slug: '',
     accept_responses: true,
     allow_see_result: false,
-    max_submissions: 1,
+    max_submissions: 0,
     require_fullscreen: false,
     reveal_answers: false,
     banner_url: null,
@@ -164,7 +164,7 @@ export default function FormBuilderPage() {
   // Settings flags
   const [useJoinToken, setUseJoinToken] = useState(false);
   // Batas pengisian: 'once' | 'unlimited' | 'custom'
-  const [maxSubmissionsMode, setMaxSubmissionsMode] = useState('once');
+  const [maxSubmissionsMode, setMaxSubmissionsMode] = useState('unlimited');
   const [customMaxSubmissions, setCustomMaxSubmissions] = useState(2);
 
   const token = localStorage.getItem('token');
@@ -197,7 +197,7 @@ export default function FormBuilderPage() {
             slug: form.slug,
             accept_responses: form.accept_responses,
             allow_see_result: form.allow_see_result ?? false,
-            max_submissions: form.max_submissions ?? 1,
+            max_submissions: form.max_submissions ?? 0,
             require_fullscreen: form.require_fullscreen ?? false,
             reveal_answers: form.reveal_answers ?? false,
             banner_url: form.banner_url || null,
@@ -206,7 +206,7 @@ export default function FormBuilderPage() {
             join_token: form.join_token,
             qr_code_url: form.qr_code_url,
           });
-          const maxSub = form.max_submissions ?? 1;
+          const maxSub = form.max_submissions ?? 0;
           if (maxSub === 1) {
             setMaxSubmissionsMode('once');
           } else if (maxSub === 0) {

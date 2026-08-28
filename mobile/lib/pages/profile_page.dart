@@ -91,7 +91,11 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 20),
           const Text(
             'Foto Profil',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 20),
           _sheetOption(
@@ -157,7 +161,13 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(width: 16),
             Text(
               label,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: color == const Color(0xFFDC2626) ? color : Colors.black87),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: color == const Color(0xFFDC2626)
+                    ? color
+                    : Colors.black87,
+              ),
             ),
           ],
         ),
@@ -173,7 +183,9 @@ class _ProfilePageState extends State<ProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Kamera tidak didukung pada platform desktop, membuka file explorer...'),
+              content: Text(
+                'Kamera tidak didukung pada platform desktop, membuka file explorer...',
+              ),
               backgroundColor: Colors.orange,
             ),
           );
@@ -184,7 +196,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source, maxWidth: 512, maxHeight: 512, imageQuality: 80);
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
       if (image != null && mounted) {
         setState(() {
           _pickedImage = File(image.path);
@@ -193,7 +210,10 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengambil gambar: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Gagal mengambil gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -201,21 +221,23 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _save() async {
     if (_isSaving) return;
-    setState(() => _isSaving = true);
+    if (mounted) setState(() => _isSaving = true);
 
     String? uploadedAvatarUrl;
 
     // Upload the new image first if picked
     if (_pickedImage != null) {
       final uploadResult = await ApiService.uploadFile(_pickedImage!);
+      if (!mounted) return;
       if (uploadResult['success'] == true) {
         uploadedAvatarUrl = uploadResult['file_url'] as String;
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal upload foto: ${uploadResult['message']}'), backgroundColor: Colors.red),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal upload foto: ${uploadResult['message']}'),
+            backgroundColor: Colors.red,
+          ),
+        );
         setState(() => _isSaving = false);
         return;
       }
@@ -235,12 +257,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (payload.isEmpty) {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
       if (mounted) Navigator.pop(context, true);
       return;
     }
 
     final result = await ApiService.updateProfile(payload);
+    if (!mounted) return;
     setState(() => _isSaving = false);
 
     if (result['success'] == true && mounted) {
@@ -253,7 +276,10 @@ class _ProfilePageState extends State<ProfilePage> {
       Navigator.pop(context, true);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan: ${result['message']}'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Gagal menyimpan: ${result['message']}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -276,7 +302,11 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         title: const Text(
           'Settings',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
         ),
         centerTitle: false,
         bottom: const PreferredSize(
@@ -311,23 +341,37 @@ class _ProfilePageState extends State<ProfilePage> {
                     label: 'Username',
                     child: TextField(
                       controller: _nameController,
-                      onChanged: (_) => setState(() {}), // trigger rebuild for hasChanges
-                      style: const TextStyle(fontSize: 15, color: Colors.black87),
+                      onChanged: (_) =>
+                          setState(() {}), // trigger rebuild for hasChanges
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.black87,
+                      ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFF9FAFB),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4F46E5),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -339,7 +383,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     label: 'Email',
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(12),
@@ -347,7 +394,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       child: Text(
                         _email,
-                        style: const TextStyle(fontSize: 15, color: Color(0xFF9CA3AF)),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF9CA3AF),
+                        ),
                       ),
                     ),
                   ),
@@ -404,7 +454,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ),
               ),
             ),
@@ -413,7 +467,11 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 16),
         Text(
           _nameController.text.isNotEmpty ? _nameController.text : 'User',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -427,9 +485,19 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildAvatarImage() {
     if (_pickedImage != null) {
       if (kIsWeb) {
-        return Image.network(_pickedImage!.path, width: 110, height: 110, fit: BoxFit.cover);
+        return Image.network(
+          _pickedImage!.path,
+          width: 110,
+          height: 110,
+          fit: BoxFit.cover,
+        );
       }
-      return Image.file(_pickedImage!, width: 110, height: 110, fit: BoxFit.cover);
+      return Image.file(
+        _pickedImage!,
+        width: 110,
+        height: 110,
+        fit: BoxFit.cover,
+      );
     }
     if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
       String url = _avatarUrl!;
@@ -463,7 +531,11 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 8),
         child,
@@ -480,10 +552,15 @@ class _ProfilePageState extends State<ProfilePage> {
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF6B7280),
               side: const BorderSide(color: Color(0xFFD1D5DB)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('Cancel', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
         const SizedBox(width: 16),
@@ -493,12 +570,24 @@ class _ProfilePageState extends State<ProfilePage> {
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF4F46E5),
               disabledBackgroundColor: const Color(0xFFC7D2FE),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             child: _isSaving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Save', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Save',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
           ),
         ),
       ],

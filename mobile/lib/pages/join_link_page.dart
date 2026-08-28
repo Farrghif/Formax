@@ -31,10 +31,11 @@ class _JoinLinkPageState extends State<JoinLinkPage> {
       _errorText = null;
     });
     final result = await ApiService.validateFormLink(link);
+    if (!mounted) return;
     setState(() => _isLoading = false);
     if (result['success'] == true) {
       final slug = result['data']['slug'] ?? '';
-      if (mounted && slug.isNotEmpty) {
+      if (slug.isNotEmpty) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => FillFormPage(slug: slug)),
