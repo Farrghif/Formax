@@ -9,7 +9,7 @@ from ..deps import get_current_user
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 UPLOAD_DIR = "static/uploads"
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").strip().rstrip("/")
 
 
 @router.post("")

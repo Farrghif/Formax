@@ -855,9 +855,12 @@ export default function FormBuilderPage() {
     setBannerUploading(true);
     try {
       const result = await uploadFile(token, file);
-      setFormData((prev) => ({ ...prev, banner_url: result.file_url }));
-      showToast('Banner berhasil diupload', 'success');
+      const cleanUrl = (result.file_url || '').trim();
+      console.log('[Banner] uploaded URL:', cleanUrl);
+      setFormData((prev) => ({ ...prev, banner_url: cleanUrl }));
+      showToast('Banner berhasil diupload — jangan lupa klik Simpan Draf', 'success');
     } catch (err) {
+      console.error('[Banner] upload failed:', err);
       showToast(err.message, 'error');
     } finally {
       setBannerUploading(false);
@@ -1020,7 +1023,16 @@ export default function FormBuilderPage() {
                   {/* Banner */}
                   {formData.banner_url ? (
                     <div className="fb-banner-wrap">
-                      <img src={formData.banner_url} alt="Banner form" className="fb-banner-img" />
+                      <img
+                        src={formData.banner_url?.trim()}
+                        alt="Banner form"
+                        className="fb-banner-img"
+                        onError={(ev) => {
+                          console.error('[Banner] gagal load:', formData.banner_url);
+                          ev.target.style.display = 'none';
+                          showToast('Gambar banner gagal dimuat — coba Simpan lalu refresh', 'error');
+                        }}
+                      />
                       <div className="fb-banner-actions">
                         <label className="fb-banner-btn">
                           {bannerUploading ? 'Mengupload...' : 'Ganti Banner'}
