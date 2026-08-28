@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getMe, logout } from '../api/auth';
 import { getMyForms, deleteForm, getForm, getFormSubmissions, exportSubmissions } from '../api/forms';
 import { getTemplates, deleteTemplate } from '../api/templates';
@@ -37,6 +37,7 @@ function plainLabel(html, fallback = 'Pertanyaan tanpa judul') {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -73,19 +74,29 @@ export default function DashboardPage() {
 
   const token = localStorage.getItem('token');
 
+  const fetchTemplates = async () => {
+    try {
+      const tpls = await getTemplates(token);
+      setTemplates(tpls);
+    } catch {
+      // diamkan, biar tidak blokir dashboard
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       navigate('/auth');
       return;
     }
+    // FIX: Template tidak lagi di-load otomatis saat refresh/dashboard mount.
+    // Hanya user & forms yang di-load di awal. Template hanya di-load
+    // saat user masuk tab Template ATAU setelah konfirmasi simpan template.
     Promise.all([
       getMe(token),
-      getTemplates(token).catch(() => []),
       getMyForms(token).catch(() => []),
     ])
-      .then(([userData, tpls, forms]) => {
+      .then(([userData, forms]) => {
         setUser(userData);
-        setTemplates(tpls);
         const sorted = [...forms].sort((a, b) => parseServerTime(b.created_at) - parseServerTime(a.created_at));
         setAllForms(sorted);
         setRecentForms(sorted.slice(0, 3));
@@ -96,6 +107,84 @@ export default function DashboardPage() {
       })
       .finally(() => setLoading(false));
   }, [navigate, token]);
+
+  // FIX: auto-load template langsung tanpa F5 — handle pending + autoOpen + back reload
+  useEffect(() => {
+    if (location.state?.autoOpenTemplate || location.state?.reloadTemplates) {
+      setActiveNav('template');
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // FIX: load template hanya saat tab Template dibuka (tidak saat refresh dashboard)
+  // Juga cek pending template dari FormBuilder agar langsung muncul di "Template Saya" tanpa F5.
+  useEffect(() => {
+    if (activeNav === 'template' && token) {
+      // Cek localStorage pending (ditulis FormBuilder saat konfirmasi simpan)
+      try {
+        const raw = localStorage.getItem('template-just-saved');
+        if (raw) {
+          const created = JSON.parse(raw);
+          if (created && created.id) {
+            setTemplates((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+          }
+          localStorage.removeItem('template-just-saved');
+        }
+      } catch {}
+      // Juga cek location.state (navigasi dengan state)
+      if (location.state?.newTemplate) {
+        const nt = location.state.newTemplate;
+        setTemplates((prev) => (prev.some((t) => t.id === nt.id) ? prev : [...prev, nt]));
+      }
+      fetchTemplates();
+    }
+  }, [activeNav, token]);
+
+  // FIX: saat Dashboard pertama kali mount, cek apakah ada template pending dari save sebelumnya
+  // agar "Template Saya" langsung terisi tanpa perlu buka tab dulu jika user baru save dan kembali.
+  useEffect(() => {
+    if (!token) return;
+    // Jika datang dari FormBuilder dengan autoOpen, sudah handle di atas
+    try {
+      const raw = localStorage.getItem('template-just-saved');
+      if (raw) {
+        const created = JSON.parse(raw);
+        if (created && created.id) {
+          setTemplates((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+        }
+      }
+    } catch {}
+    if (location.state?.newTemplate) {
+      const nt = location.state.newTemplate;
+      setTemplates((prev) => (prev.some((t) => t.id === nt.id) ? prev : [...prev, nt]));
+      if (location.state?.autoOpenTemplate) setActiveNav('template');
+    }
+  }, []);
+
+  // FIX: dengarkan event "template-saved" dari FormBuilder agar template langsung muncul
+  // "pada saat itu juga" tanpa perlu refresh manual.
+  useEffect(() => {
+    const onTemplateSaved = (e) => {
+      const newTpl = e.detail;
+      if (newTpl && newTpl.id) {
+        setTemplates((prev) => {
+          if (prev.some((t) => t.id === newTpl.id)) return prev;
+          return [...prev, newTpl];
+        });
+      } else {
+        fetchTemplates();
+      }
+    };
+    const onStorage = (e) => {
+      if (e.key === 'template-just-saved') fetchTemplates();
+    };
+    window.addEventListener('template-saved', onTemplateSaved);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('template-saved', onTemplateSaved);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [token]);
 
   // Close context menu when clicking outside
   useEffect(() => {

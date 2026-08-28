@@ -102,25 +102,12 @@ class _FormMakerPageState extends State<FormMakerPage>
     );
 
     final questionsPayload = _builderState.buildApiPayload();
-    // Log detail payload untuk diagnosa mapping hilang (cek label/options/settings)
-    debugPrint(
-      '[FormMaker] Draft title="$title" questions=${questionsPayload.length} _draftId=$_draftTemplateId',
-    );
-    for (var i = 0; i < questionsPayload.length && i < 3; i++) {
-      debugPrint(
-        '[FormMaker] Q$i type=${questionsPayload[i]['type']} label=${(questionsPayload[i]['label'] as String).substring(0, (questionsPayload[i]['label'] as String).length > 60 ? 60 : (questionsPayload[i]['label'] as String).length)} opts=${(questionsPayload[i]['options'] as List).length} settings=${questionsPayload[i]['settings']}',
-      );
-    }
 
     final payload = {
       'title': title,
       'description': descriptionPlain,
       'questions': questionsPayload,
     };
-
-    debugPrint(
-      '[FormMaker] Simpan draft payload -> ${ApiService.baseUrl}/templates title="$title"',
-    );
 
     // FIX Bug B: jangan selalu POST (bikin duplikat ID be4e... vs 31e95...), pakai PATCH jika sudah pernah create/edit
     final String? targetId = _draftTemplateId ?? widget.initialTemplate?.id;

@@ -31,7 +31,7 @@ class _ResultPageState extends State<ResultPage> {
     if (res['success'] == true) {
       final rawList = res['data'] as List<dynamic>;
       return rawList
-          .map((e) => SubmissionModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => SubmissionModel.fromJson(e as Map))
           .toList();
     }
     throw Exception(res['message'] ?? 'Gagal memuat respons');

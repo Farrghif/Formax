@@ -37,14 +37,56 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingSearch = false;
   Map<String, dynamic> _searchData = {};
 
-  late Future<Map<String, dynamic>> _myTemplatesFuture;
+  List<FormTemplate> _myTemplates = [];
+  bool _isLoadingTemplates = false;
+  bool _templatesLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
-    _myTemplatesFuture = ApiService.getMyTemplates();
+    // FIX: Template tidak di-load otomatis saat refresh/app start.
+    // Hanya di-load saat user masuk tab Template atau setelah konfirmasi simpan.
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _ensureTemplatesLoaded() async {
+    // FIX: setiap ke TemplatePage selalu reload otomatis (sesuai request user)
+    _templatesLoaded = true;
+    await _loadMyTemplates();
+  }
+
+  Future<void> _loadMyTemplates() async {
+    setState(() {
+      _isLoadingTemplates = true;
+    });
+    final res = await ApiService.getMyTemplates();
+    if (!mounted) return;
+    setState(() {
+      _isLoadingTemplates = false;
+      if (res['success'] == true) {
+        final rawList = res['data'] as List<dynamic>;
+        _myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map)).toList();
+      } else {
+        debugPrint('[Home] getMyTemplates gagal: ${res['message']}');
+      }
+    });
+  }
+
+  Future<void> _refreshTemplatesImmediately() async {
+    _templatesLoaded = true;
+    await _loadMyTemplates();
+  }
+
+  void _addTemplateOptimistically(FormTemplate t) {
+    // Langsung terload otomatis tanpa menunggu fetch server
+    setState(() {
+      // Hindari duplikat id
+      if (t.id != null && _myTemplates.any((e) => e.id == t.id)) return;
+      _myTemplates = [..._myTemplates, t];
+    });
+    // Sync dengan server di background untuk pastikan konsisten
+    _refreshTemplatesImmediately();
   }
 
   @override
@@ -78,7 +120,8 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _isLoadingSearch = false;
           if (result['success'] == true) {
-            _searchData = result['data'] as Map<String, dynamic>;
+            final raw = result['data'];
+            _searchData = raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map);
           } else {
             _searchData = {};
           }
@@ -199,7 +242,15 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBottomNav() {
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
-      onTap: (i) => setState(() => _selectedIndex = i),
+      onTap: (i) {
+        // FIX: setiap ke TemplatePage selalu reload otomatis
+        if (i == 1) {
+          _ensureTemplatesLoaded();
+        }
+        setState(() {
+          _selectedIndex = i;
+        });
+      },
       selectedItemColor: const Color(0xFF3B82F6),
       unselectedItemColor: const Color(0xFF94A3B8),
       showUnselectedLabels: true,
@@ -267,7 +318,7 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.data?['success'] == true) {
           final rawList = snapshot.data!['data'] as List<dynamic>;
           forms = rawList
-              .map((e) => FormModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => FormModel.fromJson(e as Map))
               .toList();
           // Sort by createdAt DESC, take 10
           forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -295,7 +346,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () => setState(() => _selectedIndex = 2),
+                    onPressed: () {
+                      setState(() {
+                        _selectedIndex = 2;
+                      });
+                    },
                     child: const Text('Lihat semua'),
                   ),
                 ],
@@ -356,7 +411,11 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 14),
                 ElevatedButton.icon(
-                  onPressed: () => setState(() => _selectedIndex = 1),
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = 1;
+                    });
+                  },
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Buat Formulir'),
                   style: ElevatedButton.styleFrom(
@@ -539,7 +598,16 @@ class _HomePageState extends State<HomePage> {
   // ─── Template Tab ─────────────────────────────────────────────────────────
 
   Widget _buildTemplateTab() {
-    return SingleChildScrollView(
+    // FIX: setiap ke TemplatePage selalu auto-reload (sesuai request user)
+    if (!_templatesLoaded && !_isLoadingTemplates) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _ensureTemplatesLoaded();
+      });
+    }
+    return RefreshIndicator(
+      onRefresh: _loadMyTemplates,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,20 +655,27 @@ class _HomePageState extends State<HomePage> {
                       builder: (_) => const FormMakerPage(),
                     ),
                   );
-                  // Selalu refresh setelah kembali dari FormMaker, bahkan jika result null
-                  // (user mungkin save draft tapi tidak return value; atau backend belum eager-load)
+                  // FIX: langsung terload otomatis — optimistic add tanpa tunggu fetch
                   if (!mounted) return;
-                  setState(() {
-                    _myTemplatesFuture = ApiService.getMyTemplates();
-                  });
                   if (result != null) {
+                    _addTemplateOptimistically(result);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${FormTemplate(title: result.title, subtitle: result.subtitle).plainTitle} berhasil disimpan!'),
+                        content: Text('${result.plainTitle} berhasil disimpan!'),
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
+                  } else {
+                    // Tetap sync walau result null (mis PATCH)
+                    _refreshTemplatesImmediately();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Template tersimpan — daftar diperbarui'), backgroundColor: Color(0xFF059669)),
+                    );
                   }
+                  // Otomatis tetap di tab Template agar user langsung lihat hasilnya
+                  setState(() {
+                    _selectedIndex = 1;
+                  });
                 },
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Buat Baru'),
@@ -616,60 +691,62 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           const SizedBox(height: 12),
-          FutureBuilder<Map<String, dynamic>>(
-            future: _myTemplatesFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              List<FormTemplate> myTemplates = [];
-              if (snapshot.data?['success'] == true) {
-                final rawList = snapshot.data!['data'] as List<dynamic>;
-                myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map<String, dynamic>)).toList();
-              } else if (snapshot.data != null && snapshot.data?['success'] == false) {
-                // Tampilkan error koneksi agar tidak dikira data hilang padahal GET gagal
-                debugPrint('[Home] getMyTemplates gagal: ${snapshot.data?['message']}');
-              }
-
-              if (myTemplates.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
+          if (_isLoadingTemplates)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_myTemplates.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Text(
                       'Belum ada template yang disimpan.',
                       style: TextStyle(color: Colors.grey),
                     ),
-                  ),
-                );
-              }
-
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _loadMyTemplates,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Muat Ulang'),
+                    ),
+                  ],
                 ),
-                itemCount: myTemplates.length,
-                itemBuilder: (context, index) {
-                  return TemplateCard(
-                    template: myTemplates[index],
-                    isBuiltIn: false,
-                  );
-                },
-              );
-            },
-          ),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
+              ),
+              itemCount: _myTemplates.length,
+              itemBuilder: (context, index) {
+                return TemplateCard(
+                  template: _myTemplates[index],
+                  isBuiltIn: false,
+                  onSaved: (result) async {
+                    // FIX: back dari FormMaker (baik save maupun back biasa) → auto reload
+                    if (result != null) {
+                      _addTemplateOptimistically(result);
+                    } else {
+                      await _refreshTemplatesImmediately();
+                    }
+                  },
+                );
+              },
+            ),
         ],
       ),
+    ),
     );
   }
 
@@ -709,7 +786,7 @@ class _HomePageState extends State<HomePage> {
           const Divider(height: 1),
           const SizedBox(height: 8),
           _drawerItem(Icons.grid_view_rounded, 'Dashboard', () {
-            setState(() => _selectedIndex = 0);
+            setState(() { _selectedIndex = 0; });
             Navigator.pop(context);
           }, _selectedIndex == 0),
           _drawerItem(Icons.link, 'Join with Link', () {

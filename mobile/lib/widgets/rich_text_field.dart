@@ -51,17 +51,19 @@ class _RichTextFieldState extends State<RichTextField> {
       document: QuillHtml.documentFromHtml(widget.initialHtml),
       selection: const TextSelection.collapsed(offset: 0),
     );
+    // FIX: toolbar otomatis muncul saat field diklik/focus tanpa perlu tekan logo B
+    _focusNode.addListener(() {
+      final shouldShow = _focusNode.hasFocus;
+      if (shouldShow != _showToolbar && mounted) {
+        setState(() => _showToolbar = shouldShow);
+      }
+    });
     // FIX Bug 7: hanya satu listener (controller.addListener) untuk hindari double emit.
-    // document.changes sudah ter-cover oleh controller listener, jangan duplikat.
     void emitHtml() {
       final html = QuillHtml.documentToHtml(_controller.document);
       widget.onChanged(html);
     }
     _controller.addListener(emitHtml);
-    // Listener lama yang menyembunyikan toolbar saat focus hilang dihapus
-    // karena toolbar QuillSimpleToolbar butuh focus editor tetap terjaga.
-    // Jika auto-hide dibutuhkan, gunakan TapRegion di build, bukan focus listener,
-    // agar tap di toolbar (bold/italic) tidak membuat field ter-unselect.
   }
 
   @override

@@ -31,7 +31,7 @@ class _HistoryPageState extends State<HistoryPage> {
     if (res['success'] == true) {
       final rawList = res['data'] as List<dynamic>;
       final forms = rawList
-          .map((e) => FormModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => FormModel.fromJson(e as Map))
           .toList();
       forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return forms;

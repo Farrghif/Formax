@@ -445,17 +445,24 @@ export default function FormBuilderPage() {
   };
 
   // ============================================================
-  // SAVE AS NEW TEMPLATE
+  // SAVE AS NEW TEMPLATE (dengan konfirmasi)
   // ============================================================
+  const [showConfirmTemplateSave, setShowConfirmTemplateSave] = useState(false);
+
   const handleSaveAsTemplate = async () => {
     if (!formData.title.trim()) {
       showToast('Judul template tidak boleh kosong', 'error');
       return;
     }
+    // FIX: tampilkan dialog konfirmasi dulu, bukan langsung save saat refresh/load
+    setShowConfirmTemplateSave(true);
+  };
 
+  const confirmSaveAsTemplate = async () => {
+    setShowConfirmTemplateSave(false);
     setTemplateSaving(true);
     try {
-      await createTemplate(token, {
+      const created = await createTemplate(token, {
         title: formData.title,
         description: formData.description,
         banner_url: formData.banner_url,
@@ -474,7 +481,7 @@ export default function FormBuilderPage() {
           })),
         })),
       });
-      showToast('Template berhasil disimpan! Muncul di Dasbor > Templat', 'success');
+      showToast('Template berhasil disimpan! Muncul di Dashboard > Template', 'success');
     } catch (err) {
       showToast(err.message || 'Gagal menyimpan template', 'error');
     } finally {
@@ -957,7 +964,7 @@ export default function FormBuilderPage() {
         {/* Topbar */}
         <header className="fb-topbar">
           <div className="fb-topbar-left">
-            <button className="fb-back-btn" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard">
+            <button className="fb-back-btn" onClick={() => navigate('/dashboard', { state: { reloadTemplates: true } })} aria-label="Back to dashboard">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <polyline points="15 18 9 12 15 6" />
               </svg>
@@ -2076,6 +2083,30 @@ export default function FormBuilderPage() {
               <button className="fb-confirm-btn danger" onClick={executeSingleDelete}>
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
                 Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Save as Template — FIX: konfirmasi dulu, bukan langsung terload saat refresh */}
+      {showConfirmTemplateSave && (
+        <div className="fb-confirm-overlay" onClick={() => setShowConfirmTemplateSave(false)}>
+          <div className="fb-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <button className="fb-confirm-close" onClick={() => setShowConfirmTemplateSave(false)} aria-label="Tutup">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+            <div className="fb-confirm-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+              <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
+            </div>
+            <h3 className="fb-confirm-title">Simpan sebagai Template?</h3>
+            <p className="fb-confirm-desc">
+              Template <strong>{formData.title || 'Tanpa Judul'}</strong> dengan <strong>{questions.length} soal</strong> akan disimpan dan langsung muncul di <strong>Dashboard &gt; Template</strong> tanpa perlu refresh.
+            </p>
+            <div className="fb-confirm-actions">
+              <button className="fb-confirm-btn secondary" onClick={() => setShowConfirmTemplateSave(false)}>Batal</button>
+              <button className="fb-confirm-btn primary" onClick={confirmSaveAsTemplate} disabled={templateSaving} style={{ background: '#2563eb', color: 'white' }}>
+                {templateSaving ? 'Menyimpan...' : 'Ya, Simpan'}
               </button>
             </div>
           </div>

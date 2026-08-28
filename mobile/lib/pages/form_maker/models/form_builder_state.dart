@@ -96,8 +96,9 @@ class FormBuilderState extends ChangeNotifier {
         );
       }).toList();
 
-      // Extract settings if present
-      final settings = (q['settings'] as Map<String, dynamic>?) ?? {};
+      // Extract settings if present — FIX: handle LinkedMap<dynamic,dynamic>
+      final settingsRaw = q['settings'];
+      final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
       final imageUrl = settings['image_url'] as String?;
       final rowLabels = (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
       final scaleMin = (settings['scale_min'] as int?) ?? 1;
