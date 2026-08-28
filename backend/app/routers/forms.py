@@ -14,7 +14,7 @@ _SLUG_RE = re.compile(r'^[a-z0-9-]+$')
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").strip().rstrip("/")
 QR_DIR = "static/qrcodes"
 
 
@@ -156,7 +156,7 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
     public_url = f"{frontend_url}/f/{form.slug}"
     img = qrcode.make(public_url)
 

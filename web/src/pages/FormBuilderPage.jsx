@@ -15,6 +15,7 @@ import {
   deleteOption,
 } from '../api/questions';
 import { downloadTemplateDocx, previewDocxImport, confirmDocxImport } from '../api/docx';
+import { apiFetch } from '../api/config';
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
@@ -1968,7 +1969,7 @@ export default function FormBuilderPage() {
             <p className="fb-modal-subtitle">Pindai kode QR untuk membuka formulir ini di perangkat seluler</p>
 
             <div className="fb-qr-img-wrapper">
-              <img src={formData.qr_code_url} alt="QR Code Form" />
+              <NgrokImage src={formData.qr_code_url} alt="QR Code Form" style={{ width: '190px', height: '190px', display: 'block' }} />
             </div>
 
             <div className="fb-share-link-box">
@@ -1979,13 +1980,25 @@ export default function FormBuilderPage() {
             </div>
 
             <div className="fb-modal-actions">
-              <a
-                href={formData.qr_code_url}
-                download={`qrcode-${formData.slug}.png`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await apiFetch(formData.qr_code_url);
+                    if (!res.ok) throw new Error('Gagal fetch QR');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qrcode-${formData.slug}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (e) {
+                    window.open(formData.qr_code_url, '_blank');
+                  }
+                }}
                 className="fb-modal-btn secondary"
-                style={{ textDecoration: 'none' }}
               >
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -1993,7 +2006,7 @@ export default function FormBuilderPage() {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
                 Unduh QR
-              </a>
+              </button>
               <a
                 href={getPublicLink()}
                 target="_blank"
