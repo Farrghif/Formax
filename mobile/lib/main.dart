@@ -4,9 +4,11 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'services/api_service.dart';
+import 'services/deep_link_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  DeepLinkService.instance.init();
   runApp(const MyApp());
 }
 
@@ -23,6 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Form4x',
       debugShowCheckedModeBanner: false,
+      navigatorKey: DeepLinkService.instance.navigatorKey,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

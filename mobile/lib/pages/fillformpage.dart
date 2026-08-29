@@ -160,6 +160,8 @@ class _FillFormPageState extends State<FillFormPage> {
   static const int _questionsPerPage = 4;
   int _currentPage = 0;
 
+  static bool _looksLikeHtml(String s) => s.contains('<');
+
   @override
   void initState() {
     super.initState();
@@ -457,7 +459,7 @@ class _FillFormPageState extends State<FillFormPage> {
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
-        _formData?.title ?? 'Memuat Form...',
+        RichTextView.stripHtml(_formData?.title ?? 'Memuat Form...'),
         style: const TextStyle(
           color: Color(0xFF374151),
           fontWeight: FontWeight.bold,
@@ -607,7 +609,7 @@ class _FillFormPageState extends State<FillFormPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Form "${_formData?.title ?? ''}" membutuhkan token untuk diakses.',
+                'Form "${RichTextView.stripHtml(_formData?.title ?? '')}" membutuhkan token untuk diakses.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
               ),
@@ -858,25 +860,43 @@ class _FillFormPageState extends State<FillFormPage> {
                 ),
               ),
             ),
-          Text(
-            _formData!.title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
-            ),
-          ),
+          _looksLikeHtml(_formData!.title)
+              ? RichTextView(
+                  html: _formData!.title,
+                  textStyle: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                )
+              : Text(
+                  _formData!.title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
           if (_formData?.description != null &&
               _formData!.description!.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(
-              _formData!.description!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-                height: 1.5,
-              ),
-            ),
+            _looksLikeHtml(_formData!.description!)
+                ? RichTextView(
+                    html: _formData!.description!,
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                      height: 1.5,
+                    ),
+                  )
+                : Text(
+                    _formData!.description!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                      height: 1.5,
+                    ),
+                  ),
           ],
           const SizedBox(height: 12),
           Container(

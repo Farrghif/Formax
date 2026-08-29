@@ -162,7 +162,7 @@ class _HistoryPageState extends State<HistoryPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  form.title,
+                  form.plainTitle,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -237,7 +237,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             MaterialPageRoute(
                               builder: (_) => ResultPage(
                                 formId: form.id,
-                                formTitle: form.title,
+                                formTitle: form.plainTitle,
                               ),
                             ),
                           );

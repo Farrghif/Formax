@@ -169,6 +169,21 @@ def update_form(
     return form
 
 
+@router.post("/{form_id}/publish", response_model=schemas.FormOut)
+def publish_form(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Terbitkan form: ubah status menjadi 'published' agar bisa diakses lewat link publik."""
+    form = db.query(models.Form).filter(models.Form.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form tidak ditemukan")
+    if form.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bukan form milikmu")
+
+    form.status = models.FormStatus.published
+    db.commit()
+    db.refresh(form)
+    return form
+
+
 @router.delete("/{form_id}")
 def delete_form(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     form = db.query(models.Form).filter(models.Form.id == form_id).first()

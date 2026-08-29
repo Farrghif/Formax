@@ -30,10 +30,15 @@ class QuillHtml {
   static String deltaToHtml(dynamic delta) {
     final out = StringBuffer();
     final inline = StringBuffer(); // accumulated inline html for the current line
-    String? blockTag; // 'h1' | 'h2' | 'h3' | 'blockquote' | null
+    String? blockTag; // 'h1' | 'h2' | 'h3' | 'blockquote' | null (p)
     String? listTag; // 'ul' | 'ol' | null
+    String? blockAlign; // block-level text-align for the current line
+    double? blockLineHeight; // block-level line-height for the current line
+    String? listAlign; // alignment captured for the open list group
     final listItems = <String>[];
 
+    /// Inline (text-op) CSS. Preserves all inline formatting so that font
+    /// size, font family, background colour and line spacing round-trip.
     String inlineStyle(Map<String, dynamic> a) {
       final s = <String>[];
       if (a['bold'] == true) s.add('font-weight: bold;');
@@ -41,29 +46,34 @@ class QuillHtml {
       if (a['underline'] == true) s.add('text-decoration: underline;');
       if (a['strike'] == true) s.add('text-decoration: line-through;');
       if (a['color'] != null) s.add('color: ${a['color']};');
+      if (a['background'] != null) s.add('background-color: ${a['background']};');
+      final sizePx = _quillSizeToPx(a['size']);
+      if (sizePx != null) s.add('font-size: $sizePx;');
+      if (a['font'] != null) s.add('font-family: ${a['font']};');
+      final lh = a['line-height'];
+      if (lh != null) s.add('line-height: $lh;');
       return s.isEmpty ? '' : s.join(' ');
     }
 
-    void flushInline({required bool closeBlock}) {
-      if (inline.isNotEmpty) {
-        if (listTag != null) {
-          listItems.add(inline.toString());
-        } else if (blockTag != null) {
-          out.write('$inline</$blockTag>');
-        } else {
-          out.write('<p>$inline</p>');
-        }
-        inline.clear();
-      }
-      if (closeBlock && listTag != null && listItems.isNotEmpty) {
-        out.write('<$listTag>');
+    String blockStyle() {
+      final s = <String>[];
+      if (blockAlign != null) s.add('text-align: $blockAlign;');
+      if (blockLineHeight != null) s.add('line-height: $blockLineHeight;');
+      return s.isEmpty ? '' : ' style="${s.join(' ')}"';
+    }
+
+    void flushList() {
+      if (listTag != null && listItems.isNotEmpty) {
+        final align = listAlign != null ? ' style="text-align: $listAlign;"' : '';
+        out.write('<$listTag$align>');
         for (final it in listItems) {
           out.write('<li>$it</li>');
         }
         out.write('</$listTag>');
-        listItems.clear();
-        listTag = null;
       }
+      listItems.clear();
+      listTag = null;
+      listAlign = null;
     }
 
     for (final op in delta.operations) {
@@ -72,26 +82,49 @@ class QuillHtml {
       final attrs = (op.attributes ?? const <String, dynamic>{}) as Map<String, dynamic>;
 
       if (data == '\n') {
+        blockAlign = attrs['align'] as String?;
+        blockLineHeight = (attrs['line-height'] as num?)?.toDouble();
         final block = attrs['block'] as String?;
-        if (block == 'ul' || block == 'ol') {
-          listTag = block;
-          flushInline(closeBlock: false);
-        } else if (block == 'blockquote') {
-          flushInline(closeBlock: true);
+        final rawList = block == 'ul' || block == 'ol'
+            ? block
+            : (attrs['list'] as String?);
+
+        if (rawList == 'ul' || rawList == 'ol' || rawList == 'bullet' || rawList == 'ordered') {
+          final group = (rawList == 'ol' || rawList == 'ordered') ? 'ol' : 'ul';
+          if (listTag != group) {
+            flushList();
+            listTag = group;
+            listAlign = blockAlign;
+          }
+          if (inline.isNotEmpty) {
+            listItems.add(inline.toString());
+            inline.clear();
+          }
+          continue;
+        }
+
+        flushList();
+        final rawHeader = attrs['header'];
+        if (block == 'blockquote' || attrs['blockquote'] == true) {
           blockTag = 'blockquote';
-          inline.write('<blockquote>');
+        } else if (rawHeader is int) {
+          blockTag = 'h$rawHeader';
         } else if (block != null && block.startsWith('header.')) {
-          flushInline(closeBlock: true);
           blockTag = 'h${block.split('.').last}';
-          inline.write('<$blockTag>');
-        } else if (block == 'code-block') {
-          flushInline(closeBlock: true);
-          out.write('<pre>$inline</pre>');
-          inline.clear();
+        } else if (block == 'code-block' || attrs['code-block'] == true) {
+          blockTag = 'pre';
         } else {
-          flushInline(closeBlock: true);
           blockTag = null;
         }
+
+        if (inline.isNotEmpty || blockTag == 'blockquote' || (blockTag != null && blockTag.startsWith('h'))) {
+          final tag = blockTag ?? 'p';
+          out.write('<$tag${blockStyle()}>$inline</$tag>');
+          inline.clear();
+        }
+        blockTag = null;
+        blockAlign = null;
+        blockLineHeight = null;
         continue;
       }
 
@@ -122,9 +155,37 @@ class QuillHtml {
       }
     }
 
-    flushInline(closeBlock: true);
+    flushList();
+    if (inline.isNotEmpty) {
+      if (blockTag == null) {
+        out.write('<p${blockStyle()}>$inline</p>');
+      } else {
+        out.write('<$blockTag${blockStyle()}>$inline</$blockTag>');
+      }
+      inline.clear();
+    }
     final result = out.toString();
     return result.isEmpty ? '<p><br></p>' : result;
+  }
+
+  /// Map a Quill font [size] attribute to a CSS `font-size` value that the
+  /// reverse HTML parser understands (so it round-trips back to `size`).
+  static String? _quillSizeToPx(dynamic size) {
+    if (size == null) return null;
+    final s = size.toString();
+    switch (s) {
+      case 'small':
+        return '0.75em';
+      case 'large':
+        return '1.5em';
+      case 'huge':
+        return '2.5em';
+      case 'normal':
+        return null;
+      default:
+        final n = double.tryParse(s);
+        return n == null ? null : '${n}px';
+    }
   }
 
   static String _escape(String text) =>

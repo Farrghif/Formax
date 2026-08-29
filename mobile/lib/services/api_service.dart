@@ -163,8 +163,36 @@ class ApiService {
     }
   }
 
+  // Diagnosa HTML: berapa persen label/placeholder dari questions yang masih
+  // mengandung tag HTML saat dikirim ke backend. Jika 0, mobile sudah drop —
+  // jika >0 tapi GET kembalikan plain, berarti backend yang strip.
+  static void _logHtmlDiagnostic(String label, dynamic questions) {
+    try {
+      if (questions is! List || questions.isEmpty) {
+        debugPrint('[ApiService] $label: no questions (${questions.runtimeType})');
+        return;
+      }
+      int withHtml = 0;
+      int total = 0;
+      for (final q in questions) {
+        if (q is! Map) continue;
+        for (final key in ['label', 'placeholder', 'description']) {
+          final v = q[key];
+          if (v is String && v.trim().isNotEmpty) {
+            total++;
+            if (RegExp(r'<[a-zA-Z/]').hasMatch(v)) withHtml++;
+          }
+        }
+      }
+      debugPrint('[ApiService] $label: $withHtml/$total text fields still contain HTML');
+    } catch (e) {
+      debugPrint('[ApiService] $label diag error: $e');
+    }
+  }
+
   // Fungsi Create Template — DIPERBAIKI: timeout, logging, validasi 422
   static Future<Map<String, dynamic>> createTemplate(Map<String, dynamic> payload) async {
+    _logHtmlDiagnostic('createTemplate (SEND)', payload['questions']);
     try {
       final token = await getToken();
       if (token == null) {
@@ -248,7 +276,11 @@ class ApiService {
       final response = await http
           .get(Uri.parse('$baseUrl/templates/$id'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) return {'success': true, 'data': _safeJson(response.body)};
+      if (response.statusCode == 200) {
+        final parsed = _safeJson(response.body);
+        if (parsed is Map) _logHtmlDiagnostic('getTemplate (RECV)', parsed['questions']);
+        return {'success': true, 'data': parsed};
+      }
       final body = _safeJson(response.body);
       final msg = body is Map ? (body['detail'] ?? 'Failed: ${response.statusCode}') : 'Failed: ${response.statusCode}';
       return {'success': false, 'message': msg.toString()};
@@ -271,7 +303,15 @@ class ApiService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': _safeJson(response.body)};
+        final parsed = _safeJson(response.body);
+        dynamic questions;
+        if (parsed is List) {
+          questions = parsed;
+        } else if (parsed is Map) {
+          questions = parsed['items'] ?? parsed['questions'] ?? parsed['data'];
+        }
+        _logHtmlDiagnostic('getMyTemplates (RECV)', questions);
+        return {'success': true, 'data': parsed};
       }
       final body = _safeJson(response.body);
       final msg = body is Map ? (body['detail'] ?? 'Failed: ${response.statusCode}') : 'Failed: ${response.statusCode}';
@@ -320,6 +360,29 @@ class ApiService {
       final data = _safeJson(response.body);
       if (response.statusCode == 200) return {'success': true, 'data': data};
       final msg = data is Map ? (data['detail'] ?? 'Failed to update form') : 'Failed to update form';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Publish form: mengubah status form menjadi 'published'
+  static Future<Map<String, dynamic>> publishForm(String formId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/forms/$formId/publish'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map ? (data['detail'] ?? 'Failed to publish form') : 'Failed to publish form';
       return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};

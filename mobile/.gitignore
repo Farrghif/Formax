@@ -135,6 +135,11 @@ windows/flutter/ephemeral/
 .history/
 migrate_working_dir/
 
+# Local databases / generated data
+*.db
+*.sqlite
+*.sqlite3
+
 # If you use Firebase config files, keep these unignored only if needed:
 # android/app/google-services.json
 # ios/Runner/GoogleService-Info.plist

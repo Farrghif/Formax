@@ -80,32 +80,28 @@ class _FormMakerPageState extends State<FormMakerPage>
 
     setState(() => _builderState.isSaving = true);
 
-    // Always sync the form title from the first page header (RichText HTML -> plain)
+    // Sync the form title/description from the first page header, preserving
+    // rich-text HTML (formTitle/formDescription are the HTML strings edited in
+    // the page header editor). Fall back to a plain label only when empty.
     if (_builderState.pages.isNotEmpty) {
-      final firstTitleHtml = _builderState.pages[0].title;
-      final firstTitlePlain = QuillHtml.htmlToPlainText(firstTitleHtml);
-      if (firstTitlePlain.isNotEmpty) {
-        _builderState.formTitle = firstTitlePlain;
+      if (_builderState.pages[0].title.trim().isNotEmpty) {
+        _builderState.formTitle = _builderState.pages[0].title;
       }
-      // description simpan sebagai plain juga untuk konsistensi list
-      _builderState.formDescription = QuillHtml.htmlToPlainText(
-        _builderState.pages[0].description,
-      );
+      if (_builderState.pages[0].description.trim().isNotEmpty) {
+        _builderState.formDescription = _builderState.pages[0].description;
+      }
     }
 
-    final title = QuillHtml.titleToPlain(
-      _builderState.formTitle,
-      fallback: 'Form Tanpa Judul',
-    );
-    final descriptionPlain = QuillHtml.htmlToPlainText(
-      _builderState.formDescription,
-    );
+    final titleHtml = _builderState.formTitle.trim().isNotEmpty
+        ? _builderState.formTitle
+        : 'Form Tanpa Judul';
+    final descriptionHtml = _builderState.formDescription.trim();
 
     final questionsPayload = _builderState.buildApiPayload();
 
     final payload = {
-      'title': title,
-      'description': descriptionPlain,
+      'title': titleHtml,
+      'description': descriptionHtml,
       'questions': questionsPayload,
     };
 
@@ -134,7 +130,7 @@ class _FormMakerPageState extends State<FormMakerPage>
       Navigator.pop(
         context,
         FormTemplate(
-          title: title,
+          title: QuillHtml.htmlToPlainText(titleHtml),
           subtitle: 'Baru saja disimpan',
           id: _draftTemplateId ?? widget.initialTemplate?.id,
           questionsJson: questionsPayload,
@@ -162,6 +158,10 @@ class _FormMakerPageState extends State<FormMakerPage>
 
   void _publishForm() async {
     if (_builderState.isSaving) return;
+    // FIX Bug A: unfocus dulu agar RichTextField flush HTML terakhir (ketik lalu langsung Publish)
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
 
     // Simple Validation
     if (_builderState.formTitle.isEmpty) {
@@ -173,11 +173,13 @@ class _FormMakerPageState extends State<FormMakerPage>
 
     setState(() => _builderState.isSaving = true);
 
-    final title = QuillHtml.htmlToPlainText(_builderState.formTitle).isNotEmpty
-        ? QuillHtml.htmlToPlainText(_builderState.formTitle)
-        : _builderState.formTitle;
-    // Slug sanitized: hanya a-z0-9 dan hyphen (bug #30)
-    final baseSlug = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+    final titleHtml = _builderState.formTitle.trim().isNotEmpty
+        ? _builderState.formTitle
+        : 'Form Tanpa Judul';
+    final descriptionHtml = _builderState.formDescription.trim();
+    // Slug derived from PLAIN text of the title (HTML tags must not leak into URL)
+    final slugBase = QuillHtml.htmlToPlainText(titleHtml);
+    final baseSlug = slugBase.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
     final slug = '$baseSlug-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
     // FIX Bug 11 & 19: kirim settings yang sebelumnya hanya UI semu
@@ -198,8 +200,8 @@ class _FormMakerPageState extends State<FormMakerPage>
     }
 
     final payload = {
-      'title': title,
-      'description': QuillHtml.htmlToPlainText(_builderState.formDescription),
+      'title': titleHtml,
+      'description': descriptionHtml,
       'slug': slug,
       'questions': _builderState.buildApiPayload(),
       'allow_see_result': _correctAnswers,
@@ -214,10 +216,25 @@ class _FormMakerPageState extends State<FormMakerPage>
     final res = await ApiService.createForm(payload);
     if (res['success'] == true) {
       final formId = res['data']['id'] as String;
-      // FIX Bug 17-18: createForm selalu draft, maka PATCH status menjadi published
-      await ApiService.updateForm(formId, {'status': 'published'});
-      final qrRes = await ApiService.generateQrCode(formId);
+      // FIX Bug 17-18: createForm selalu draft, maka publish via endpoint khusus.
+      // Pastikan benar-benar published (jangan lanjut generate QR kalau gagal).
+      final pubRes = await ApiService.publishForm(formId);
       setState(() => _builderState.isSaving = false);
+
+      if (pubRes['success'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gagal publish form: ${pubRes['message'] ?? 'terjadi kesalahan'}',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final qrRes = await ApiService.generateQrCode(formId);
 
       if (qrRes['success'] == true) {
         final shareLink = qrRes['data']['share_link'] as String;

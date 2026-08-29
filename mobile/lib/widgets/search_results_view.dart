@@ -123,7 +123,7 @@ class SearchResultsView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    template.title,
+                    template.plainTitle,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -199,7 +199,7 @@ class SearchResultsView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    form.title,
+                    form.plainTitle,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,

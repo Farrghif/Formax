@@ -508,7 +508,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    form.title,
+                    form.plainTitle,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

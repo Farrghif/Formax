@@ -20,6 +20,22 @@ class FormModel {
     this.totalSubmissions = 0,
   });
 
+  /// Plain text for compact list display — strips HTML tags so rich-text
+  /// form titles (stored as HTML) never leak raw `<p>`/`<strong>` markup.
+  String get plainTitle => _stripHtml(title);
+
+  static String _stripHtml(String? html) {
+    if (html == null || html.trim().isEmpty) return '';
+    return html
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   factory FormModel.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     return FormModel(
