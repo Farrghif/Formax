@@ -1559,50 +1559,75 @@ export default function DashboardPage() {
                     ← Kembali ke Aktivitas Saya
                   </button>
 
-                  {/* Header bukti */}
-                  <div className="detail-header-card">
-                    <div>
-                      <p className="detail-header-formtitle">{activityResult.form_title}</p>
-                      <h2 className="detail-header-name">Bukti Pengisian Form</h2>
-                      <div className="detail-header-metarow">
-                        <span className="detail-meta-item">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          Submit: {formatDateString(activityResult.submitted_at)} WIB
-                        </span>
-                        <span className="detail-meta-item">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Mulai: {formatDateString(activityDetailSub.started_at)} WIB
-                        </span>
-                        <span className="detail-meta-item" title={activityDetailSub.id}>
-                          ID: {activityDetailSub.id.slice(0, 8)}…
-                        </span>
+                  <div className="detail-layout">
+                    {/* KIRI — Info bukti rapih ke bawah */}
+                    <aside className="detail-info-card">
+                      <div className="detail-info-header">
+                        <span className="detail-info-kicker">Bukti Pengisian</span>
+                        <h2 className="detail-info-title" title={activityResult.form_title}>{activityResult.form_title}</h2>
                       </div>
-                      {activityDetailSub.is_auto_submitted && (
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#b45309', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                          <span>⚡ Auto-submit (waktu habis)</span>
+                      <div className="detail-info-list">
+                        {activityResult.score_percent !== null && (
+                          <div className="detail-info-row" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                            <span className="detail-info-label" style={{ color: '#0053db' }}>
+                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              Total Nilai
+                            </span>
+                            <strong className="detail-info-value" style={{ fontSize: '22px', color: '#0053db' }}>{activityResult.score_percent}/100 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}>({activityResult.correct_count}/{activityResult.total_graded} benar)</span></strong>
+                          </div>
+                        )}
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            Waktu Submit
+                          </span>
+                          <strong className="detail-info-value">{formatDateString(activityResult.submitted_at)} WIB</strong>
                         </div>
-                      )}
-                      {activityDetailSub.is_cheated && (
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#b91c1c', background: '#fee2e2', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                          <span>⚠️ Ditandai curang (keluar fullscreen)</span>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Waktu Mulai
+                          </span>
+                          <strong className="detail-info-value">{formatDateString(activityDetailSub.started_at)} WIB</strong>
                         </div>
-                      )}
-                    </div>
-                    {activityResult.score_percent !== null && (
-                      <div className="detail-score-box">
-                        <p className="detail-score-label">Skor</p>
-                        <h3 className="detail-score-num">{activityResult.score_percent}/100</h3>
-                        <p style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{activityResult.correct_count}/{activityResult.total_graded} benar</p>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Durasi
+                          </span>
+                          <strong className="detail-info-value">
+                            {(() => {
+                              if (!activityDetailSub.started_at || !activityResult.submitted_at) return '-';
+                              const diff = parseServerTime(activityResult.submitted_at).getTime() - parseServerTime(activityDetailSub.started_at).getTime();
+                              const s = Math.max(0, Math.floor(diff / 1000));
+                              const m = Math.floor(s / 60);
+                              const sec = s % 60;
+                              return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                            })()}
+                          </strong>
+                        </div>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">ID Submission</span>
+                          <strong className="detail-info-value" title={activityDetailSub.id} style={{ fontFamily: 'monospace', fontSize: '12px' }}>{activityDetailSub.id}</strong>
+                        </div>
+                        {activityDetailSub.is_auto_submitted && (
+                          <div className="detail-info-row" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                            <span className="detail-info-label" style={{ color: '#b45309' }}>Status</span>
+                            <strong className="detail-info-value" style={{ color: '#b45309' }}>⚡ Auto-submit (waktu habis)</strong>
+                          </div>
+                        )}
+                        {activityDetailSub.is_cheated && (
+                          <div className="detail-info-row cheated">
+                            <span className="detail-info-label">Status</span>
+                            <strong className="detail-info-value cheated">⚠️ Curang — keluar fullscreen</strong>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </aside>
 
-                  {/* Rincian jawaban */}
-                  <div>
+                    {/* KANAN — Rincian jawaban bisa digulir */}
+                    <section className="detail-answers-pane">
+                      <div className="detail-answers-list">
                     {activityResult.answers.map((a, idx) => (
                       <div key={a.question_id} className="detail-question-card">
                         <div className="detail-question-header">
@@ -1625,6 +1650,8 @@ export default function DashboardPage() {
                         )}
                       </div>
                     ))}
+                      </div>
+                    </section>
                   </div>
                 </div>
               ) : (
