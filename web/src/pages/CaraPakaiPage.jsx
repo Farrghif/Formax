@@ -108,7 +108,7 @@ const CaraPakaiPage = () => {
       <section className="cp-hero">
         <div className="cp-hero-inner">
           <h1 className="cp-hero-title">
-            Cara Menggunakan <span className="cp-hero-accent">formMaker</span>
+            Cara Menggunakan <span className="cp-hero-accent">Form4x</span>
           </h1>
           <p className="cp-hero-sub">
             Panduan singkat untuk mulai membuat, membagikan, dan memantau form
@@ -157,7 +157,7 @@ const CaraPakaiPage = () => {
                 <span className="cp-step-icon">👤+</span> Daftar Akun
               </h2>
               <p className="cp-step-desc">
-                Cukup daftar dengan email, tanpa perlu mengunduh apa pun untuk mulai menggunakan formMaker di browser.
+                Cukup daftar dengan email, tanpa perlu mengunduh apa pun untuk mulai menggunakan Form4x di browser.
               </p>
 
 
@@ -166,7 +166,7 @@ const CaraPakaiPage = () => {
                   <div className="cp-num-badge">1</div>
                   <div className="cp-card-text">
                     <h4>Buka Halaman Daftar</h4>
-                    <p>Klik tombol "Daftar Gratis" di halaman utama formMaker.</p>
+                    <p>Klik tombol "Daftar Gratis" di halaman utama Form4x.</p>
                   </div>
                 </div>
 
@@ -330,7 +330,7 @@ const CaraPakaiPage = () => {
             <h2 className="cp-features-title">Fitur yang Tersedia</h2>
           </div>
           <p className="cp-features-sub">
-            formMaker hadir dengan berbagai fitur untuk membuat form Anda lebih rapi dan mudah dikelola.
+            Form4x hadir dengan berbagai fitur untuk membuat form Anda lebih rapi dan mudah dikelola.
           </p>
 
           <div className="cp-features-grid">
@@ -376,8 +376,8 @@ const CaraPakaiPage = () => {
       {/* ── FOOTER ── */}
       <footer className="hp-footer">
         <div className="hp-footer-inner">
-          <div className="hp-footer-brand">formMaker</div>
-          <p className="cp-footer-copy">© 2026 formMaker. All rights reserved.</p>
+          <div className="hp-footer-brand">Form4x</div>
+          <p className="cp-footer-copy">© 2026 Form4x. All rights reserved.</p>
         </div>
       </footer>
     </div>
