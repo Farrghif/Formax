@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
-from ..deps import get_db, get_current_user
+from ..deps import get_db, get_current_user, get_optional_user, get_respondent_key
 
 router = APIRouter(tags=["submissions"])
 
@@ -26,15 +26,45 @@ def _window_dt(dt):
     return dt.replace(tzinfo=WIB)
 
 
+# ------------------------------------------------------------------
+# IDENTITAS RESPONDEN: login (user_id) ATAU anonim (respondent_key)
+# Google-Forms style: siapa pun dengan link boleh isi tanpa akun.
+# ------------------------------------------------------------------
+def _resolve_identity(current_user, respondent_key):
+    """Return (user_id, respondent_key) untuk identitas responden.
+
+    Login -> user_id; anonim -> respondent_key. Wajib minimal salah satu.
+    """
+    if current_user is not None:
+        return str(current_user.id), None
+    key = (respondent_key or "").strip()
+    if key:
+        return None, key
+    raise HTTPException(
+        status_code=401,
+        detail="Harus login atau menyertakan identitas responden (X-Respondent-Key)",
+    )
+
+
+def _owns_submission(submission, current_user, respondent_key):
+    """Cek apakah request ini pemilik submission (login atau anonim)."""
+    if current_user is not None:
+        return submission.user_id == str(current_user.id)
+    key = (respondent_key or "").strip()
+    return bool(key) and submission.respondent_key == key
+
+
 @router.post("/forms/public/{slug}/join", response_model=schemas.SubmissionOut)
 def join_form(
     slug: str,
     payload: schemas.JoinFormRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """
     Dipanggil pas user klik 'Mulai Isi Form' / 'Mulai Ujian'.
+    - Responden boleh login ATAU anonim (X-Respondent-Key).
     - Kalau form.join_token diset, user WAJIB kirim token yang cocok (fitur ujian bareng).
     - Kalau ada start_date/end_date, dicek apakah sekarang ada di dalam window itu.
     - Logika submission mengikuti setting form.max_submissions:
@@ -44,6 +74,8 @@ def join_form(
           Kalau sudah capai limit dan form.allow_see_result aktif, submission terakhir
           dikembalikan supaya responden bisa lihat hasilnya; kalau tidak, ditolak.
     """
+    user_id, rkey = _resolve_identity(current_user, respondent_key)
+
     form = db.query(models.Form).filter(models.Form.slug == slug).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form tidak ditemukan")
@@ -63,41 +95,39 @@ def join_form(
     # 1) Kalau masih ada submission yang belum selesai, lanjutkan itu (bukan mulai dari 0).
     in_progress = (
         db.query(models.Submission)
-        .filter(
-            models.Submission.form_id == form.id,
-            models.Submission.user_id == current_user.id,
-            models.Submission.submitted_at.is_(None),
-        )
-        .first()
+        .filter(models.Submission.form_id == form.id, models.Submission.submitted_at.is_(None))
     )
-    if in_progress:
-        return in_progress
+    if user_id:
+        in_progress = in_progress.filter(models.Submission.user_id == user_id)
+    else:
+        in_progress = in_progress.filter(models.Submission.respondent_key == rkey)
+    existing = in_progress.first()
+    if existing:
+        return existing
 
     # 2) Cek batas jumlah submission yang sudah selesai.
     max_sub = form.max_submissions if form.max_submissions is not None else 1
-    completed_count = (
-        db.query(func.count(models.Submission.id))
-        .filter(
-            models.Submission.form_id == form.id,
-            models.Submission.user_id == current_user.id,
-            models.Submission.submitted_at.isnot(None),
-        )
-        .scalar()
-        or 0
+    completed_q = db.query(func.count(models.Submission.id)).filter(
+        models.Submission.form_id == form.id,
+        models.Submission.submitted_at.isnot(None),
     )
+    if user_id:
+        completed_q = completed_q.filter(models.Submission.user_id == user_id)
+    else:
+        completed_q = completed_q.filter(models.Submission.respondent_key == rkey)
+    completed_count = completed_q.scalar() or 0
 
     if max_sub != 0 and completed_count >= max_sub:
         if form.allow_see_result:
-            latest = (
-                db.query(models.Submission)
-                .filter(
-                    models.Submission.form_id == form.id,
-                    models.Submission.user_id == current_user.id,
-                    models.Submission.submitted_at.isnot(None),
-                )
-                .order_by(models.Submission.submitted_at.desc())
-                .first()
+            latest_q = db.query(models.Submission).filter(
+                models.Submission.form_id == form.id,
+                models.Submission.submitted_at.isnot(None),
             )
+            if user_id:
+                latest_q = latest_q.filter(models.Submission.user_id == user_id)
+            else:
+                latest_q = latest_q.filter(models.Submission.respondent_key == rkey)
+            latest = latest_q.order_by(models.Submission.submitted_at.desc()).first()
             if latest:
                 return latest
         raise HTTPException(
@@ -106,7 +136,7 @@ def join_form(
         )
 
     # 3) Belum pernah / masih boleh isi -> buat submission baru.
-    submission = models.Submission(form_id=form.id, user_id=current_user.id)
+    submission = models.Submission(form_id=form.id, user_id=user_id, respondent_key=rkey)
     db.add(submission)
     db.commit()
     db.refresh(submission)
@@ -118,7 +148,8 @@ def save_answer(
     submission_id: str,
     payload: schemas.AnswerSave,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """
     Autosave — dipanggil tiap kali user jawab 1 soal (bukan nunggu submit akhir).
@@ -128,7 +159,7 @@ def save_answer(
     submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
-    if submission.user_id != current_user.id:
+    if not _owns_submission(submission, current_user, respondent_key):
         raise HTTPException(status_code=403, detail="Bukan submission milikmu")
     if submission.submitted_at is not None:
         raise HTTPException(status_code=400, detail="Form ini sudah kamu submit, tidak bisa diubah lagi")
@@ -148,7 +179,7 @@ def save_answer(
         answer.file_url = payload.file_url
     else:
         answer = models.Answer(
-            submission_id=submission_id, question_id=payload.question_id,
+            submission_id=submission_id, question_id=str(payload.question_id),
             answer_text=payload.answer_text, answer_options=payload.answer_options, file_url=payload.file_url,
         )
         db.add(answer)
@@ -162,13 +193,14 @@ def save_answer(
 def get_progress(
     submission_id: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """Buat indikator 'X/Y soal terjawab' di UI."""
     submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
-    if submission.user_id != current_user.id:
+    if not _owns_submission(submission, current_user, respondent_key):
         raise HTTPException(status_code=403, detail="Bukan submission milikmu")
 
     total = db.query(func.count(models.Question.id)).filter(models.Question.form_id == submission.form_id).scalar()
@@ -180,13 +212,14 @@ def get_progress(
 def submit_final(
     submission_id: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """Finalisasi submission. Kalau waktunya udah lewat end_date form, ditandai is_auto_submitted."""
     submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
-    if submission.user_id != current_user.id:
+    if not _owns_submission(submission, current_user, respondent_key):
         raise HTTPException(status_code=403, detail="Bukan submission milikmu")
     if submission.submitted_at is not None:
         raise HTTPException(status_code=400, detail="Sudah pernah disubmit")
@@ -329,7 +362,8 @@ def _is_answer_correct(question, ans):
 def get_submission_result(
     submission_id: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """
     Responden lihat hasil submission-nya sendiri (skor + benar/salah per soal).
@@ -339,7 +373,7 @@ def get_submission_result(
     submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
-    if submission.user_id != current_user.id:
+    if not _owns_submission(submission, current_user, respondent_key):
         raise HTTPException(status_code=403, detail="Bukan submission milikmu")
     if submission.submitted_at is None:
         raise HTTPException(status_code=400, detail="Hasil belum tersedia, submission belum disubmit")
@@ -392,7 +426,8 @@ def get_submission_result(
 def flag_cheated(
     submission_id: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    respondent_key: Optional[str] = Depends(get_respondent_key),
 ):
     """
     Frontend kirim flag ini kalau user keluar dari mode fullscreen.
@@ -401,7 +436,7 @@ def flag_cheated(
     submission = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if not submission:
         raise HTTPException(status_code=404, detail="Submission tidak ditemukan")
-    if submission.user_id != current_user.id:
+    if not _owns_submission(submission, current_user, respondent_key):
         raise HTTPException(status_code=403, detail="Bukan submission milikmu")
 
     form = db.query(models.Form).filter(models.Form.id == submission.form_id).first()

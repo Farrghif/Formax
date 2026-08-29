@@ -168,7 +168,9 @@ class Submission(Base):
 
     id = Column(String(36), primary_key=True, default=gen_uuid)
     form_id = Column(String(36), ForeignKey("forms.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # wajib login
+    # Responden: harus login ATAU punya respondent_key (anonim). user_id nullable utk anonim.
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # login (opsional)
+    respondent_key = Column(String(64), nullable=True)  # anonim: UUID client utk identitas tanpa akun
 
     started_at = Column(DateTime, default=datetime.utcnow)
     is_auto_submitted = Column(Boolean, default=False)

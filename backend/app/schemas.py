@@ -286,7 +286,8 @@ class ProgressOut(BaseModel):
 class SubmissionOut(BaseModel):
     id: uuid.UUID
     form_id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None  # None untuk responden anonim
+    respondent_key: Optional[str] = None  # identitas anonim
     user: Optional[UserOut] = None
     started_at: datetime
     is_auto_submitted: bool
@@ -321,7 +322,8 @@ class FormBriefOut(BaseModel):
 class MySubmissionOut(BaseModel):
     id: uuid.UUID
     form_id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
+    respondent_key: Optional[str] = None
     started_at: datetime
     submitted_at: Optional[datetime]
     is_auto_submitted: bool = False
