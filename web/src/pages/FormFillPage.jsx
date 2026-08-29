@@ -75,25 +75,26 @@ export default function FormFillPage() {
   const [showResult, setShowResult] = useState(false);
   const [resultLoading, setResultLoading] = useState(false);
 
-  // 1. Initial Load & Auth Check
+  // Helper untuk ambil token fresh (biar tidak stale closure)
+  const getToken = () => localStorage.getItem('token');
+
+  // 1. Initial Load (allow anonymous via respondent_key)
   useEffect(() => {
-    if (!token) {
-      navigate(`/auth?redirect=/f/${slug}`);
-      return;
-    }
+    // Jangan redirect paksa ke login — biarkan anonim isi via X-Respondent-Key
+    // Jika token ada, akan dipakai; jika tidak, akan pakai respondent_key otomatis
 
     const loadForm = async () => {
       try {
         setLoading(true);
         setErrorMsg('');
-        const formData = await getPublicFormBySlug(token, slug);
+        const formData = await getPublicFormBySlug(getToken(), slug);
         setForm(formData);
 
         // Try auto joining form (if no join token required or user already joined)
         try {
           if (joiningRef.current) return;
           joiningRef.current = true;
-          const sub = await joinForm(token, slug);
+          const sub = await joinForm(getToken(), slug);
           setSubmissionId(sub.id);
           if (sub.submitted_at) {
             setIsSubmitted(true);
@@ -133,14 +134,14 @@ export default function FormFillPage() {
     };
 
     loadForm();
-  }, [slug, token, navigate]);
+  }, [slug, navigate]);
 
   // Handle manual join with token
   const handleJoinWithToken = async (e) => {
     e.preventDefault();
     setJoinError('');
     try {
-      const sub = await joinForm(token, slug, joinTokenInput);
+      const sub = await joinForm(getToken(), slug, joinTokenInput);
       setSubmissionId(sub.id);
       setShowJoinModal(false);
       if (sub.submitted_at) {
@@ -172,7 +173,7 @@ export default function FormFillPage() {
     if (!submissionId) return;
     try {
       setIsSubmitting(true);
-      await submitFinal(token, submissionId);
+      await submitFinal(getToken(), submissionId);
       setIsSubmitted(true);
       doneRef.current = true;
       setShowSubmitModal(false);
@@ -209,7 +210,7 @@ export default function FormFillPage() {
     setCheated(true);
     setShowFullscreenWarning(true);
     if (submissionId && form?.require_fullscreen) {
-      flagCheated(token, submissionId).catch(() => {});
+      flagCheated(getToken(), submissionId).catch(() => {});
     }
   }, [submissionId, form, token]);
 
@@ -239,7 +240,7 @@ export default function FormFillPage() {
     if (!submissionId) return;
     setResultLoading(true);
     try {
-      const data = await getSubmissionResult(token, submissionId);
+      const data = await getSubmissionResult(getToken(), submissionId);
       setResult(data);
       setShowResult(true);
       if (document.fullscreenElement) {
@@ -314,7 +315,7 @@ export default function FormFillPage() {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setShowProfilePopover(true);
     if (!userProfile) {
-      getMe(token)
+      getMe(getToken())
         .then((data) => setUserProfile(data))
         .catch(() => {});
     }
@@ -367,7 +368,7 @@ export default function FormFillPage() {
 
     // Trigger autosave to backend if submission exists
     if (submissionId) {
-      saveAnswer(token, submissionId, {
+      saveAnswer(getToken(), submissionId, {
         question_id: questionId,
         answer_text: updated[questionId].answer_text || null,
         answer_options: updated[questionId].answer_options || null,
@@ -381,7 +382,7 @@ export default function FormFillPage() {
     if (!file) return;
     setUploadingFiles((prev) => ({ ...prev, [questionId]: true }));
     try {
-      const result = await uploadFile(token, file);
+      const result = await uploadFile(getToken(), file);
       handleAnswerChange(questionId, {
         file_url: result.file_url,
         answer_text: file.name,

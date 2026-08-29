@@ -49,9 +49,17 @@ def _resolve_identity(current_user, respondent_key):
 def _owns_submission(submission, current_user, respondent_key):
     """Cek apakah request ini pemilik submission (login atau anonim)."""
     if current_user is not None:
-        return submission.user_id == str(current_user.id)
+        # Login: cocokkan user_id (handle UUID vs String); fallback cek respondent_key juga
+        if submission.user_id is not None and str(submission.user_id) == str(current_user.id):
+            return True
+        key = (respondent_key or "").strip()
+        if key and submission.respondent_key is not None and str(submission.respondent_key) == key:
+            return True
+        return False
     key = (respondent_key or "").strip()
-    return bool(key) and submission.respondent_key == key
+    if key and submission.respondent_key is not None and str(submission.respondent_key) == key:
+        return True
+    return False
 
 
 @router.post("/forms/public/{slug}/join", response_model=schemas.SubmissionOut)
