@@ -525,7 +525,7 @@ export default function FormBuilderPage() {
       type: 'single_choice',
       label: '',
       placeholder: '',
-      is_required: false,
+      is_required: allRequired,
       order_index: questions.length,
       settings: {},
       options: [
@@ -920,6 +920,20 @@ export default function FormBuilderPage() {
     if (type === 'single_choice') return 'fb-option-radio';
     if (type === 'checkbox') return 'fb-option-checkbox';
     return null;
+  };
+
+  // Global wajib isi — bulk set semua pertanyaan (A)
+  const allRequired = questions.length > 0 && questions.every((q) => q.is_required);
+  const setAllRequired = (val) => {
+    if (questions.length === 0) {
+      showToast('Tambah soal dulu', 'error');
+      return;
+    }
+    setQuestions((prev) => prev.map((q) => ({ ...q, is_required: val, _saved: false })));
+    showToast(
+      val ? `Semua ${questions.length} soal dijadikan wajib diisi` : 'Semua soal dijadikan tidak wajib',
+      'success'
+    );
   };
 
   if (loading) {
@@ -1623,6 +1637,25 @@ export default function FormBuilderPage() {
                     <span>Peringatan: jika responden keluar dari mode full screen, submission akan ditandai sebagai curang (is_cheated).</span>
                   </div>
                 )}
+
+                {/* Semua Pertanyaan Wajib Diisi — bulk */}
+                <div className="fb-setting-row">
+                  <div>
+                    <p className="fb-setting-row-label">Semua Pertanyaan Wajib Diisi</p>
+                    <p className="fb-setting-row-desc">
+                      {questions.length === 0
+                        ? 'Tambah soal dulu untuk mengatur'
+                        : `${questions.filter((q) => q.is_required).length}/${questions.length} soal wajib • Aktifkan untuk mewajibkan semua sekaligus`}
+                    </p>
+                  </div>
+                  <button
+                    className={`fb-toggle ${allRequired ? 'on' : 'off'}`}
+                    onClick={() => setAllRequired(!allRequired)}
+                    disabled={questions.length === 0}
+                    aria-label="Toggle semua wajib diisi"
+                    title={questions.length === 0 ? 'Tambah soal dulu' : allRequired ? 'Jadikan semua tidak wajib' : 'Jadikan semua wajib'}
+                  />
+                </div>
 
                 {/* Date Range */}
                 <div className="fb-setting-group" style={{ marginTop: '22px' }}>
