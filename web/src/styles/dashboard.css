@@ -2662,3 +2662,129 @@
   color: #64748b;
 }
 
+/* ============================================================
+   RIWAYAT — RESPONSIVE ANDROID (tanpa ubah desktop)
+   Desktop tetap seperti sekarang, hanya Android yang dioptimalkan
+   ============================================================ */
+@media (max-width: 768px) {
+  .history-card-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .history-card-preview {
+    height: 120px;
+  }
+  .table-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+  .table-header-filters {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .table-header-filters .db-search {
+    width: 100% !important;
+  }
+  .filter-select {
+    width: 100%;
+  }
+  .resp-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .resp-data-table {
+    min-width: 620px;
+  }
+  .results-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .btn-export-excel {
+    width: 100%;
+    justify-content: center;
+  }
+  .analytics-q-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .detail-question-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .db-content {
+    padding: 16px 12px;
+  }
+  .history-card-body {
+    padding: 12px 14px;
+  }
+  .history-card-title {
+    font-size: 15px;
+  }
+  .history-card-responses-text {
+    font-size: 12px;
+  }
+  .history-btn-result {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .stat-card {
+    padding: 16px 14px;
+  }
+  .stat-label {
+    font-size: 10px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .table-card-container {
+    border-radius: 14px;
+  }
+  .table-card-title {
+    font-size: 16px;
+  }
+  .resp-data-table th,
+  .resp-data-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .detail-info-card {
+    padding: 16px;
+    gap: 12px;
+  }
+  .detail-info-title {
+    font-size: 16px;
+  }
+  .detail-info-row {
+    padding: 9px 10px;
+  }
+  .detail-question-card,
+  .analytics-question-card {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+  .detail-question-title,
+  .analytics-q-title {
+    font-size: 14px;
+  }
+  .detail-answers-pane {
+    padding-right: 0;
+  }
+  .analytics-q-tags {
+    flex-wrap: wrap;
+  }
+  .results-page-container {
+    gap: 16px;
+  }
+  .back-nav-btn {
+    font-size: 13px;
+  }
+}
+
