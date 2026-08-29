@@ -1441,28 +1441,9 @@ export default function FormBuilderPage() {
 
               {/* Floating actions */}
               <div className="fb-float-actions">
-                <button className="fb-float-btn" onClick={addQuestion} title="Tambah pertanyaan teks">
+                <button className="fb-float-btn" onClick={addQuestion} title="Tambah pertanyaan">
                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
-                  </svg>
-                </button>
-                <button className="fb-float-btn" title="Tambah gambar" onClick={() => showToast('Fitur gambar coming soon')}>
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                </button>
-                <button className="fb-float-btn" title="Tambah video" onClick={() => showToast('Fitur video coming soon')}>
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <polygon points="23 7 16 12 23 17 23 7" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" />
-                  </svg>
-                </button>
-                <button className="fb-float-btn" title="Tambah section" onClick={() => showToast('Fitur section coming soon')}>
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
                   </svg>
                 </button>
               </div>
