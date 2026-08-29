@@ -420,6 +420,20 @@ export default function DashboardPage() {
     f.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Search untuk Dasbor & Templat (sebelumnya hanya Riwayat yang jalan)
+  const q = searchQuery.trim().toLowerCase();
+  const filteredSystemTemplates = q
+    ? systemTemplates.filter(
+        (t) => t.title.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q))
+      )
+    : systemTemplates;
+  const filteredRecentForms = q ? filteredForms.slice(0, 6) : recentForms;
+  const filteredTemplates = q
+    ? templates.filter(
+        (t) => t.title.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q))
+      )
+    : templates;
+
   // Filter respondents by search & status
   const filteredRespondents = submissionsList.filter((sub) => {
     const name = sub.user?.full_name || 'Responden (User)';
@@ -605,8 +619,8 @@ export default function DashboardPage() {
                   <span>Buat Templat Baru</span>
                 </button>
 
-                {systemTemplates.length > 0 ? (
-                  systemTemplates.map((tpl, idx) => {
+                {filteredSystemTemplates.length > 0 ? (
+                  filteredSystemTemplates.map((tpl, idx) => {
                     const bgClass = idx === 0 ? 'blank-bg' : idx === 1 ? 'attendance-bg' : 'exam-bg';
                     const subtitles = ['Mulai dari kosong', 'Pelacakan acara atau kelas', 'Penilaian & Kuis'];
                     return (
@@ -639,6 +653,10 @@ export default function DashboardPage() {
                       </div>
                     );
                   })
+                ) : q ? (
+                  <div className="db-empty-state" style={{ gridColumn: 'span 3', padding: '24px' }}>
+                    <p>Tidak ada template untuk "{searchQuery}"</p>
+                  </div>
                 ) : (
                   <>
                     {[
@@ -676,9 +694,9 @@ export default function DashboardPage() {
 
               {/* Riwayat Terbaru */}
               <h2 className="db-section-title">Riwayat Terbaru</h2>
-              {recentForms.length > 0 ? (
+              {filteredRecentForms.length > 0 ? (
                 <div className="db-recent-grid">
-                  {recentForms.map((form) => (
+                  {filteredRecentForms.map((form) => (
                     <div key={form.id} className="db-recent-card" onClick={() => handleFormClick(form)}>
                       <div className="db-recent-preview">
                         {form.banner_url ? (
@@ -734,6 +752,10 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+              ) : q ? (
+                <div className="db-empty-state">
+                  <p>Tidak ada form untuk "{searchQuery}"</p>
+                </div>
               ) : (
                 <div className="db-empty-state">
                   <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -750,9 +772,9 @@ export default function DashboardPage() {
           {activeNav === 'template' && (
             <>
               <h2 className="db-section-title">Semua Templat</h2>
-              {templates.length > 0 ? (
+              {filteredTemplates.length > 0 ? (
                 <div className="db-recent-grid">
-                  {templates.map((tpl) => (
+                  {filteredTemplates.map((tpl) => (
                     <div key={tpl.id} className="db-recent-card" onClick={() => handleTemplateClick(tpl)}>
                       <div className="db-recent-preview">
                         {tpl.banner_url ? (
@@ -802,6 +824,10 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : q ? (
+                <div className="db-empty-state">
+                  <p>Tidak ada template untuk "{searchQuery}"</p>
                 </div>
               ) : (
                 <div className="db-empty-state">
