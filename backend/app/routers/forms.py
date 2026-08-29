@@ -205,7 +205,7 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
-    frontend_url = os.getenv("FRONTEND_URL", "https://formax-seven.vercel.app").strip().rstrip("/")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
     public_url = f"{frontend_url}/f/{form.slug}"
     img = qrcode.make(public_url)
 
