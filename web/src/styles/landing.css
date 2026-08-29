@@ -648,9 +648,12 @@
   font-weight: 700;
   color: #ffffff;
   background: linear-gradient(135deg, #2563eb, #1e3a8a);
+  border: 1.5px solid transparent;
   box-shadow: 0 8px 22px rgba(37, 99, 235, 0.35);
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
+.tp-hero-actions .tp-btn-cta { margin-top: 0; }
 
 .tp-btn-cta:hover {
   transform: translateY(-2px);
@@ -1223,8 +1226,11 @@
 .tp-hero.tp-hero--about { padding: 72px 0 64px; }
 .tp-hero.tp-hero--about .tp-hero-inner { align-items: center; text-align: center; }
 .tp-hero.tp-hero--about .tp-hero-title { text-align: center; text-wrap: balance; margin-left: auto; margin-right: auto; }
-.tp-hero.tp-hero--about .tp-hero-sub { text-align: center; text-wrap: balance; margin-left: auto; margin-right: auto; }
-.tp-hero-actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 28px; flex-wrap: wrap; width: 100%; }
+.tp-hero.tp-hero--about .tp-hero-sub { text-align: center; text-wrap: balance; margin: 28px auto 0; max-width: 680px; line-height: 1.75; }
+.tp-hero-actions { display: flex; gap: 12px; justify-content: center; align-items: stretch; margin-top: 32px; flex-wrap: wrap; width: 100%; }
+.tp-btn-cta, .tp-btn-ghost {
+  min-height: 48px; box-sizing: border-box;
+}
 .tp-btn-ghost {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 14px 30px; border-radius: 12px; font-size: 15px; font-weight: 700;
@@ -1298,4 +1304,24 @@
 @media (max-width: 600px) {
   .tp-features-grid, .tp-values-grid, .tp-team-grid { grid-template-columns: 1fr; }
   .tp-hero-title { font-size: 30px; }
+}
+/* Android web — 480px ke bawah: beranda, tentang, cara pakai full responsive */
+@media (max-width: 480px) {
+  .hp-header-inner, .tp-hero-inner, .tp-section-inner, .tp-about-grid, .tp-features-grid, .tp-values-grid, .tp-team-grid, .hp-section-inner, .cp-hero-inner, .hp-cta-inner, .tp-cta-inner { padding-left: 16px; padding-right: 16px; }
+  .hp-hero, .tp-hero, .tp-hero.tp-hero--about, .cp-hero { padding: 48px 0 40px; }
+  .hp-hero-title, .tp-hero-title, .cp-hero-title { font-size: 26px; line-height: 1.25; letter-spacing: -0.6px; }
+  .hp-hero-sub, .tp-hero-sub, .cp-hero-sub, .tp-section-desc { font-size: 14px; line-height: 1.6; }
+  .tp-hero-actions, .hp-hero-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+  .tp-hero-actions .tp-btn-cta, .tp-hero-actions .tp-btn-ghost, .hp-hero-actions .hp-btn-primary, .hp-hero-actions .hp-btn-outline { width: 100%; min-height: 46px; }
+  .tp-hero-stats { gap: 12px; }
+  .tp-stat { min-width: 90px; }
+  .tp-about-grid { gap: 20px; }
+  .tp-about-card, .tp-feature-card, .tp-value-card, .tp-team-card, .cp-step-content { padding: 18px; }
+  .hp-features, .tp-features, .tp-about, .tp-team, .cp-features-section, .tp-values { padding: 48px 0; }
+  .hp-cta-inner, .tp-cta-inner { padding: 32px 20px; border-radius: 18px; }
+  .hp-cta-title, .tp-cta-title { font-size: 22px; }
+}
+@media (max-width: 360px) {
+  .hp-hero-title, .tp-hero-title, .cp-hero-title { font-size: 24px; }
+  .tp-section-title, .hp-section-title { font-size: 26px; }
 }
