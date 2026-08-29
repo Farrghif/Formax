@@ -930,47 +930,31 @@ export default function DashboardPage() {
                     </button>
                   </div>
 
-                  {/* 3 Summary Stats Cards */}
-                  <div className="stats-cards-grid">
-                    {/* Card 1: Total Responden */}
-                    <div className="stat-card">
-                      <div className="stat-icon-box">
-                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                      </div>
-                      <div className="stat-info-wrap">
-                        <span className="stat-label">TOTAL RESPONDEN</span>
-                        <span className="stat-value">{totalRespondents}</span>
-                      </div>
-                    </div>
+                  {/* Score Analysis Top Banner Row matching mockup (Total Respons, Nilai Tertinggi, Nilai Terendah) */}
+                  {(() => {
+                    // Highest & Lowest scores calculation
+                    const highestScore = scoredSubs.length > 0 ? Math.max(...scoredSubs.map((s) => s.scorePercent)) : '-';
+                    const lowestScore = scoredSubs.length > 0 ? Math.min(...scoredSubs.map((s) => s.scorePercent)) : '-';
 
-                    {/* Card 2: Rata-Rata Skor */}
-                    <div className="stat-card">
-                      <div className="stat-icon-box">
-                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2" />
-                        </svg>
+                    return (
+                      <div className="score-analysis-top-banner">
+                        <div className="score-top-item">
+                          <span className="score-top-num">{totalRespondents}</span>
+                          <span className="score-top-lbl">TOTAL RESPONS</span>
+                        </div>
+                        <div className="score-top-divider" />
+                        <div className="score-top-item">
+                          <span className="score-top-num">{highestScore}</span>
+                          <span className="score-top-lbl">NILAI TERTINGGI</span>
+                        </div>
+                        <div className="score-top-divider" />
+                        <div className="score-top-item">
+                          <span className="score-top-num">{lowestScore}</span>
+                          <span className="score-top-lbl">NILAI TERENDAH</span>
+                        </div>
                       </div>
-                      <div className="stat-info-wrap">
-                        <span className="stat-label">RATA-RATA SKOR</span>
-                        <span className="stat-value">{avgScore !== null ? `${avgScore}/100` : '-'}</span>
-                      </div>
-                    </div>
-
-                    {/* Card 3: Waktu Rata-Rata */}
-                    <div className="stat-card">
-                      <div className="stat-icon-box">
-                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="stat-info-wrap">
-                        <span className="stat-label">WAKTU RATA-RATA</span>
-                        <span className="stat-value">{avgDuration > 0 ? `${avgDuration} Menit` : '-'}</span>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Table Card Container */}
                   <div className="table-card-container">
@@ -1074,6 +1058,110 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* 2 Score & Type Analysis Cards (Matching Mockup) */}
+                  {(() => {
+                    // Score distribution buckets
+                    const scoreRanges = [
+                      { label: '90-100', min: 90, max: 100 },
+                      { label: '80-89', min: 80, max: 89 },
+                      { label: '70-79', min: 70, max: 79 },
+                      { label: '<70', min: 0, max: 69 },
+                    ];
+                    const scoreBuckets = scoreRanges.map((range) => {
+                      const count = scoredSubs.filter(
+                        (s) => s.scorePercent >= range.min && s.scorePercent <= range.max
+                      ).length;
+                      return { ...range, count };
+                    });
+                    const maxBucketCount = Math.max(...scoreBuckets.map((b) => b.count), 1);
+
+                    // Assessment type (auto vs manual — auto = has gradable questions)
+                    const autoCount = submissionsList.filter((s) => s.totalGradable > 0).length;
+                    const manualCount = submissionsList.length - autoCount;
+                    const total = submissionsList.length;
+                    const autoPercent = total > 0 ? Math.round((autoCount / total) * 100) : 0;
+                    const manualPercent = total > 0 ? 100 - autoPercent : 0;
+
+                    return (
+                      <div className="score-analysis-charts-row">
+                        {/* Card 1: Distribusi Tipe Penilaian */}
+                        <div className="score-chart-card">
+                          <div className="score-chart-header">
+                            <h4 className="score-chart-title">Distribusi Tipe Penilaian</h4>
+                            <button className="score-chart-dots" title="Opsi">•••</button>
+                          </div>
+                          <div className="score-donut-body">
+                            <div className="score-donut-ring-wrap">
+                              <svg viewBox="0 0 120 120" className="score-donut-svg">
+                                <circle cx="60" cy="60" r="48" fill="none" stroke="#e2e8f0" strokeWidth="18" />
+                                <circle
+                                  cx="60" cy="60" r="48"
+                                  fill="none"
+                                  stroke="#0053db"
+                                  strokeWidth="18"
+                                  strokeDasharray={`${autoPercent * 3.016} ${300 - autoPercent * 3.016}`}
+                                  strokeDashoffset="75"
+                                  strokeLinecap="round"
+                                />
+                                {manualCount > 0 && (
+                                  <circle
+                                    cx="60" cy="60" r="48"
+                                    fill="none"
+                                    stroke="#10b981"
+                                    strokeWidth="18"
+                                    strokeDasharray={`${manualPercent * 3.016} ${300 - manualPercent * 3.016}`}
+                                    strokeDashoffset={75 - autoPercent * 3.016}
+                                    strokeLinecap="round"
+                                  />
+                                )}
+                                <text x="60" y="54" textAnchor="middle" className="score-donut-center-val">{total}</text>
+                                <text x="60" y="70" textAnchor="middle" className="score-donut-center-label">Total</text>
+                              </svg>
+                            </div>
+                            <div className="score-donut-legend">
+                              <div className="score-donut-legend-item">
+                                <span className="score-donut-dot dot-auto" />
+                                <span className="score-donut-legend-text">Otomatis</span>
+                                <span className="score-donut-legend-count">{autoCount}</span>
+                              </div>
+                              <div className="score-donut-legend-item">
+                                <span className="score-donut-dot dot-manual" />
+                                <span className="score-donut-legend-text">Manual</span>
+                                <span className="score-donut-legend-count">{manualCount}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card 2: Score Analysis Bars */}
+                        <div className="score-chart-card">
+                          <div className="score-chart-header">
+                            <h4 className="score-chart-title">Score Analysis</h4>
+                            <button className="score-chart-dots" title="Opsi">•••</button>
+                          </div>
+                          <div className="score-bars-container">
+                            {scoreBuckets.map((bucket, bIdx) => (
+                              <div key={bIdx} className="score-bar-column">
+                                <div className={`score-bar-count-badge ${bucket.count > 0 ? 'active' : ''}`}>
+                                  ✓ {bucket.count} Org
+                                </div>
+                                <div className="score-bar-track-vertical">
+                                  <div
+                                    className={`score-bar-fill-vertical ${bIdx === 0 ? 'striped-green' : 'striped-blue'}`}
+                                    style={{
+                                      height: `${Math.max((bucket.count / maxBucketCount) * 100, bucket.count > 0 ? 25 : 0)}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="score-bar-range-label">{bucket.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Visual Analytics & Question Summary Charts */}
                   <div className="analytics-section">

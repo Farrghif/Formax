@@ -21,6 +21,12 @@ export default function FormFillPage() {
   const [form, setForm] = useState(null);
   const [submissionId, setSubmissionId] = useState(null);
   const [answers, setAnswers] = useState({}); // { [question_id]: { answer_text, answer_options, file_url } }
+  const [bookmarked, setBookmarked] = useState(() => {
+    try {
+      const raw = localStorage.getItem(`bm:${slug}`);
+      return new Set(JSON.parse(raw || '[]'));
+    } catch { return new Set(); }
+  });
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -170,6 +176,8 @@ export default function FormFillPage() {
       setIsSubmitted(true);
       doneRef.current = true;
       setShowSubmitModal(false);
+      try { localStorage.removeItem(`bm:${slug}`); } catch {}
+      setBookmarked(new Set());
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -327,6 +335,24 @@ export default function FormFillPage() {
     if (ans.file_url) return true;
     return false;
   };
+
+  // Bookmark — hanya frontend, persist per form slug (kuning di Navigator)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`bm:${slug}`);
+      setBookmarked(new Set(JSON.parse(raw || '[]')));
+    } catch { setBookmarked(new Set()); }
+  }, [slug]);
+
+  const toggleBookmark = useCallback((qId) => {
+    setBookmarked((prev) => {
+      const next = new Set(prev);
+      if (next.has(qId)) next.delete(qId);
+      else next.add(qId);
+      try { localStorage.setItem(`bm:${slug}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, [slug]);
 
   // Answer handler & Autosave
   const handleAnswerChange = (questionId, newAnswerData) => {
@@ -901,17 +927,24 @@ export default function FormFillPage() {
           <div className="navigator-grid">
             {questions.map((q, idx) => {
               const isAns = isQuestionAnswered(q.id);
+              const isBm = bookmarked.has(q.id);
               const qPage = Math.floor(idx / QUESTIONS_PER_PAGE);
               const isCurrentPage = qPage === currentPage;
+              let boxState = 'unanswered';
+              if (isBm && !isAns) boxState = 'bookmarked';
+              else if (isAns) boxState = 'answered';
+              const bmClass = isBm && isAns ? ' bookmarked' : isBm && !isAns ? '' : '';
+              // untuk sudah diisi+bookmark: tetap biru tapi tambah strip kuning via ::after
+              const finalClass = `navigator-box ${boxState}${bmClass} ${isCurrentPage ? 'current-page' : ''}`;
               return (
                 <div
                   key={q.id}
-                  className={`navigator-box ${isAns ? 'answered' : 'unanswered'} ${isCurrentPage ? 'current-page' : ''}`}
+                  className={finalClass}
                   onClick={() => {
                     setCurrentPage(qPage);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  title={`Soal #${idx + 1} (${isAns ? 'Sudah Diisi' : 'Belum Diisi'})`}
+                  title={`Soal #${idx + 1} (${isAns ? 'Sudah Diisi' : 'Belum Diisi'}${isBm ? ' • Ditandai' : ''})`}
                 >
                   {idx + 1}
                 </div>
@@ -963,6 +996,17 @@ export default function FormFillPage() {
                     {q.is_required && <span className="required-star">*</span>}
                   </div>
                   <div className="question-header-right">
+                    <button
+                      className={`q-bookmark-btn ${bookmarked.has(q.id) ? 'active' : ''}`}
+                      onClick={() => toggleBookmark(q.id)}
+                      title={bookmarked.has(q.id) ? 'Hapus tanda' : 'Tandai'}
+                      aria-label={bookmarked.has(q.id) ? 'Hapus tanda bookmark' : 'Tandai soal'}
+                      type="button"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={bookmarked.has(q.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                      </svg>
+                    </button>
                     <span className="question-type-tag">{getTypeLabel(q.type)}</span>
                     {points !== null && <span className="points-badge">{points} poin</span>}
                   </div>

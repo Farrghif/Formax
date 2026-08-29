@@ -4,3 +4,7 @@ formmaker.db
 *.pyc
 __pycache__/
 *.egg-info/
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log

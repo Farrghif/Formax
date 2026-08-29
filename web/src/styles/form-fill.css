@@ -302,6 +302,8 @@
 }
 
 .navigator-box {
+  position: relative;
+  overflow: hidden;
   width: 38px;
   height: 38px;
   border-radius: 8px;
@@ -334,6 +336,60 @@
 
 .navigator-box.current-page {
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0053db;
+}
+
+/* Bookmark — frontend only, kuning */
+.navigator-box.bookmarked {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+.navigator-box.bookmarked:hover {
+  background-color: #fde68a;
+}
+/* Sudah diisi (biru) + ditandai → tetap biru tapi ada strip kuning kecil pojok kanan atas */
+.navigator-box.answered.bookmarked::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 14px solid #f59e0b;
+  border-left: 14px solid transparent;
+  border-radius: 0 8px 0 0;
+  pointer-events: none;
+}
+
+/* Tombol bookmark di kanan atas question-card */
+.q-bookmark-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.q-bookmark-btn:hover {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #f59e0b;
+  transform: translateY(-1px);
+}
+.q-bookmark-btn.active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.22);
+}
+.q-bookmark-btn.active:hover {
+  background: #fde68a;
 }
 
 /* ============ Content Area ============ */
