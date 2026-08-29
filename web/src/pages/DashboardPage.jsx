@@ -570,7 +570,6 @@ export default function DashboardPage() {
               <span className="db-user-email">{user?.email}</span>
             </div>
           </div>
-          <ThemeToggle size="sidebar" title="Ganti tema" />
           <button id="btn-logout" className="db-logout-btn" onClick={handleLogout} aria-label="Logout">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
