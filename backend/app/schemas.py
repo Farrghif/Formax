@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List, Any
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from .models import QuestionType, FormStatus
+from .sanitize import sanitize_html
 
 
 # ============================================================
@@ -57,6 +58,11 @@ class QuestionOptionCreate(BaseModel):
     is_correct: bool = False
     is_other: bool = False
 
+    @field_validator("label")
+    @classmethod
+    def _clean_label(cls, v):
+        return sanitize_html(v)
+
 
 class QuestionOptionUpdate(BaseModel):
     label: Optional[str] = None
@@ -86,6 +92,11 @@ class QuestionCreate(BaseModel):
     settings: dict = {}
     options: List[QuestionOptionCreate] = []
 
+    @field_validator("label", "placeholder")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
+
 
 class QuestionUpdate(BaseModel):
     type: Optional[QuestionType] = None
@@ -94,6 +105,11 @@ class QuestionUpdate(BaseModel):
     is_required: Optional[bool] = None
     order_index: Optional[int] = None
     settings: Optional[dict] = None
+
+    @field_validator("label", "placeholder")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
 
 
 class QuestionOut(BaseModel):
@@ -119,12 +135,22 @@ class TemplateCreate(BaseModel):
     banner_url: Optional[str] = None
     questions: List[QuestionCreate] = []
 
+    @field_validator("title", "description")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
+
 
 class TemplateUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     banner_url: Optional[str] = None
     questions: Optional[List[QuestionCreate]] = None  # untuk draft update, replace semua questions
+
+    @field_validator("title", "description")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
 
 
 class TemplateOut(BaseModel):
@@ -159,6 +185,11 @@ class FormCreate(BaseModel):
     require_fullscreen: bool = False
     reveal_answers: bool = False
 
+    @field_validator("title", "description")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
+
 
 class FormUpdate(BaseModel):
     title: Optional[str] = None
@@ -172,6 +203,12 @@ class FormUpdate(BaseModel):
     max_submissions: Optional[int] = None
     require_fullscreen: Optional[bool] = None
     reveal_answers: Optional[bool] = None
+    questions: Optional[List[QuestionCreate]] = None  # draft/update: replace semua questions
+
+    @field_validator("title", "description")
+    @classmethod
+    def _clean_html_fields(cls, v):
+        return sanitize_html(v)
 
 
 class FormOut(BaseModel):

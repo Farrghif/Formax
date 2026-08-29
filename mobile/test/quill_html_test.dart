@@ -67,6 +67,11 @@ void main() {
       {'insert': '\n', 'attributes': {'align': 'center'}},
     ];
     final html = QuillHtml.documentToHtml(Document.fromJson(deltaJson));
+    // Ukuran ditulis sebagai px agar konsisten lintas renderer (bukan em).
+    expect(html, contains('font-size: 18px'));
+    // Warna tetap 6-digit #rrggbb.
+    expect(html, contains('color: #ff0000'));
+    expect(html, contains('background-color: #ffff00'));
     // Restore the HTML into a fresh Quill document, exactly like the editor
     // does when a saved form/template is reopened.
     final restored = QuillHtml.documentFromHtml(html).toDelta().toJson();
@@ -83,7 +88,35 @@ void main() {
     expect(restored.join(), contains('italic'));
     expect(restored.join(), contains('#ff0000'));
     expect(restored.join(), contains('align'));
-    expect(restored.join(), contains('large'));
+    // Ukuran 'large' round-trip balik sebagai 18 (px).
+    expect(restored.join(), contains('18'));
+  });
+
+  test('warna 8-digit ARGB (format lama flutter_quill) dinormalisasi ke 6-digit', () {
+    expect(QuillHtml.normalizeHexColor('#FFFFEB3B'), '#FFEB3B');
+    expect(QuillHtml.normalizeHexColor('#FF558B2F'), '#558B2F');
+    expect(QuillHtml.normalizeHexColor('#ff0000'), '#ff0000');
+    expect(
+      QuillHtml.normalizeHtmlColors(
+              '<p><span style="color: #FF558B2F; font-size: 0.75em;">x</span></p>')
+          .toLowerCase(),
+      contains('#558b2f'),
+    );
+    expect(QuillHtml.normalizeHtmlColors('a #FF558B2F b').toLowerCase(),
+        contains('#558b2f'));
+  });
+
+  test('ukuran lama 0.75em/1.5em/2.5em masih terbaca sebagai small/large/huge', () {
+    final html = QuillHtml.documentToHtml(Document.fromJson([
+      {'insert': 'x', 'attributes': {'size': 'small'}},
+      {'insert': '\n'},
+    ]));
+    expect(html, contains('font-size: 12px'));
+    final restored = QuillHtml.documentFromHtml('<p style="font-size: 0.75em;">x</p>')
+        .toDelta()
+        .toJson()
+        .join();
+    expect(restored, contains('small'));
   });
 
   test('headers, alignment and bullet lists round-trip', () {

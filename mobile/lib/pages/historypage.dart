@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import '../models/form_model.dart';
 import '../services/api_service.dart';
+import '../utils/export_helper.dart';
 import 'result_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -70,18 +71,21 @@ class _HistoryPageState extends State<HistoryPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
+        Text(
           'History',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF111827),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Lihat hasil jawaban formulir yang sudah dipublikasikan.',
-          style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 20),
         ...forms.map(
@@ -98,12 +102,12 @@ class _HistoryPageState extends State<HistoryPage> {
     final isHighlighted = form.id == widget.highlightFormId;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isHighlighted
               ? const Color(0xFFB4C5D4)
-              : const Color(0xFFE5E7EB),
+              : Theme.of(context).colorScheme.outlineVariant,
           width: isHighlighted ? 2 : 1,
         ),
         boxShadow: [
@@ -163,10 +167,10 @@ class _HistoryPageState extends State<HistoryPage> {
               children: [
                 Text(
                   form.plainTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -174,31 +178,31 @@ class _HistoryPageState extends State<HistoryPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.people_outline,
                       size: 14,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${form.totalSubmissions} responden',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6B7280),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(
+                    Icon(
                       Icons.calendar_today_outlined,
                       size: 14,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _formatDate(form.createdAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6B7280),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -208,13 +212,11 @@ class _HistoryPageState extends State<HistoryPage> {
                   children: [
                     // Export button
                     OutlinedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Mengekspor ke spreadsheet...'),
-                          ),
-                        );
-                      },
+                      onPressed: () => exportFormSubmissionsWithShare(
+                        context,
+                        form.id,
+                        '${form.slug.isEmpty ? form.id : form.slug}-hasil.xlsx',
+                      ),
                       icon: const Icon(Icons.table_chart_outlined, size: 14),
                       label: const Text('Export'),
                       style: OutlinedButton.styleFrom(
@@ -258,6 +260,18 @@ class _HistoryPageState extends State<HistoryPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    // Hapus form (konfirmasi — parity web)
+                    IconButton(
+                      onPressed: () => _confirmDeleteForm(form),
+                      tooltip: 'Hapus form',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -268,34 +282,90 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  Future<void> _confirmDeleteForm(FormModel form) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text('Hapus Form'),
+          ],
+        ),
+        content: Text(
+          'Yakin ingin menghapus form "${form.plainTitle}"? '
+          'Semua respons yang masuk ikut terhapus dan tindakan ini tidak bisa dibatalkan.',
+          style: const TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final res = await ApiService.deleteForm(form.id);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Form berhasil dihapus')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus: ${res['message']}'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const SizedBox(height: 40),
-        const Center(
+        Center(
           child: Icon(
             Icons.history_toggle_off,
             size: 72,
-            color: Colors.black12,
+            color: colorScheme.outline,
           ),
         ),
         const SizedBox(height: 16),
-        const Center(
+        Center(
           child: Text(
             'Belum ada formulir',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black38,
+              color: colorScheme.onSurface,
             ),
           ),
         ),
-        const Center(
+        Center(
           child: Text(
             'Publikasikan formulir dari tab Template\nuntuk melihatnya di sini.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Colors.black26),
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
           ),
         ),
       ],
@@ -303,20 +373,21 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildErrorState(String error) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.wifi_off, size: 48, color: Colors.black26),
+          Icon(Icons.wifi_off, size: 48, color: colorScheme.outline),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Tidak dapat memuat data',
-            style: TextStyle(fontSize: 15, color: Colors.black45),
+            style: TextStyle(fontSize: 15, color: colorScheme.onSurface),
           ),
           const SizedBox(height: 4),
           Text(
             error,
-            style: const TextStyle(fontSize: 12, color: Colors.black26),
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           ElevatedButton(onPressed: _refresh, child: const Text('Coba Lagi')),

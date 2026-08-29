@@ -12,6 +12,43 @@ const ZOOM_MIN = 50;
 const ZOOM_MAX = 200;
 const ZOOM_STEP = 10;
 
+// Normalisasi warna hex 8-digit ARGB (format lama dari editor mobile, mis.
+// #FF4FC3F7) menjadi #RGB 6-digit. Browser mengartikan 8-digit sebagai
+// `#RRGGBBAA` (CSS Color 4) sehingga warna yang dipilih tampil salah/pink.
+function normalizeColors(html) {
+  return String(html ?? '').replace(/#([0-9A-Fa-f]{8})\b/g, (_m, hex) => {
+    const a = parseInt(hex.slice(0, 2), 16);
+    const r = parseInt(hex.slice(2, 4), 16);
+    const g = parseInt(hex.slice(4, 6), 16);
+    const b = parseInt(hex.slice(6, 8), 16);
+    if (a === 255) {
+      return '#' + hex.slice(2).toUpperCase();
+    }
+    return `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+  });
+}
+
+// Terjemah HTML rich-text (milik pembuat form) menjadi objek props yang bisa
+// dirender React. Dipakai untuk judul, deskripsi, label soal & opsi agar tampil
+// terformat (mirip RichTextView di aplikasi mobile), bukan sebagai tag mentah.
+const richHtml = (html) => ({ __html: normalizeColors(html ?? '') });
+
+// Buang semua markup HTML jadi teks polos. Dipakai untuk konten responden
+// (jawaban) dan elemen yang tidak bisa memuat markup seperti <option>.
+function stripHtml(html) {
+  return String(html ?? '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function FormFillPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -432,7 +469,7 @@ export default function FormFillPage() {
                   }
                 >
                   <div className="option-radio">{isSelected && <div className="option-radio-dot" />}</div>
-                  <span className="option-label-text">{opt.label}</span>
+                  <span className="option-label-text" dangerouslySetInnerHTML={richHtml(opt.label)} />
                   {isSelected && (
                     <svg className="option-check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
@@ -474,7 +511,7 @@ export default function FormFillPage() {
                       </svg>
                     )}
                   </div>
-                  <span className="option-label-text">{opt.label}</span>
+                  <span className="option-label-text" dangerouslySetInnerHTML={richHtml(opt.label)} />
                 </div>
               );
             })}
@@ -498,7 +535,7 @@ export default function FormFillPage() {
               <option value="">— Pilih jawaban —</option>
               {(q.options || []).map((opt) => (
                 <option key={opt.id} value={opt.label}>
-                  {opt.label}
+                  {stripHtml(opt.label)}
                 </option>
               ))}
             </select>
@@ -637,7 +674,7 @@ export default function FormFillPage() {
         </header>
         <main className="result-main">
           <div className="result-card">
-            <h2 className="result-title">{result.form_title}</h2>
+            <h2 className="result-title" dangerouslySetInnerHTML={richHtml(result.form_title)} />
             <p className="result-subtitle">Hasil submission Anda</p>
 
             {result.is_cheated && (
@@ -679,7 +716,7 @@ export default function FormFillPage() {
                 <div key={a.question_id} className="result-answer-item">
                   <div className="result-answer-header">
                     <span className="result-q-number">{idx + 1}.</span>
-                    <div className="result-q-label" dangerouslySetInnerHTML={{ __html: a.label }} />
+                    <div className="result-q-label" dangerouslySetInnerHTML={richHtml(a.label)} />
                     {a.is_correct !== null && a.is_correct !== undefined && (
                       <span className={`result-badge ${a.is_correct ? 'correct' : 'wrong'}`}>
                         {a.is_correct ? 'Benar' : 'Salah'}
@@ -690,13 +727,13 @@ export default function FormFillPage() {
                     <p>
                       <span className="result-label">Jawaban Anda:</span>
                       <span className={`result-answer-text ${a.is_correct === false ? 'wrong' : ''}`}>
-                        {a.user_answer || '(tidak dijawab)'}
+                        {stripHtml(a.user_answer) || '(tidak dijawab)'}
                       </span>
                     </p>
                     {a.correct_answer && (
                       <p>
                         <span className="result-label">Jawaban Benar:</span>
-                        <span className="result-answer-text correct">{a.correct_answer}</span>
+                        <span className="result-answer-text correct">{stripHtml(a.correct_answer)}</span>
                       </p>
                     )}
                   </div>
@@ -795,7 +832,7 @@ export default function FormFillPage() {
             Jawaban Berhasil Terkirim!
           </h2>
           <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
-            Terima kasih telah mengisi <strong>{form?.title}</strong>. Jawaban Anda telah tersimpan dengan aman di sistem.
+            Terima kasih telah mengisi <strong dangerouslySetInnerHTML={richHtml(form?.title)} />. Jawaban Anda telah tersimpan dengan aman di sistem.
           </p>
 
           {cheated && (
@@ -962,11 +999,11 @@ export default function FormFillPage() {
             </div>
           )}
           <div className="form-header-details">
-            <h2 className="form-title">{form?.title}</h2>
+            <h2 className="form-title" dangerouslySetInnerHTML={richHtml(form?.title)} />
             {form?.description && (
               <div
                 className="form-description"
-                dangerouslySetInnerHTML={{ __html: form.description }}
+                dangerouslySetInnerHTML={richHtml(form.description)}
               />
             )}
           </div>
@@ -993,7 +1030,7 @@ export default function FormFillPage() {
                 <div className="question-card-header">
                   <div className="question-label">
                     <span className="question-number">{globalNumber}.</span>
-                    <div className="question-label-content" dangerouslySetInnerHTML={{ __html: q.label }} />
+                    <div className="question-label-content" dangerouslySetInnerHTML={richHtml(q.label)} />
                     {q.is_required && <span className="required-star">*</span>}
                   </div>
                   <div className="question-header-right">

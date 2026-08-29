@@ -146,6 +146,18 @@ class FormBuilderState extends ChangeNotifier {
     return state;
   }
 
+  // Muat draft form dari backend (GET /forms/{id}) — memakai loader yang sama
+  // dengan template karena bentuk questions JSON-nya identik.
+  factory FormBuilderState.fromForm(Map<String, dynamic> formJson) {
+    final questionsRaw = formJson['questions'];
+    return FormBuilderState.fromTemplate(FormTemplate(
+      id: formJson['id']?.toString(),
+      title: (formJson['title'] as String?) ?? '',
+      subtitle: (formJson['description'] as String?) ?? '',
+      questionsJson: questionsRaw is List ? questionsRaw : null,
+    ));
+  }
+
   // === Actions ===
 
   void updateFormTitle(String newTitle) {

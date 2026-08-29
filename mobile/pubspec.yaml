@@ -44,6 +44,10 @@ dependencies:
   flutter_quill: ^11.0.0
   flutter_quill_delta_from_html: ^1.5.0
   flutter_html: ^3.0.0-beta.2
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
+  file_picker: ^12.1.2
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

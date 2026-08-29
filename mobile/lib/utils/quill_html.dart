@@ -45,8 +45,8 @@ class QuillHtml {
       if (a['italic'] == true) s.add('font-style: italic;');
       if (a['underline'] == true) s.add('text-decoration: underline;');
       if (a['strike'] == true) s.add('text-decoration: line-through;');
-      if (a['color'] != null) s.add('color: ${a['color']};');
-      if (a['background'] != null) s.add('background-color: ${a['background']};');
+      if (a['color'] != null) s.add('color: ${normalizeHexColor(a['color']?.toString())};');
+      if (a['background'] != null) s.add('background-color: ${normalizeHexColor(a['background']?.toString())};');
       final sizePx = _quillSizeToPx(a['size']);
       if (sizePx != null) s.add('font-size: $sizePx;');
       if (a['font'] != null) s.add('font-family: ${a['font']};');
@@ -170,22 +170,53 @@ class QuillHtml {
 
   /// Map a Quill font [size] attribute to a CSS `font-size` value that the
   /// reverse HTML parser understands (so it round-trips back to `size`).
+  ///
+  /// Uses explicit `px` (not `em`) so every renderer (flutter_html, browser,
+  /// Quill editor) sizes text consistently without `em` double-scaling.
   static String? _quillSizeToPx(dynamic size) {
     if (size == null) return null;
     final s = size.toString();
     switch (s) {
       case 'small':
-        return '0.75em';
+        return '12px';
       case 'large':
-        return '1.5em';
+        return '18px';
       case 'huge':
-        return '2.5em';
+        return '24px';
       case 'normal':
         return null;
       default:
         final n = double.tryParse(s);
         return n == null ? null : '${n}px';
     }
+  }
+
+  /// Normalizes a CSS hex color for rendering.
+  ///
+  /// flutter_quill stores colors as **8-digit ARGB** (`#AARRGGBB`). Browsers
+  /// parse 8-digit hex as CSS Color 4 (`#RRGGBBAA`) and Flutter's flutter_html
+  /// drops it entirely, so a picked color can render wrong (or pink). When the
+  /// alpha is `ff` (the only case the color picker produces) we emit the
+  /// equivalent 6-digit `#RRGGBB`; otherwise fall back to `rgba(...)` which
+  /// both renderers understand.
+  static String normalizeHexColor(String? hex) {
+    if (hex == null) return '';
+    var h = hex.trim();
+    if (!h.startsWith('#')) return h;
+    final digits = h.substring(1);
+    if (digits.length == 8) {
+      final a = digits.substring(0, 2);
+      final r = digits.substring(2, 4);
+      final g = digits.substring(4, 6);
+      final b = digits.substring(6, 8);
+      if (a.toLowerCase() == 'ff') {
+        return '#$r$g$b'.toUpperCase();
+      }
+      final alpha = (int.parse(a, radix: 16) / 255).toStringAsFixed(3);
+      return 'rgba(${int.parse(r, radix: 16)}, ${int.parse(g, radix: 16)}, '
+          '${int.parse(b, radix: 16)}, $alpha)';
+    }
+    return h;
   }
 
   static String _escape(String text) =>
@@ -212,6 +243,16 @@ class QuillHtml {
           .replaceAll(RegExp(r'\s+'), ' ')
           .trim();
     }
+  }
+
+  /// Normalizes every 8-digit `#AARRGGBB` color inside an HTML string to
+  /// 6-digit `#RRGGBB` / `rgba(...)` so old data (written before the writer
+  /// fix) renders correctly in browsers and flutter_html.
+  static String normalizeHtmlColors(String html) {
+    return html.replaceAllMapped(
+      RegExp(r'#([0-9A-Fa-f]{8})\b'),
+      (m) => normalizeHexColor('#${m[1]}'),
+    );
   }
 
   /// Alias untuk kasus title — jaga agar tidak kosong

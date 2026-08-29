@@ -255,6 +255,9 @@ class _RichTextFieldState extends State<RichTextField> {
                           expands: false,
                           autoFocus: false,
                           customStyles: DefaultStyles(
+                            sizeSmall: const TextStyle(fontSize: 12),
+                            sizeLarge: const TextStyle(fontSize: 18),
+                            sizeHuge: const TextStyle(fontSize: 24),
                             paragraph: DefaultTextBlockStyle(
                               const TextStyle(
                                 fontSize: 14,

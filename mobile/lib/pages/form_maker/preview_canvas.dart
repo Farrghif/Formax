@@ -50,7 +50,7 @@ class PreviewCanvas extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // FIX Bug 9: render HTML via RichTextView, bukan raw Text
+// FIX Bug 9: render HTML via RichTextView, bukan raw Text
                     RichTextView(
                       html: page.title.isEmpty ? (isFirst ? state.formTitle : 'Bagian') : page.title,
                       textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),

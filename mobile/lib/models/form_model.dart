@@ -56,53 +56,87 @@ class SubmissionModel {
   final String id;
   final String respondentName;
   final String respondentEmail;
-  final DateTime submittedAt;
+  final DateTime? submittedAt; // null = masih dalam proses (belum dikirim)
   final bool isAutoSubmitted;
-  final List<AnswerModel> answers;
+  final bool isCheated;
+  final Map<String, AnswerModel> answersById; // questionId -> jawaban
 
   SubmissionModel({
     required this.id,
     required this.respondentName,
     required this.respondentEmail,
-    required this.submittedAt,
+    this.submittedAt,
     this.isAutoSubmitted = false,
-    this.answers = const [],
+    this.isCheated = false,
+    this.answersById = const {},
   });
+
+  List<AnswerModel> get answers => answersById.values.toList();
 
   factory SubmissionModel.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     final userRaw = map['user'];
     final user = userRaw is Map ? Map<String, dynamic>.from(userRaw as Map) : null;
     final answersList = map['answers'] as List<dynamic>? ?? [];
+    final answersById = <String, AnswerModel>{};
+    for (final a in answersList) {
+      if (a is! Map) continue;
+      final ans = AnswerModel.fromJson(a);
+      if (ans.questionId.isNotEmpty) answersById[ans.questionId] = ans;
+    }
 
     return SubmissionModel(
       id: map['id'] ?? '',
       respondentName: user?['full_name'] ?? 'Anonim',
       respondentEmail: user?['email'] ?? '-',
       submittedAt: map['submitted_at'] != null
-          ? DateTime.tryParse(map['submitted_at']) ?? DateTime.now()
-          : DateTime.now(),
+          ? DateTime.tryParse(map['submitted_at'])
+          : null,
       isAutoSubmitted: map['is_auto_submitted'] ?? false,
-      answers: answersList
-          .map((a) => AnswerModel.fromJson(a as Map))
-          .toList(),
+      isCheated: map['is_cheated'] ?? false,
+      answersById: answersById,
     );
   }
 }
 
 class AnswerModel {
+  final String questionId;
   final String questionLabel;
-  final String answer;
+  final String? answerText;
+  final List<String>? answerOptions;
+  final String? fileUrl;
 
-  AnswerModel({required this.questionLabel, required this.answer});
+  AnswerModel({
+    required this.questionId,
+    required this.questionLabel,
+    this.answerText,
+    this.answerOptions,
+    this.fileUrl,
+  });
+
+  /// Teks jawaban untuk ditampilkan.
+  String get display {
+    if (answerOptions != null && answerOptions!.isNotEmpty) {
+      return answerOptions!.join(', ');
+    }
+    if (answerText != null && answerText!.isNotEmpty) return answerText!;
+    if (fileUrl != null && fileUrl!.isNotEmpty) return fileUrl!;
+    return '-';
+  }
 
   factory AnswerModel.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     final qRaw = map['question'];
     final question = qRaw is Map ? Map<String, dynamic>.from(qRaw as Map) : null;
+    final optionsRaw = map['answer_options'];
     return AnswerModel(
+      questionId: map['question_id']?.toString() ?? '',
       questionLabel: question?['label'] ?? 'Pertanyaan',
-      answer: map['value'] ?? '-',
+      answerText: map['answer_text'] as String?,
+      answerOptions: optionsRaw is List
+          ? optionsRaw.map((e) => e.toString()).toList()
+          : null,
+      fileUrl: map['file_url'] as String?,
     );
   }
 }

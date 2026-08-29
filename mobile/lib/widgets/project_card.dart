@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/project.dart';
+import 'rich_text_view.dart';
 
 class ProjectCard extends StatelessWidget {
   final Project project;
@@ -39,9 +40,12 @@ class ProjectCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black12, width: 1),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,11 +89,11 @@ class ProjectCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    project.title,
-                    style: const TextStyle(
+                    RichTextView.stripHtml(project.title),
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

@@ -10,10 +10,24 @@ import 'form_maker/preview_canvas.dart';
 import '../models/question_model.dart'; // Ensure QuestionType is imported for toolbar
 import 'package:image_picker/image_picker.dart';
 
+class FormMakerResult {
+  final String? draftFormId;
+  final String? draftFormTitle;
+  final FormTemplate? template;
+
+  const FormMakerResult({this.draftFormId, this.draftFormTitle, this.template});
+
+  bool get savedDraft => draftFormId != null && draftFormId!.isNotEmpty;
+  bool get savedTemplate => template != null;
+}
+
 class FormMakerPage extends StatefulWidget {
   final FormTemplate? initialTemplate;
 
-  const FormMakerPage({super.key, this.initialTemplate});
+  /// JSON lengkap form draft (dari GET /forms/{id}) untuk dilanjutkan editing.
+  final Map<String, dynamic>? initialDraft;
+
+  const FormMakerPage({super.key, this.initialTemplate, this.initialDraft});
 
   @override
   State<FormMakerPage> createState() => _FormMakerPageState();
@@ -24,7 +38,8 @@ class _FormMakerPageState extends State<FormMakerPage>
   late FormBuilderState _builderState;
   late TabController _tabController;
   bool _isPreviewMode = false;
-  String? _draftTemplateId; // untuk PATCH bukan POST berulang (fix duplikat)
+  String? _draftTemplateId; // untuk PATCH template (bukan POST berulang)
+  String? _draftFormId;     // untuk PATCH form draft (bukan POST berulang / duplikat)
 
   final Color _primaryColor = const Color(0xFF4F46E5);
   final Color _bgColor = const Color(0xFFE8EEF7);
@@ -37,7 +52,14 @@ class _FormMakerPageState extends State<FormMakerPage>
   bool _pointValues = true;
 
   String _sendCopy = 'Nonaktif';
-  bool _limitOneResponse = true;
+  // Setelan Form (parity dengan web): status, penerimaan respons, batas respons, fullscreen, join token.
+  String _formStatus = 'draft'; // draft / published / closed
+  bool _acceptResponses = true;
+  String _submissionLimit = 'once'; // once / unlimited / custom
+  final TextEditingController _customSubLimitCtrl =
+      TextEditingController(text: '2');
+  bool _requireFullscreen = false;
+  bool _useJoinToken = false;
   bool _hideResponses = false;
   bool _allowMultipleEdits = false;
 
@@ -48,18 +70,45 @@ class _FormMakerPageState extends State<FormMakerPage>
   final TextEditingController _durationCtrl = TextEditingController(
     text: '1 hari',
   );
-  final TextEditingController _pointValueCtrl = TextEditingController(text: '0');
+  final TextEditingController _pointValueCtrl = TextEditingController(
+    text: '0',
+  );
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    if (widget.initialTemplate != null) {
+    if (widget.initialDraft != null) {
+      final map = Map<String, dynamic>.from(widget.initialDraft!);
+      _draftFormId = map['id']?.toString();
+      _applyFormSettings(map);
+      _builderState = FormBuilderState.fromForm(map);
+    } else if (widget.initialTemplate != null) {
       _builderState = FormBuilderState.fromTemplate(widget.initialTemplate!);
       _draftTemplateId = widget.initialTemplate!.id;
     } else {
       _builderState = FormBuilderState();
+    }
+  }
+
+  // Muat setelan form dari draft (GET /forms/{id}) supaya panel Setelan
+  // menampilkan status & limit yang benar saat lanjutkan draft.
+  void _applyFormSettings(Map<String, dynamic> map) {
+    _formStatus = map['status']?.toString() ?? 'draft';
+    _acceptResponses = map['accept_responses'] as bool? ?? true;
+    _requireFullscreen = map['require_fullscreen'] as bool? ?? false;
+    _correctAnswers = map['allow_see_result'] as bool? ?? true;
+    final maxSub = map['max_submissions'];
+    if (maxSub is int) {
+      if (maxSub == 1) {
+        _submissionLimit = 'once';
+      } else if (maxSub == 0) {
+        _submissionLimit = 'unlimited';
+      } else {
+        _submissionLimit = 'custom';
+        _customSubLimitCtrl.text = '$maxSub';
+      }
     }
   }
 
@@ -69,20 +118,20 @@ class _FormMakerPageState extends State<FormMakerPage>
     _tabController.dispose();
     _durationCtrl.dispose();
     _pointValueCtrl.dispose();
+    _customSubLimitCtrl.dispose();
     super.dispose();
   }
 
-  void _saveDraft() async {
-    if (_builderState.isSaving) return;
-    // FIX Bug A: unfocus dulu agar RichTextField flush HTML terakhir (ketik lalu langsung Save)
-    FocusScope.of(context).unfocus();
-    await Future.delayed(const Duration(milliseconds: 150));
+  String _networkHint(String msg) {
+    return msg.contains('SocketException') ||
+            msg.contains('Failed host') ||
+            msg.contains('Connection refused') ||
+            msg.contains('No token')
+        ? '\n\nCek: backend jalan di ${ApiService.baseUrl}?\nEmulator: 10.0.2.2:8000 | HP fisik: adb reverse tcp:8000 tcp:8000 + --dart-define=API_URL=http://127.0.0.1:8000'
+        : '';
+  }
 
-    setState(() => _builderState.isSaving = true);
-
-    // Sync the form title/description from the first page header, preserving
-    // rich-text HTML (formTitle/formDescription are the HTML strings edited in
-    // the page header editor). Fall back to a plain label only when empty.
+  void _syncTitleFromPage() {
     if (_builderState.pages.isNotEmpty) {
       if (_builderState.pages[0].title.trim().isNotEmpty) {
         _builderState.formTitle = _builderState.pages[0].title;
@@ -91,105 +140,17 @@ class _FormMakerPageState extends State<FormMakerPage>
         _builderState.formDescription = _builderState.pages[0].description;
       }
     }
-
-    final titleHtml = _builderState.formTitle.trim().isNotEmpty
-        ? _builderState.formTitle
-        : 'Form Tanpa Judul';
-    final descriptionHtml = _builderState.formDescription.trim();
-
-    final questionsPayload = _builderState.buildApiPayload();
-
-    final payload = {
-      'title': titleHtml,
-      'description': descriptionHtml,
-      'questions': questionsPayload,
-    };
-
-    // FIX Bug B: jangan selalu POST (bikin duplikat ID be4e... vs 31e95...), pakai PATCH jika sudah pernah create/edit
-    final String? targetId = _draftTemplateId ?? widget.initialTemplate?.id;
-    final res = targetId != null
-        ? await ApiService.updateTemplate(targetId, payload)
-        : await ApiService.createTemplate(payload);
-    if (!mounted) return;
-    setState(() => _builderState.isSaving = false);
-
-    if (res['success'] == true) {
-      // simpan id agar save berikutnya jadi PATCH bukan POST duplikat
-      if (_draftTemplateId == null && widget.initialTemplate?.id == null) {
-        final data = res['data'];
-        if (data is Map && data['id'] != null) {
-          _draftTemplateId = data['id'].toString();
-        }
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Draft berhasil disimpan ke Template Saya!'),
-          backgroundColor: Color(0xFF059669),
-        ),
-      );
-      Navigator.pop(
-        context,
-        FormTemplate(
-          title: QuillHtml.htmlToPlainText(titleHtml),
-          subtitle: 'Baru saja disimpan',
-          id: _draftTemplateId ?? widget.initialTemplate?.id,
-          questionsJson: questionsPayload,
-        ),
-      );
-    } else {
-      final msg = res['message']?.toString() ?? 'Unknown error';
-      final hint =
-          msg.contains('SocketException') ||
-              msg.contains('Failed host') ||
-              msg.contains('Connection refused') ||
-              msg.contains('No token')
-          ? '\n\nCek: backend jalan di ${ApiService.baseUrl}?\nEmulator: 10.0.2.2:8000 | HP fisik: adb reverse tcp:8000 tcp:8000 + --dart-define=API_URL=http://127.0.0.1:8000'
-          : '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menyimpan: $msg$hint'),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-      debugPrint('[FormMaker] Gagal simpan draft: $msg');
-    }
   }
 
-  void _publishForm() async {
-    if (_builderState.isSaving) return;
-    // FIX Bug A: unfocus dulu agar RichTextField flush HTML terakhir (ketik lalu langsung Publish)
-    FocusScope.of(context).unfocus();
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
-
-    // Simple Validation
-    if (_builderState.formTitle.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Judul formulir tidak boleh kosong')),
-      );
-      return;
-    }
-
-    setState(() => _builderState.isSaving = true);
-
-    final titleHtml = _builderState.formTitle.trim().isNotEmpty
-        ? _builderState.formTitle
-        : 'Form Tanpa Judul';
-    final descriptionHtml = _builderState.formDescription.trim();
-    // Slug derived from PLAIN text of the title (HTML tags must not leak into URL)
-    final slugBase = QuillHtml.htmlToPlainText(titleHtml);
-    final baseSlug = slugBase.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
-    final slug = '$baseSlug-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-
-    // FIX Bug 11 & 19: kirim settings yang sebelumnya hanya UI semu
+  Map<String, dynamic> _buildPublishSettings() {
     DateTime? startDate;
     DateTime? endDate;
     if (_enableTimer) {
       startDate = DateTime.now();
-      // parse _durationCtrl e.g. "1 hari" -> 1 day
       final durText = _durationCtrl.text.trim();
-      final num = int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ?? 1;
+      final num =
+          int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ??
+          1;
       if (durText.contains('jam')) {
         endDate = startDate.add(Duration(hours: num));
       } else if (durText.contains('menit')) {
@@ -199,69 +160,256 @@ class _FormMakerPageState extends State<FormMakerPage>
       }
     }
 
+    // Batas respons: 1 kali / tanpa batas / kustom (>= 2) — seperti web.
+    int maxSub;
+    switch (_submissionLimit) {
+      case 'unlimited':
+        maxSub = 0;
+        break;
+      case 'custom':
+        final n = int.tryParse(_customSubLimitCtrl.text.trim()) ?? 1;
+        maxSub = n >= 2 ? n : 1;
+        break;
+      case 'once':
+      default:
+        maxSub = 1;
+    }
+
+    return {
+      'allow_see_result': _correctAnswers,
+      'max_submissions': maxSub,
+      'require_fullscreen': _requireFullscreen,
+      'reveal_answers': _correctAnswers,
+      'accept_responses': _acceptResponses,
+      'status': _formStatus,
+      if (startDate != null) 'start_date': startDate.toIso8601String(),
+      if (endDate != null) 'end_date': endDate.toIso8601String(),
+    };
+  }
+
+  // Simpan draft/publish form ke /forms. Kalau sudah punya _draftFormId,
+  // pakai PATCH (update field + replace questions) supaya tidak duplikat.
+  Future<Map<String, dynamic>?> _saveForm({required bool publish}) async {
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return null;
+    setState(() => _builderState.isSaving = true);
+    try {
+      _syncTitleFromPage();
+
+      final titleHtml = _builderState.formTitle.trim().isNotEmpty
+          ? _builderState.formTitle
+          : 'Form Tanpa Judul';
+      final descriptionHtml = _builderState.formDescription.trim();
+      final questionsPayload = _builderState.buildApiPayload();
+      final settings = _buildPublishSettings();
+      // Tombol Publish selalu menghasilkan status published (seperti web).
+      if (publish) settings['status'] = 'published';
+
+      Map<String, dynamic> res;
+      if (_draftFormId != null) {
+        res = await ApiService.updateForm(_draftFormId!, {
+          'title': titleHtml,
+          'description': descriptionHtml,
+          ...settings,
+          'questions': questionsPayload,
+        });
+      } else {
+        res = await ApiService.createForm({
+          'title': titleHtml,
+          'description': descriptionHtml,
+          'slug': ApiService.generateSlug(QuillHtml.htmlToPlainText(titleHtml)),
+          'questions': questionsPayload,
+          ...settings,
+          if (_useJoinToken) 'use_join_token': true,
+        });
+        if (res['success'] == true) {
+          final data = res['data'];
+          if (data is Map && data['id'] != null) {
+            // FormCreate tidak punya status/accept_responses → persist via PATCH
+            // supaya status closed/published & 'Terima respons' benar-benar tersimpan.
+            if ((!publish && _formStatus != 'draft') || !_acceptResponses) {
+              await ApiService.updateForm(data['id'].toString(), {
+                'status': _formStatus,
+                'accept_responses': _acceptResponses,
+              });
+            }
+          }
+        }
+      }
+
+      if (res['success'] == true) {
+        final data = res['data'];
+        if (data is Map && data['id'] != null) {
+          _draftFormId = data['id'].toString();
+        }
+      }
+      return res;
+    } finally {
+      if (mounted) setState(() => _builderState.isSaving = false);
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    if (_builderState.isSaving) return;
+    final res = await _saveForm(publish: false);
+    if (!mounted || res == null) return;
+
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draft berhasil disimpan — bisa dilanjutkan dari Dashboard / web'),
+          backgroundColor: Color(0xFF059669),
+        ),
+      );
+    } else {
+      final msg = res['message']?.toString() ?? 'Unknown error';
+      final hint = _networkHint(msg);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan draft: $msg$hint'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint('[FormMaker] Gagal simpan draft: $msg');
+    }
+  }
+
+  Future<void> _saveAsTemplate() async {
+    if (_builderState.isSaving) return;
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+    _syncTitleFromPage();
+
+    final titleHtml = _builderState.formTitle.trim().isNotEmpty
+        ? _builderState.formTitle
+        : 'Form Tanpa Judul';
+    final descriptionHtml = _builderState.formDescription.trim();
+    final questionsPayload = _builderState.buildApiPayload();
+
+    setState(() => _builderState.isSaving = true);
+
     final payload = {
       'title': titleHtml,
       'description': descriptionHtml,
-      'slug': slug,
-      'questions': _builderState.buildApiPayload(),
-      'allow_see_result': _correctAnswers,
-      'max_submissions': _limitOneResponse ? 1 : 0,
-      'require_fullscreen': false,
-      'reveal_answers': _correctAnswers,
-      if (startDate != null) 'start_date': startDate.toIso8601String(),
-      if (endDate != null) 'end_date': endDate.toIso8601String(),
-      'use_join_token': false,
+      'questions': questionsPayload,
     };
 
-    final res = await ApiService.createForm(payload);
+    final String? targetId = _draftTemplateId ?? widget.initialTemplate?.id;
+    final res = targetId != null
+        ? await ApiService.updateTemplate(targetId, payload)
+        : await ApiService.createTemplate(payload);
+    if (!mounted) return;
+    setState(() => _builderState.isSaving = false);
+
     if (res['success'] == true) {
-      final formId = res['data']['id'] as String;
-      // FIX Bug 17-18: createForm selalu draft, maka publish via endpoint khusus.
-      // Pastikan benar-benar published (jangan lanjut generate QR kalau gagal).
-      final pubRes = await ApiService.publishForm(formId);
-      setState(() => _builderState.isSaving = false);
-
-      if (pubRes['success'] != true) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Gagal publish form: ${pubRes['message'] ?? 'terjadi kesalahan'}',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      final qrRes = await ApiService.generateQrCode(formId);
-
-      if (qrRes['success'] == true) {
-        final shareLink = qrRes['data']['share_link'] as String;
-        String qrUrl = qrRes['data']['qr_code_url'] as String;
-        if (qrUrl.contains('localhost')) {
-          final apiHost = Uri.parse(ApiService.baseUrl).host;
-          qrUrl = qrUrl.replaceAll('localhost', apiHost);
-        }
-        if (mounted) _showShareDialog(shareLink, qrUrl);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal generate QR: ${qrRes['message']}')),
-          );
+      if (_draftTemplateId == null && widget.initialTemplate?.id == null) {
+        final data = res['data'];
+        if (data is Map && data['id'] != null) {
+          _draftTemplateId = data['id'].toString();
         }
       }
+      Navigator.pop(
+        context,
+        FormMakerResult(
+          template: FormTemplate(
+            title: QuillHtml.htmlToPlainText(titleHtml),
+            subtitle: 'Baru saja disimpan',
+            id: _draftTemplateId ?? widget.initialTemplate?.id,
+            questionsJson: questionsPayload,
+          ),
+        ),
+      );
     } else {
+      final msg = res['message']?.toString() ?? 'Unknown error';
+      final hint = _networkHint(msg);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan template: $msg$hint'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint('[FormMaker] Gagal simpan template: $msg');
+    }
+  }
+
+  void _publishForm() async {
+    if (_builderState.isSaving) return;
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+
+    if (_builderState.formTitle.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul formulir tidak boleh kosong')),
+      );
+      return;
+    }
+
+    final res = await _saveForm(publish: true);
+    if (!mounted) return;
+    if (res == null) return;
+    if (res['success'] != true) {
+      final msg = res['message']?.toString() ?? 'terjadi kesalahan';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal publish form: $msg${_networkHint(msg)}'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
+    final formId = _draftFormId!;
+    setState(() => _builderState.isSaving = true);
+
+    final titlePlain = QuillHtml.htmlToPlainText(
+      _builderState.formTitle.trim().isNotEmpty
+          ? _builderState.formTitle
+          : 'Form Tanpa Judul',
+    );
+
+    // FIX Bug 17-18: createForm selalu draft, maka publish via endpoint khusus.
+    // Pastikan benar-benar published (jangan lanjut generate QR kalau gagal).
+    final pubRes = await ApiService.publishForm(formId);
+    if (pubRes['success'] != true) {
       setState(() => _builderState.isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal publish: ${res['message']}')),
+          SnackBar(
+            content: Text(
+              'Gagal publish form: ${pubRes['message'] ?? 'terjadi kesalahan'}',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final qrRes = await ApiService.generateQrCode(formId);
+
+    if (qrRes['success'] == true) {
+      final shareLink = qrRes['data']['share_link'] as String;
+      String qrUrl = qrRes['data']['qr_code_url'] as String;
+      if (qrUrl.contains('localhost')) {
+        final apiHost = Uri.parse(ApiService.baseUrl).host;
+        qrUrl = qrUrl.replaceAll('localhost', apiHost);
+      }
+      if (mounted) _showShareDialog(shareLink, qrUrl, formId, titlePlain);
+    } else {
+      if (mounted) {
+        setState(() => _builderState.isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal generate QR: ${qrRes['message']}')),
         );
       }
     }
   }
 
-  void _showShareDialog(String link, String qrUrl) {
+  void _showShareDialog(String link, String qrUrl, String formId, String title) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -270,7 +418,7 @@ class _FormMakerPageState extends State<FormMakerPage>
       if (mounted) {
         Navigator.pop(
           context,
-          FormTemplate(title: 'Form Terpublikasi', subtitle: 'Siap digunakan'),
+          FormMakerResult(draftFormId: formId, draftFormTitle: title),
         );
       }
     });
@@ -525,6 +673,20 @@ class _FormMakerPageState extends State<FormMakerPage>
             onPressed: _builderState.isSaving ? null : _saveDraft,
             tooltip: 'Simpan Draft',
           ),
+        if (!_isPreviewMode)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.black54),
+            tooltip: 'Menu lain',
+            onSelected: (value) {
+              if (value == 'template') _saveAsTemplate();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'template',
+                child: Text('Simpan sebagai Template'),
+              ),
+            ],
+          ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0, top: 10, bottom: 10),
           child: FilledButton.icon(
@@ -561,6 +723,8 @@ class _FormMakerPageState extends State<FormMakerPage>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          _buildFormAccessCard(),
+          const SizedBox(height: 12),
           _buildQuizSettingsCard(),
           const SizedBox(height: 12),
           _buildResponseSettingsCard(),
@@ -570,6 +734,184 @@ class _FormMakerPageState extends State<FormMakerPage>
           _buildTimerSettingsCard(),
           const SizedBox(height: 80),
         ],
+      ),
+    );
+  }
+
+  // ── Form & Akses: status, terima respons, batas respons, layar penuh, join token ──
+  Widget _buildFormAccessCard() {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.lock_outline, color: Color(0xFFDC2626)),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Form & Akses',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Status, penerimaan respons, dan pembatasan',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'STATUS FORM',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _formStatus,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'draft',
+                      child: Text('Draft', style: TextStyle(fontSize: 14)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'published',
+                      child: Text('Dipublikasikan', style: TextStyle(fontSize: 14)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'closed',
+                      child: Text('Ditutup', style: TextStyle(fontSize: 14)),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => _formStatus = v!),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _settingsSwitchRow(
+              'Terima respons',
+              _acceptResponses,
+              (v) => setState(() => _acceptResponses = v),
+              subtitle: 'Matikan untuk berhenti menerima jawaban tanpa menutup form',
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'BATAS RESPONS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildRadioOption(
+              '1 kali per orang',
+              'once',
+              _submissionLimit,
+              (v) => setState(() => _submissionLimit = v.toString()),
+            ),
+            _buildRadioOption(
+              'Tanpa batas',
+              'unlimited',
+              _submissionLimit,
+              (v) => setState(() => _submissionLimit = v.toString()),
+            ),
+            _buildRadioOption(
+              'Kustom (jumlah tertentu)',
+              'custom',
+              _submissionLimit,
+              (v) => setState(() => _submissionLimit = v.toString()),
+            ),
+            if (_submissionLimit == 'custom') ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 120,
+                child: TextField(
+                  controller: _customSubLimitCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Batas (>= 2)',
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(color: Colors.black12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            _settingsSwitchRow(
+              'Paksa layar penuh (anti-cheat)',
+              _requireFullscreen,
+              (v) => setState(() => _requireFullscreen = v),
+              subtitle: 'Form ditandai "curang" jika responden keluar dari form',
+            ),
+            const SizedBox(height: 12),
+            _settingsSwitchRow(
+              'Perlukan token (ujian bareng)',
+              _useJoinToken,
+              (v) => setState(() => _useJoinToken = v),
+              subtitle: 'Token dibuat otomatis saat form pertama kali disimpan',
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                border: Border.all(color: const Color(0xFFFDBA74)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFFEA580C), size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Setelan tersimpan saat form disimpan (Simpan Draft / Publish). '
+                      'Jadwal timer memakai durasi di kartu Form Timer.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9A3412),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -812,13 +1154,6 @@ class _FormMakerPageState extends State<FormMakerPage>
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _settingsSwitchRow(
-              'Batasi ke 1 jawaban',
-              _limitOneResponse,
-              (v) => setState(() => _limitOneResponse = v),
-              subtitle: 'Responden akan diwajibkan untuk login',
             ),
             const SizedBox(height: 16),
             _settingsSwitchRow(
@@ -1094,10 +1429,13 @@ class _FormMakerPageState extends State<FormMakerPage>
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                // FIX Bug 12: sebelumnya hanya snackbar ilusi; sekarang settings sudah sinkron
-                // ke payload publish (allow_see_result, max_submissions, timer). SnackBar konfirmasi.
+                // Settings sudah sinkron ke payload (status, ke). SnackBar konfirmasi.
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Pengaturan disimpan — akan diterapkan saat Publish (timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'}, batas 1x: $_limitOneResponse)')),
+                  SnackBar(
+                    content: Text(
+                      'Pengaturan disimpan — akan diterapkan saat Publish (status: $_formStatus, batas respons: $_submissionLimit, timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'})',
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(

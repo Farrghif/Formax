@@ -1,11 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ShareFormDialog extends StatefulWidget {
   final String link;
   final String qrUrl;
+  final String? fileName;
 
-  const ShareFormDialog({super.key, required this.link, required this.qrUrl});
+  const ShareFormDialog({super.key, required this.link, required this.qrUrl, this.fileName});
 
   @override
   State<ShareFormDialog> createState() => _ShareFormDialogState();
@@ -14,6 +20,7 @@ class ShareFormDialog extends StatefulWidget {
 class _ShareFormDialogState extends State<ShareFormDialog> {
   int _selectedTab = 0;
   late final TextEditingController _linkController;
+  bool _downloadingQr = false;
 
   @override
   void initState() {
@@ -35,8 +42,32 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
     }
   }
 
+  Future<void> _downloadQr() async {
+    setState(() => _downloadingQr = true);
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${widget.fileName ?? 'qrcode-form.png'}');
+      final res = await http.get(Uri.parse(widget.qrUrl));
+      if (res.statusCode != 200 || res.bodyBytes.isEmpty) {
+        throw Exception('Respons kosong (${res.statusCode})');
+      }
+      await file.writeAsBytes(res.bodyBytes);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], subject: 'QR Code Form'),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengunduh QR: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _downloadingQr = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
@@ -48,31 +79,35 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Kirim formulir',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black54),
+                  icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Kirim melalui',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _tabIcon(Icons.link, 0),
+                _tabIcon(context, Icons.link, 0),
                 const SizedBox(width: 4),
-                _tabIcon(Icons.qr_code, 1),
+                _tabIcon(context, Icons.qr_code, 1),
               ],
             ),
             const Divider(height: 24),
@@ -81,9 +116,9 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Batal',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
                 ),
               ),
             ),
@@ -93,7 +128,8 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
     );
   }
 
-  Widget _tabIcon(IconData icon, int index) {
+  Widget _tabIcon(BuildContext context, IconData icon, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = _selectedTab == index;
     return InkWell(
       onTap: () => setState(() => _selectedTab = index),
@@ -109,7 +145,7 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
         ),
         child: Icon(
           icon,
-          color: isSelected ? const Color(0xFF0F52BA) : Colors.black38,
+          color: isSelected ? const Color(0xFF0F52BA) : colorScheme.onSurfaceVariant,
           size: 22,
         ),
       ),
@@ -154,25 +190,47 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
   }
 
   Widget _buildQrTab() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Image.network(
-          widget.qrUrl,
-          height: 180,
-          width: 180,
-          errorBuilder: (context, error, stackTrace) => const SizedBox(
-            height: 180,
-            width: 180,
-            child: Center(
-              child: Icon(Icons.qr_code, size: 80, color: Colors.black26),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Image.network(
+              widget.qrUrl,
+              height: 180,
+              width: 180,
+              errorBuilder: (context, error, stackTrace) => SizedBox(
+                height: 180,
+                width: 180,
+                child: Center(
+                  child: Icon(Icons.qr_code, size: 80, color: colorScheme.outline),
+                ),
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _downloadingQr ? null : _downloadQr,
+                icon: _downloadingQr
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download, size: 18),
+                label: const Text('Unduh QR'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

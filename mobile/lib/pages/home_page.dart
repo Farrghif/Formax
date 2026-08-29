@@ -41,13 +41,65 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingTemplates = false;
   bool _templatesLoaded = false;
 
+  Future<List<FormModel>>? _recentFormsFuture;
+  Future<List<FormModel>>? _draftFormsFuture;
+
   @override
   void initState() {
     super.initState();
+    _refreshDashboard();
     _loadUserProfile();
     // FIX: Template tidak di-load otomatis saat refresh/app start.
     // Hanya di-load saat user masuk tab Template atau setelah konfirmasi simpan.
     _searchController.addListener(_onSearchChanged);
+  }
+
+  void _refreshDashboard() {
+    _recentFormsFuture = _fetchRecentForms();
+    _draftFormsFuture = _fetchDraftForms();
+  }
+
+  Future<List<FormModel>> _fetchRecentForms() async {
+    final res = await ApiService.getMyForms();
+    if (res['success'] == true) {
+      final rawList = res['data'];
+      if (rawList is! List) return [];
+      var forms = rawList.map((e) => FormModel.fromJson(e as Map)).toList();
+      forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (forms.length > 10) forms = forms.sublist(0, 10);
+      return forms;
+    }
+    return [];
+  }
+
+  Future<List<FormModel>> _fetchDraftForms() async {
+    final res = await ApiService.getDraftForms();
+    if (res['success'] == true) {
+      final rawList = res['data'];
+      if (rawList is! List) return [];
+      final drafts = rawList.map((e) => FormModel.fromJson(e as Map)).toList();
+      drafts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return drafts;
+    }
+    return [];
+  }
+
+  Future<void> _openDraftEditor(String formId) async {
+    final res = await ApiService.getForm(formId);
+    if (!mounted) return;
+    if (res['success'] != true || res['data'] is! Map) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat draft: ${res['message']}')),
+      );
+      return;
+    }
+    final formJson = Map<String, dynamic>.from(res['data'] as Map);
+    await Navigator.push<FormMakerResult>(
+      context,
+      MaterialPageRoute(builder: (_) => FormMakerPage(initialDraft: formJson)),
+    );
+    if (!mounted) return;
+    setState(_refreshDashboard);
   }
 
   Future<void> _ensureTemplatesLoaded() async {
@@ -89,6 +141,64 @@ class _HomePageState extends State<HomePage> {
     });
     // Sync dengan server di background untuk pastikan konsisten
     _refreshTemplatesImmediately();
+  }
+
+  Future<void> _deleteTemplate(FormTemplate tpl) async {
+    if (tpl.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text('Hapus Template'),
+          ],
+        ),
+        content: Text(
+          'Yakin ingin menghapus template "${tpl.plainTitle}"? '
+          'Tindakan ini tidak bisa dibatalkan.',
+          style: const TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final res = await ApiService.deleteTemplate(tpl.id!);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      setState(() {
+        _myTemplates = _myTemplates.where((e) => e.id != tpl.id).toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Template berhasil dihapus')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus template: ${res['message']}'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
   }
 
   @override
@@ -144,7 +254,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       endDrawer: _buildEndDrawer(),
       body: _buildBody(),
@@ -309,72 +419,205 @@ class _HomePageState extends State<HomePage> {
   // ─── Dashboard Tab ────────────────────────────────────────────────────────
 
   Widget _buildDashboardTab() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: ApiService.getMyForms(),
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(_refreshDashboard);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreetingCard(),
+            const SizedBox(height: 24),
+            _buildDraftSection(),
+            const SizedBox(height: 24),
+            _buildRecentSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraftSection() {
+    return FutureBuilder<List<FormModel>>(
+      future: _draftFormsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
-
-        List<FormModel> forms = [];
-        if (snapshot.data?['success'] == true) {
-          final rawList = snapshot.data!['data'] as List<dynamic>;
-          forms = rawList
-              .map((e) => FormModel.fromJson(e as Map))
-              .toList();
-          // Sort by createdAt DESC, take 10
-          forms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          if (forms.length > 10) forms = forms.sublist(0, 10);
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting card
-              _buildGreetingCard(),
-              const SizedBox(height: 24),
-              // Recently created forms
-              Row(
-                children: [
-                  const Text(
-                    'Formulir Terbaru',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
+        final drafts = snapshot.data ?? [];
+        if (drafts.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.drafts_outlined,
+                  size: 18,
+                  color: Color(0xFF92400E),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Draft Saya',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedIndex = 2;
-                      });
-                    },
-                    child: const Text('Lihat semua'),
+                ),
+                const Spacer(),
+                Text(
+                  '${drafts.length} draft',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...drafts.map(
+              (d) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildDraftCard(d),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDraftCard(FormModel form) {
+    return InkWell(
+      onTap: () => _openDraftEditor(form.id),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.edit_note,
+                color: Color(0xFF92400E),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    form.plainTitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Draft · ${_formatDate(form.createdAt)} — ketuk untuk lanjutkan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (forms.isEmpty)
-                _buildEmptyState(
-                  icon: Icons.article_outlined,
-                  title: 'Belum ada formulir',
-                  subtitle: 'Buat formulir pertamamu dari tab Template',
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: forms.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _buildFormCard(forms[index]),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentSection() {
+    return FutureBuilder<List<FormModel>>(
+      future: _recentFormsFuture,
+      builder: (context, snapshot) {
+        final forms = snapshot.data ?? [];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Formulir Terbaru',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-            ],
-          ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = 2;
+                    });
+                  },
+                  child: const Text('Lihat semua'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (snapshot.connectionState == ConnectionState.waiting)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (forms.isEmpty)
+              _buildEmptyState(
+                icon: Icons.article_outlined,
+                title: 'Belum ada formulir',
+                subtitle: 'Buat formulir pertamamu dari tombol Buat Formulir',
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: forms.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (context, index) => _buildFormCard(forms[index]),
+              ),
+          ],
         );
       },
     );
@@ -413,10 +656,13 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 14),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _selectedIndex = 1;
-                    });
+                  onPressed: () async {
+                    await Navigator.push<FormMakerResult>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FormMakerPage()),
+                    );
+                    if (!mounted) return;
+                    setState(_refreshDashboard);
                   },
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Buat Formulir'),
@@ -451,20 +697,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildFormCard(FormModel form) {
+    final isDraft = form.status == 'draft';
     return InkWell(
       onTap: () {
+        if (isDraft) {
+          _openDraftEditor(form.id);
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => Scaffold(
-              backgroundColor: const Color(0xFFF9FAFB),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               appBar: AppBar(
-                title: const Text(
+                title: Text(
                   'Detail Form',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black87,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 elevation: 0.5,
               ),
               body: HistoryPage(highlightFormId: form.id),
@@ -476,9 +731,9 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -509,10 +764,10 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     form.plainTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -520,9 +775,9 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 3),
                   Text(
                     '${form.totalSubmissions} responden · ${_formatDate(form.createdAt)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -530,7 +785,10 @@ class _HomePageState extends State<HomePage> {
             ),
             _buildStatusBadge(form.status),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: Colors.black26),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -568,20 +826,23 @@ class _HomePageState extends State<HomePage> {
       alignment: Alignment.center,
       child: Column(
         children: [
-          Icon(icon, size: 56, color: Colors.black12),
+          Icon(icon, size: 56, color: Theme.of(context).colorScheme.outline),
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black45,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 13, color: Colors.black38),
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -614,12 +875,12 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Template Bawaan',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -641,43 +902,63 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Template Saya',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
+              Expanded(
+                child: Text(
+                  'Template Saya',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
+              const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: () async {
-                  final result = await Navigator.push<FormTemplate>(
+                  final result = await Navigator.push<FormMakerResult>(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const FormMakerPage(),
                     ),
                   );
-                  // FIX: langsung terload otomatis — optimistic add tanpa tunggu fetch
                   if (!mounted) return;
-                  if (result != null) {
-                    _addTemplateOptimistically(result);
+                  if (result != null && result.savedTemplate) {
+                    _addTemplateOptimistically(result.template!);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${result.plainTitle} berhasil disimpan!'),
+                        content: Text('${result.template!.plainTitle} berhasil disimpan!'),
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );
                   } else {
-                    // Tetap sync walau result null (mis PATCH)
+                    setState(_refreshDashboard);
                     _refreshTemplatesImmediately();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Template tersimpan — daftar diperbarui'), backgroundColor: Color(0xFF059669)),
-                    );
+                    if (result != null && result.savedDraft) {
+                      setState(() {
+                        _selectedIndex = 0;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Draft berhasil disimpan — lihat di Dashboard'),
+                          backgroundColor: Color(0xFF059669),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Daftar diperbarui'),
+                          backgroundColor: Color(0xFF059669),
+                        ),
+                      );
+                    }
                   }
-                  // Otomatis tetap di tab Template agar user langsung lihat hasilnya
-                  setState(() {
-                    _selectedIndex = 1;
-                  });
+                  if (result == null || !result.savedDraft) {
+                    setState(() {
+                      _selectedIndex = 1;
+                    });
+                  }
                 },
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Buat Baru'),
@@ -706,9 +987,11 @@ class _HomePageState extends State<HomePage> {
               child: Center(
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'Belum ada template yang disimpan.',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -735,12 +1018,15 @@ class _HomePageState extends State<HomePage> {
                 return TemplateCard(
                   template: _myTemplates[index],
                   isBuiltIn: false,
+                  onDelete: () => _deleteTemplate(_myTemplates[index]),
                   onSaved: (result) async {
-                    // FIX: back dari FormMaker (baik save maupun back biasa) → auto reload
-                    if (result != null) {
-                      _addTemplateOptimistically(result);
+                    if (result != null && result.savedTemplate) {
+                      _addTemplateOptimistically(result.template!);
                     } else {
                       await _refreshTemplatesImmediately();
+                      if (result != null && result.savedDraft) {
+                        setState(_refreshDashboard);
+                      }
                     }
                   },
                 );
@@ -756,7 +1042,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildEndDrawer() {
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       child: Column(
         children: [
@@ -835,10 +1121,10 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 12),
                       Text(
                         _fullName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF374151),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -900,7 +1186,7 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
                     ? const Color(0xFF1E40AF)
-                    : const Color(0xFF4B5563),
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

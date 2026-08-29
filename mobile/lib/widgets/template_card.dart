@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/form_template.dart';
 import '../pages/formmakerpage.dart';
+import 'rich_text_view.dart';
 
 class TemplateCard extends StatelessWidget {
   final FormTemplate template;
   final bool isBuiltIn;
-  final Future<void> Function(FormTemplate? result)? onSaved;
+  final Future<void> Function(FormMakerResult? result)? onSaved;
   final bool handleNavigation;
+  final Future<void> Function()? onDelete;
 
   const TemplateCard({
     super.key,
@@ -14,14 +16,16 @@ class TemplateCard extends StatelessWidget {
     this.isBuiltIn = false,
     this.onSaved,
     this.handleNavigation = true,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showDelete = onDelete != null && template.id != null && !isBuiltIn;
     return GestureDetector(
       onTap: handleNavigation
           ? () async {
-              final result = await Navigator.push<FormTemplate>(
+              final result = await Navigator.push<FormMakerResult>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => FormMakerPage(initialTemplate: template),
@@ -33,61 +37,94 @@ class TemplateCard extends StatelessWidget {
               }
             }
           : null,
-      child: Container(
-        width: 150,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail Area
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFDCE4FB), // Light blue background
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.assignment_outlined,
-                    size: 40,
-                    color: Color(0xFF2563EB),
-                  ),
-                ),
+      child: Stack(
+        children: [
+          Container(
+            width: 150,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 1,
               ),
             ),
-            // Text Area
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    template.plainTitle.isNotEmpty ? template.plainTitle : template.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Thumbnail Area
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCE4FB), // Light blue background
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: const Center(
+                      child: Icon(
+                        Icons.assignment_outlined,
+                        size: 40,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                // Text Area
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        template.plainTitle.isNotEmpty
+                            ? template.plainTitle
+                            : RichTextView.stripHtml(template.title),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          if (showDelete)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.35),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onDelete,
+                  child: const Padding(
+                    padding: EdgeInsets.all(5),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

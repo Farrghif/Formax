@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import '../services/api_service.dart';
@@ -13,6 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   bool isLogin = true;
   bool _isLoading = false;
   bool _rememberMe = true; // State untuk remember me
+  bool _showPassword = false; // Toggle tampilkan/sembunyikan password (parity web)
 
   final TextEditingController loginEmailController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
@@ -43,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
           Align(
             alignment: Alignment.topCenter,
             child: Image.asset(
-              'assets/images/atasloginregister.png',
+              'assets/images/bgafmx.png',
               width: double.infinity,
               fit: BoxFit.cover,
             ),
@@ -53,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Image.asset(
-              'assets/images/bawahloginregister.png',
+              'assets/images/bgbfmx.png',
               width: double.infinity,
               fit: BoxFit.cover,
             ),
@@ -177,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                             ? loginPasswordController
                             : registerPasswordController,
                         hint: 'Enter your password',
-                        obscureText: true,
+                        isPassword: true,
                       ),
 
                       const SizedBox(height: 10),
@@ -308,70 +311,17 @@ class _LoginPageState extends State<LoginPage> {
                                         _isLoading = false;
                                       });
 
-                                      final otpCode = await showDialog<String>(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (context) {
-                                          final TextEditingController
-                                          otpController =
-                                              TextEditingController();
-                                          return AlertDialog(
-                                            title: const Text(
-                                              'Verifikasi Email',
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Text(
-                                                  'Masukkan 6 digit kode OTP yang dikirim ke email Anda.',
-                                                ),
-                                                const SizedBox(height: 10),
-                                                TextField(
-                                                  controller: otpController,
-                                                  keyboardType:
-                                                      TextInputType.number,
-                                                  maxLength: 6,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        hintText: 'Kode OTP',
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: const Text('Batal'),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () => Navigator.pop(
-                                                  context,
-                                                  otpController.text.trim(),
-                                                ),
-                                                child: const Text('Verifikasi'),
-                                              ),
-                                            ],
-                                          );
-                                        },
+                                      // Loop: tetap di dialog OTP (countdown berjalan)
+                                      // sampai verifikasi sukses / dibatalkan — seperti web.
+                                      final registered =
+                                          await _showOtpDialog(
+                                        fullName,
+                                        email,
+                                        password,
                                       );
-
-                                      if (otpCode != null &&
-                                          otpCode.isNotEmpty) {
-                                        if (!context.mounted) return;
-                                        setState(() {
-                                          _isLoading = true;
-                                        });
-                                        result = await ApiService.register(
-                                          fullName,
-                                          email,
-                                          password,
-                                          otpCode,
-                                        );
+                                      if (registered != null) {
+                                        result = {'success': true};
                                       } else {
-                                        if (context.mounted) {
-                                          setState(() => _isLoading = false);
-                                        }
                                         return;
                                       }
                                     } else {
@@ -458,6 +408,22 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Future<bool?> _showOtpDialog(
+    String fullName,
+    String email,
+    String password,
+  ) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _OtpDialog(
+        fullName: fullName,
+        email: email,
+        password: password,
+      ),
+    );
+  }
+
   Widget _buildLabel(String text) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -475,10 +441,11 @@ class _LoginPageState extends State<LoginPage> {
     required TextEditingController controller,
     required String hint,
     bool obscureText = false,
+    bool isPassword = false,
   }) {
     return TextField(
       controller: controller,
-      obscureText: obscureText,
+      obscureText: isPassword ? !_showPassword : obscureText,
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
@@ -488,7 +455,232 @@ class _LoginPageState extends State<LoginPage> {
           horizontal: 12,
           vertical: 12,
         ),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _showPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                  color: Colors.black45,
+                ),
+                tooltip: _showPassword
+                    ? 'Sembunyikan password'
+                    : 'Tampilkan password',
+                onPressed: () =>
+                    setState(() => _showPassword = !_showPassword),
+              )
+            : null,
       ),
+    );
+  }
+}
+
+/// Dialog Verifikasi OTP dengan countdown 5 menit + tombol kirim ulang
+/// (parity dengan web: timer direset saat resend, merah saat < 60 detik).
+class _OtpDialog extends StatefulWidget {
+  final String fullName;
+  final String email;
+  final String password;
+
+  const _OtpDialog({
+    required this.fullName,
+    required this.email,
+    required this.password,
+  });
+
+  @override
+  State<_OtpDialog> createState() => _OtpDialogState();
+}
+
+class _OtpDialogState extends State<_OtpDialog> {
+  final TextEditingController _otpController = TextEditingController();
+  Timer? _timer;
+  int _seconds = 300; // 5 menit, sama dengan web
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_seconds <= 0) {
+        _timer?.cancel();
+      } else {
+        setState(() => _seconds--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  String _formatTime() {
+    final m = (_seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (_seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Future<void> _resend() async {
+    if (_seconds > 0) return;
+    setState(() => _error = null);
+    final res = await ApiService.sendOtp(widget.email);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      setState(() {
+        _otpController.clear();
+        _seconds = 300;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal mengirim ulang OTP'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
+  Future<void> _verify() async {
+    final code = _otpController.text.trim();
+    if (code.length != 6) {
+      setState(() => _error = 'Masukkan 6 digit kode OTP.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final res = await ApiService.register(
+      widget.fullName,
+      widget.email,
+      widget.password,
+      code,
+    );
+    if (!mounted) return;
+    if (res['success'] == true) {
+      Navigator.pop(context, true);
+    } else {
+      setState(() {
+        _error = res['message'] as String? ?? 'Kode OTP tidak valid.';
+        _submitting = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final urgent = _seconds < 60;
+    return AlertDialog(
+      title: const Text('Verifikasi Email'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Masukkan 6 digit kode OTP yang dikirim ke email Anda.',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _otpController,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            enabled: !_submitting,
+            decoration: const InputDecoration(
+              hintText: 'Kode OTP',
+              counterText: '',
+            ),
+            onChanged: (_) => setState(() => _error = null),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.timer_outlined,
+                size: 15,
+                color: urgent ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Kode berlaku ${_formatTime()}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: urgent ? FontWeight.w600 : FontWeight.w400,
+                  color: urgent ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Flexible(
+                child: Text(
+                  "Belum menerima kode?",
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                ),
+              ),
+              TextButton(
+                onPressed: _seconds > 0 || _submitting ? null : _resend,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  _seconds > 0 ? 'Kirim ulang' : 'Kirim ulang',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E66D0),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              _error!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFFDC2626),
+                height: 1.3,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting ? null : _verify,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E66D0),
+            foregroundColor: Colors.white,
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text('Verifikasi'),
+        ),
+      ],
     );
   }
 }

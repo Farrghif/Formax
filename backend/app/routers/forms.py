@@ -1,5 +1,7 @@
+import html as _html
 import os
 import re
+import secrets
 from typing import List
 
 import qrcode
@@ -11,6 +13,17 @@ from .. import models, schemas, security
 from ..deps import get_db, get_current_user
 
 _SLUG_RE = re.compile(r'^[a-z0-9-]+$')
+_TAG_RE = re.compile(r'<[^>]+>')
+
+
+def _slugify_plain(text: str) -> str:
+    """Bersihkan teks (buang tag HTML & entitas) lalu jadikan slug."""
+    text = _TAG_RE.sub(' ', str(text))
+    text = _html.unescape(text)
+    text = text.strip().lower()
+    text = re.sub(r'[^a-z0-9\s-]', '', text)
+    text = re.sub(r'\s+', '-', text).strip('-')
+    return text[:60]
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
@@ -38,6 +51,16 @@ def create_form(
     current_user: models.User = Depends(get_current_user),
 ):
     # FIX Bug 30: validasi slug
+    # FIX Bug 30b: title disimpan sebagai HTML rich-text; jika client mengirim slug
+    # hasil generate dari HTML mentah (mis. "pspan-stylefont-weight-bold-...-mtecbzkp"),
+    # sisa tag akan bocor ke URL/QR. Rebuild slug dari teks bersih title setiap kali
+    # title mengandung markup, sehingga link selalu rapi dari client mana pun.
+    if '<' in str(payload.title):
+        base = _slugify_plain(str(payload.title)) or 'form'
+        candidate = f'{base}-{secrets.token_hex(3)}'
+        while db.query(models.Form).filter(models.Form.slug == candidate).first():
+            candidate = f'{base}-{secrets.token_hex(3)}'
+        payload.slug = candidate
     raw_slug = str(payload.slug).strip().lower()
     if not _SLUG_RE.match(raw_slug):
         raise HTTPException(status_code=422, detail="Slug tidak valid — hanya a-z, 0-9, dan -")
@@ -162,11 +185,70 @@ def update_form(
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    questions_data = data.pop("questions", None)
+
+    for key, value in data.items():
         setattr(form, key, value)
-    db.commit()
-    db.refresh(form)
-    return form
+
+    # Jika questions ikut dikirim (draft save), replace semua questions lama.
+    # Sama seperti update template — dipakai agar draft form dari mobile bisa
+    # menyimpan pertanyaan secara atomik tanpa perlu CRUD per question.
+    if questions_data is not None:
+        from datetime import datetime
+        form.updated_at = datetime.utcnow()
+        for q in list(form.questions):
+            db.delete(q)
+        db.flush()
+        for q in questions_data:
+            q_type = q.get("type") if isinstance(q, dict) else q.type
+            if isinstance(q, dict):
+                label = (q.get("label") or "").strip() or "Pertanyaan Tanpa Judul"
+                placeholder = q.get("placeholder")
+                is_required = q.get("is_required", False)
+                order_index = q.get("order_index", 0)
+                settings = q.get("settings") or {}
+                options = q.get("options") or []
+            else:
+                label = (q.label or "").strip() or "Pertanyaan Tanpa Judul"
+                placeholder = q.placeholder
+                is_required = q.is_required
+                order_index = q.order_index
+                settings = q.settings or {}
+                options = q.options
+            question = models.Question(
+                form_id=form.id,
+                type=q_type, label=label, placeholder=placeholder,
+                is_required=is_required, order_index=order_index, settings=settings,
+            )
+            db.add(question)
+            db.flush()
+            for opt in options:
+                if isinstance(opt, dict):
+                    db.add(models.QuestionOption(
+                        question_id=question.id,
+                        label=(opt.get("label") or "Opsi").strip(),
+                        value=opt.get("value"),
+                        order_index=opt.get("order_index", 0),
+                        is_correct=opt.get("is_correct", False),
+                        is_other=opt.get("is_other", False),
+                    ))
+                else:
+                    db.add(models.QuestionOption(
+                        question_id=question.id, label=(opt.label or "Opsi").strip(),
+                        value=opt.value, order_index=opt.order_index,
+                        is_correct=opt.is_correct, is_other=opt.is_other,
+                    ))
+
+    try:
+        db.commit()
+        db.refresh(form)
+        db.refresh(form, attribute_names=["questions"])
+        return form
+    except Exception as e:
+        db.rollback()
+        print(f"[forms] update_form error: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal update form: {str(e)}")
 
 
 @router.post("/{form_id}/publish", response_model=schemas.FormOut)

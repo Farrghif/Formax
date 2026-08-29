@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../widgets/rich_text_view.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// ============================================================
 /// MODEL CLASSES
@@ -150,11 +154,19 @@ class _FillFormPageState extends State<FillFormPage> {
   final Map<String, Map<String, dynamic>> _answers = {};
   // FIX Bug 32: cache TextEditingController per question agar cursor tidak lompat tiap rebuild
   final Map<String, TextEditingController> _textCtrls = {};
+  // Soal file_upload yang sedang mengunggah (id) + future-nya utk ditunggu saat submit
+  final Set<String> _uploadingQids = {};
+  final Map<String, Future<void>> _pendingUploads = {};
 
   // Join Token
   bool _showJoinTokenDialog = false;
   final TextEditingController _joinTokenController = TextEditingController();
   String? _joinTokenError;
+
+  // Countdown timer (form dengan end_date/jadwal)
+  Timer? _countdownTimer;
+  DateTime? _countdownEnd;
+  Duration _timeLeft = Duration.zero;
 
   // Pagination
   static const int _questionsPerPage = 4;
@@ -171,8 +183,62 @@ class _FillFormPageState extends State<FillFormPage> {
   @override
   void dispose() {
     _joinTokenController.dispose();
+    _countdownTimer?.cancel();
     for (var c in _textCtrls.values) { c.dispose(); }
     super.dispose();
+  }
+
+  // ── Countdown helper ──────────────────────────────────────
+  DateTime? _parseEndDate(String? s) {
+    if (s == null || s.isEmpty) return null;
+    final dt = DateTime.tryParse(s);
+    if (dt == null) return null;
+    // Naik ISO tanpa info zona (mis. dari mobile) dianggap waktu lokal.
+    if (!s.contains('Z') && !s.contains('+')) return dt;
+    return dt.toLocal();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    final end = _parseEndDate(_formData?.endDate);
+    if (end == null || !end.isAfter(DateTime.now())) return;
+    _countdownEnd = end;
+    _timeLeft = end.difference(DateTime.now());
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _countdownEnd == null) return;
+      final left = _countdownEnd!.difference(DateTime.now());
+      if (left <= Duration.zero) {
+        _countdownTimer?.cancel();
+        setState(() => _timeLeft = Duration.zero);
+        _autoSubmitOnTimeout();
+      } else {
+        setState(() => _timeLeft = left);
+      }
+    });
+  }
+
+  Future<void> _autoSubmitOnTimeout() async {
+    if (_isSubmitted || _isSubmitting || _submissionId == null) return;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _missingRequired.isEmpty
+                ? 'Waktu habis — jawaban dikirim otomatis.'
+                : 'Waktu habis — jawaban yang sudah terisi tetap dikirim.',
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+    await _submitForm();
+  }
+
+  String _formatCountdown(Duration d) {
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return h == '00' ? '$m:$s' : '$h:$m:$s';
   }
 
   TextEditingController _getTextCtrl(Question q) {
@@ -215,22 +281,17 @@ class _FillFormPageState extends State<FillFormPage> {
     }
 
     try {
+      // Login optional: kalau ada token dipakai, kalau tidak pakai identitas anonim
       final token = await ApiService.getToken();
-      if (token == null) {
-        if (!mounted) return;
-        setState(() {
-          _errorMsg = 'Silakan login terlebih dahulu';
-          _isLoading = false;
-        });
-        return;
-      }
+      final respondentKey = await ApiService.getRespondentKey();
 
-      // 1. Fetch form data by slug
+      // 1. Fetch form data by slug (publik — boleh tanpa login)
       final formResponse = await http.get(
         Uri.parse('${ApiService.baseUrl}/forms/public/${widget.slug}'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'X-Respondent-Key': respondentKey,
+          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
 
@@ -255,9 +316,11 @@ class _FillFormPageState extends State<FillFormPage> {
       final formData = FormData.fromJson(formJson);
       if (!mounted) return;
       setState(() => _formData = formData);
+      _startCountdown();
 
       // 2. Try joining the form (auto-join if no token required)
       await _joinForm(token, null);
+      _startCountdown();
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMsg = 'Terjadi kesalahan: ${e.toString()}');
@@ -266,18 +329,20 @@ class _FillFormPageState extends State<FillFormPage> {
     }
   }
 
-  Future<void> _joinForm(String token, String? joinToken) async {
+  Future<void> _joinForm(String? token, String? joinToken) async {
     try {
       final body = <String, dynamic>{};
       if (joinToken != null && joinToken.isNotEmpty) {
         body['token'] = joinToken;
       }
 
+      final respondentKey = await ApiService.getRespondentKey();
       final response = await http.post(
         Uri.parse('${ApiService.baseUrl}/forms/public/${widget.slug}/join'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'X-Respondent-Key': respondentKey,
+          if (token != null) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode(body),
       );
@@ -324,21 +389,21 @@ class _FillFormPageState extends State<FillFormPage> {
     }
   }
 
-  Future<void> _saveAnswer(String questionId) async {
-    if (_submissionId == null) return;
+  Future<bool> _saveAnswer(String questionId) async {
+    if (_submissionId == null) return false;
 
     final token = await ApiService.getToken();
-    if (token == null) return;
-
     final answer = _answers[questionId];
-    if (answer == null) return;
+    if (answer == null) return false;
 
     try {
-      await http.put(
+      final respondentKey = await ApiService.getRespondentKey();
+      final response = await http.put(
         Uri.parse('${ApiService.baseUrl}/submissions/$_submissionId/answers'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'X-Respondent-Key': respondentKey,
+          if (token != null) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'question_id': questionId,
@@ -347,8 +412,10 @@ class _FillFormPageState extends State<FillFormPage> {
           'file_url': answer['file_url'],
         }),
       );
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (_) {
-      // Auto-save gagal silently — user tetap bisa lanjut isi
+      // Auto-save gagal silent — user tetap bisa lanjut isi
+      return false;
     }
   }
 
@@ -357,23 +424,29 @@ class _FillFormPageState extends State<FillFormPage> {
 
     if (mounted) setState(() => _isSubmitting = true);
 
+    // Tunggu semua upload yang masih berjalan agar file ikut tersimpan sebelum finalisasi.
+    final pending = _pendingUploads.values.toList();
+    if (pending.isNotEmpty) {
+      await Future.wait(pending);
+      if (!mounted) return;
+    }
+
     try {
       final token = await ApiService.getToken();
-      if (token == null) {
-        if (mounted) setState(() => _isSubmitting = false);
-        return;
-      }
+      final respondentKey = await ApiService.getRespondentKey();
 
       final response = await http.post(
         Uri.parse('${ApiService.baseUrl}/submissions/$_submissionId/submit'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'X-Respondent-Key': respondentKey,
+          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
 
       if (!mounted) return;
       if (response.statusCode == 200) {
+        _countdownTimer?.cancel();
         setState(() => _isSubmitted = true);
       } else {
         final decoded = _safeJsonDecode(response.body);
@@ -421,9 +494,48 @@ class _FillFormPageState extends State<FillFormPage> {
     return _answers.values.where((a) {
       final text = a['answer_text'] as String?;
       final options = a['answer_options'] as List?;
+      final file = a['file_url'] as String?;
       return (text != null && text.isNotEmpty) ||
-          (options != null && options.isNotEmpty);
+          (options != null && options.isNotEmpty) ||
+          (file != null && file.isNotEmpty);
     }).length;
+  }
+
+  // ── Validasi soal wajib diisi ─────────────────────────────
+  bool _isQuestionAnswered(Question q) {
+    final a = _answers[q.id];
+    if (a == null) return false;
+    final text = a['answer_text'] as String?;
+    if (text != null && text.isNotEmpty) return true;
+    final options = a['answer_options'] as List?;
+    if (options != null && options.isNotEmpty) return true;
+    final fileUrl = a['file_url'] as String?;
+    if (fileUrl != null && fileUrl.isNotEmpty) return true;
+    return false;
+  }
+
+  List<Question> get _missingRequired {
+    if (_formData == null) return const [];
+    return _formData!.questions
+        .where((q) => q.isRequired && !_isQuestionAnswered(q))
+        .toList();
+  }
+
+  List<Question> get _missingRequiredOnCurrentPage {
+    return _currentQuestions
+        .where((q) => q.isRequired && !_isQuestionAnswered(q))
+        .toList();
+  }
+
+  int _pageOfQuestion(Question q) {
+    final idx = _formData?.questions.indexOf(q) ?? 0;
+    return idx ~/ _questionsPerPage;
+  }
+
+  String _shortLabel(Question q) {
+    final t =
+        q.label.replaceAll(RegExp(r'<[^>]*>'), '').trim().replaceAll('\n', ' ');
+    return t.length > 28 ? '${t.substring(0, 28)}...' : t;
   }
 
   void _updateAnswer(String questionId, {String? text, List<String>? options}) {
@@ -444,7 +556,7 @@ class _FillFormPageState extends State<FillFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: _buildBody(),
     );
@@ -573,7 +685,7 @@ class _FillFormPageState extends State<FillFormPage> {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -785,7 +897,7 @@ class _FillFormPageState extends State<FillFormPage> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: Column(
         children: [
           Row(
@@ -793,18 +905,18 @@ class _FillFormPageState extends State<FillFormPage> {
             children: [
               Text(
                 '$_answeredCount / $total terjawab',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               Text(
                 'Halaman ${_currentPage + 1} / $_totalPages',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -821,6 +933,52 @@ class _FillFormPageState extends State<FillFormPage> {
               minHeight: 6,
             ),
           ),
+          if (_timeLeft > Duration.zero) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _timeLeft < const Duration(minutes: 1)
+                    ? const Color(0xFFFEF2F2)
+                    : const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _timeLeft < const Duration(minutes: 1)
+                      ? const Color(0xFFFCA5A5)
+                      : const Color(0xFF86EFAC),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 18,
+                    color: _timeLeft < const Duration(minutes: 1)
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF059669),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Sisa waktu:',
+                    style: TextStyle(fontSize: 13, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _formatCountdown(_timeLeft),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: _timeLeft < const Duration(minutes: 1)
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF059669),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -832,9 +990,9 @@ class _FillFormPageState extends State<FillFormPage> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -863,18 +1021,18 @@ class _FillFormPageState extends State<FillFormPage> {
           _looksLikeHtml(_formData!.title)
               ? RichTextView(
                   html: _formData!.title,
-                  textStyle: const TextStyle(
+                  textStyle: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 )
               : Text(
                   _formData!.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
           if (_formData?.description != null &&
@@ -883,17 +1041,17 @@ class _FillFormPageState extends State<FillFormPage> {
             _looksLikeHtml(_formData!.description!)
                 ? RichTextView(
                     html: _formData!.description!,
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.5,
                     ),
                   )
                 : Text(
                     _formData!.description!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.5,
                     ),
                   ),
@@ -939,9 +1097,9 @@ class _FillFormPageState extends State<FillFormPage> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -977,19 +1135,19 @@ class _FillFormPageState extends State<FillFormPage> {
                 child: question.label.contains('<')
                     ? RichTextView(
                         html: question.label,
-                        textStyle: const TextStyle(
+                        textStyle: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2937),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       )
                     : RichText(
                         text: TextSpan(
                           text: question.label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2937),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           children: [
                             if (question.isRequired)
@@ -1056,12 +1214,16 @@ class _FillFormPageState extends State<FillFormPage> {
       maxLines: 3,
       decoration: InputDecoration(
         hintText: question.placeholder ?? 'Ketik jawaban di sini...',
-        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         filled: true,
-        fillColor: const Color(0xFFF9FAFB),
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -1073,6 +1235,13 @@ class _FillFormPageState extends State<FillFormPage> {
   }
 
   // --- SINGLE CHOICE (RADIO) ---
+  // Render label opsi sebagai rich text bila berisi markup HTML (dari builder).
+  Widget _renderOptionText(String label, TextStyle style) {
+    return label.contains('<')
+        ? RichTextView(html: label, textStyle: style)
+        : Text(label, style: style);
+  }
+
   Widget _buildSingleChoiceInput(Question question) {
     final selectedValue = _answers[question.id]?['answer_text'] ?? '';
 
@@ -1088,12 +1257,12 @@ class _FillFormPageState extends State<FillFormPage> {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFEFF6FF)
-                  : const Color(0xFFF9FAFB),
+                  : Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: isSelected
                     ? const Color(0xFF1E66D0)
-                    : const Color(0xFFD1D5DB),
+                    : Theme.of(context).colorScheme.outlineVariant,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -1110,13 +1279,13 @@ class _FillFormPageState extends State<FillFormPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: _renderOptionText(
                     option.label,
-                    style: TextStyle(
+                    TextStyle(
                       fontSize: 15,
                       color: isSelected
                           ? const Color(0xFF1E40AF)
-                          : const Color(0xFF374151),
+                          : Theme.of(context).colorScheme.onSurface,
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.normal,
@@ -1157,12 +1326,12 @@ class _FillFormPageState extends State<FillFormPage> {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFEFF6FF)
-                  : const Color(0xFFF9FAFB),
+                  : Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: isSelected
                     ? const Color(0xFF1E66D0)
-                    : const Color(0xFFD1D5DB),
+                    : Theme.of(context).colorScheme.outlineVariant,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -1177,13 +1346,13 @@ class _FillFormPageState extends State<FillFormPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: _renderOptionText(
                     option.label,
-                    style: TextStyle(
+                    TextStyle(
                       fontSize: 15,
                       color: isSelected
                           ? const Color(0xFF1E40AF)
-                          : const Color(0xFF374151),
+                          : Theme.of(context).colorScheme.onSurface,
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.normal,
@@ -1205,9 +1374,9 @@ class _FillFormPageState extends State<FillFormPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD1D5DB)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -1220,7 +1389,13 @@ class _FillFormPageState extends State<FillFormPage> {
           items: question.options.map((option) {
             return DropdownMenuItem<String>(
               value: option.label,
-              child: Text(option.label),
+              child: _renderOptionText(
+                option.label,
+                const TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF374151),
+                ),
+              ),
             );
           }).toList(),
           onChanged: (value) {
@@ -1245,8 +1420,9 @@ class _FillFormPageState extends State<FillFormPage> {
           builder: (context, child) {
             return Theme(
               data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.light(
-                  primary: Color(0xFF1E66D0),
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF1E66D0),
+                  brightness: Theme.of(context).brightness,
                 ),
               ),
               child: child!,
@@ -1265,16 +1441,16 @@ class _FillFormPageState extends State<FillFormPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFD1D5DB)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.calendar_today,
               size: 20,
-              color: Color(0xFF6B7280),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 12),
             Text(
@@ -1282,8 +1458,8 @@ class _FillFormPageState extends State<FillFormPage> {
               style: TextStyle(
                 fontSize: 15,
                 color: currentDate.isEmpty
-                    ? const Color(0xFF9CA3AF)
-                    : const Color(0xFF374151),
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -1304,8 +1480,16 @@ class _FillFormPageState extends State<FillFormPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(settings['min_label'] ?? '$min', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-            Text(settings['max_label'] ?? '$max', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(settings['min_label'] ?? '$min',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )),
+            Text(settings['max_label'] ?? '$max',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )),
           ],
         ),
         const SizedBox(height: 8),
@@ -1345,13 +1529,22 @@ class _FillFormPageState extends State<FillFormPage> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(row, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            _renderOptionText(
+              row,
+              const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
               children: question.options.map((opt) {
                 final isSel = selected.contains(opt.label);
-                return FilterChip(label: Text(opt.label), selected: isSel, onSelected: (_) {
+                return FilterChip(
+                  label: _renderOptionText(
+                    opt.label,
+                    const TextStyle(fontSize: 13),
+                  ),
+                  selected: isSel,
+                  onSelected: (_) {
                   final cur = List<String>.from(selected.map((e) => e.toString()));
                   if (isRadio) { cur.clear(); cur.add(opt.label); } else { if (cur.contains(opt.label)) cur.remove(opt.label); else cur.add(opt.label); }
                   _updateAnswer(question.id, text: null, options: cur);
@@ -1364,58 +1557,312 @@ class _FillFormPageState extends State<FillFormPage> {
     );
   }
 
-  // --- FILE UPLOAD (placeholder) ---
+  // --- FILE UPLOAD ---
   Widget _buildFileUploadInput(Question question) {
-    final fileUrl = _answers[question.id]?['file_url'];
+    final fileUrl = _answers[question.id]?['file_url'] as String?;
+    final uploading = _uploadingQids.contains(question.id);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final Widget content;
+    if (uploading) {
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Mengunggah file…',
+            style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
+          ),
+        ],
+      );
+    } else if (fileUrl != null && fileUrl.isNotEmpty) {
+      final fileName = _fileNameFromUrl(fileUrl);
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_circle, size: 40, color: Color(0xFF059669)),
+          const SizedBox(height: 8),
+          Text(
+            fileName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF065F46),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'File berhasil diunggah',
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _pickAndUploadFile(question),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Ganti'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  side: BorderSide(color: colorScheme.outlineVariant),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _removeFile(question),
+                icon: const Icon(Icons.delete_outline, size: 16),
+                label: const Text('Hapus'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    } else {
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_upload_outlined, size: 40, color: Color(0xFF9CA3AF)),
+          const SizedBox(height: 8),
+          Text(
+            'Tap untuk upload file',
+            style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Gambar, video, PDF, atau file lain',
+            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+          ),
+        ],
+      );
+    }
 
     return InkWell(
-      onTap: () {
-        // TODO: Implement file picker integration
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur upload file akan segera tersedia'),
-          ),
-        );
-      },
+      onTap: uploading ? null : () => _pickAndUploadFile(question),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 32),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: const Color(0xFFD1D5DB),
+            color: Theme.of(context).colorScheme.outlineVariant,
             style: BorderStyle.solid,
           ),
         ),
+        child: content,
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadFile(Question question) async {
+    if (_uploadingQids.contains(question.id)) return;
+
+    final source = await showModalBottomSheet<_FileSource>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (ctx) => SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              fileUrl != null
-                  ? Icons.check_circle
-                  : Icons.cloud_upload_outlined,
-              size: 40,
-              color: fileUrl != null
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF9CA3AF),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              fileUrl != null
-                  ? 'File berhasil diupload'
-                  : 'Tap untuk upload file',
-              style: TextStyle(
-                fontSize: 14,
-                color: fileUrl != null
-                    ? const Color(0xFF059669)
-                    : const Color(0xFF6B7280),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Row(
+                children: [
+                  Text(
+                    'Upload File',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(ctx).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galeri'),
+              onTap: () => Navigator.pop(ctx, _FileSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Kamera'),
+              onTap: () => Navigator.pop(ctx, _FileSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file_outlined),
+              title: const Text('Dokumen / File lain'),
+              onTap: () => Navigator.pop(ctx, _FileSource.file),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
+    if (source == null || !mounted) return;
+
+    Uint8List? bytes;
+    var fileName = '';
+    try {
+      if (source == _FileSource.gallery || source == _FileSource.camera) {
+        final img = await ImagePicker().pickImage(
+          source: source == _FileSource.gallery
+              ? ImageSource.gallery
+              : ImageSource.camera,
+          maxWidth: 2048,
+          imageQuality: 85,
+        );
+        if (img == null) return;
+        bytes = await img.readAsBytes();
+        fileName = img.name;
+      } else {
+        final picked = await FilePicker.pickFile();
+        if (picked == null) return;
+        bytes = await picked.readAsBytes();
+        fileName = picked.name;
+      }
+      if (bytes == null || bytes.isEmpty) return;
+      final upload = _performUpload(question, bytes, fileName);
+      _pendingUploads[question.id] = upload;
+      try {
+        await upload;
+      } finally {
+        _pendingUploads.remove(question.id);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memilih file'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _performUpload(
+    Question question,
+    Uint8List bytes,
+    String fileName,
+  ) async {
+    if (_submissionId == null) return;
+
+    setState(() => _uploadingQids.add(question.id));
+    try {
+      final token = await ApiService.getToken();
+      final respondentKey = await ApiService.getRespondentKey();
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiService.baseUrl}/uploads'),
+      )
+        ..headers['X-Respondent-Key'] = respondentKey
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: fileName,
+            contentType: null,
+          ),
+        );
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = _safeJsonDecode(response.body);
+        final fileUrl = (data is Map) ? data['file_url'] : null;
+        if (fileUrl is String && fileUrl.isNotEmpty) {
+          setState(() {
+            _answers[question.id] = {
+              'answer_text': null,
+              'answer_options': null,
+              'file_url': fileUrl,
+            };
+          });
+          final saved = await _saveAnswer(question.id);
+          if (!saved && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('File terunggah, tapi belum tersinkron — coba lagi'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('File berhasil diunggah'),
+                backgroundColor: Color(0xFF059669),
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal mengunggah file'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        final decoded = _safeJsonDecode(response.body);
+        final detail = (decoded is Map && decoded['detail'] != null)
+            ? decoded['detail'].toString()
+            : 'Gagal mengunggah (${response.statusCode})';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(detail), backgroundColor: Colors.red),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal terhubung ke server'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingQids.remove(question.id));
+    }
+  }
+
+  void _removeFile(Question question) {
+    setState(() {
+      _answers[question.id] = {
+        'answer_text': null,
+        'answer_options': null,
+        'file_url': null,
+      };
+    });
+    _saveAnswer(question.id);
+  }
+
+  String _fileNameFromUrl(String url) {
+    final segment = url.split('/').last;
+    try {
+      var name = Uri.decodeComponent(segment);
+      if (name.length > 32) name = '${name.substring(0, 29)}...';
+      return name;
+    } catch (_) {
+      return segment;
+    }
   }
 
   // ============================================================
@@ -1428,7 +1875,7 @@ class _FillFormPageState extends State<FillFormPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -1468,7 +1915,7 @@ class _FillFormPageState extends State<FillFormPage> {
                       if (isLastPage) {
                         _showSubmitConfirmation();
                       } else {
-                        setState(() => _currentPage++);
+                        _handleNext();
                       }
                     },
               icon: _isSubmitting
@@ -1511,7 +1958,105 @@ class _FillFormPageState extends State<FillFormPage> {
   // ============================================================
   // SUBMIT CONFIRMATION DIALOG
   // ============================================================
+  void _handleNext() {
+    final missing = _missingRequiredOnCurrentPage;
+    if (missing.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Wajib diisi di halaman ini: ${missing.take(3).map(_shortLabel).join(', ')}${missing.length > 3 ? ', ...' : ''}',
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
+    setState(() => _currentPage++);
+  }
+
   void _showSubmitConfirmation() {
+    final missing = _missingRequired;
+    if (missing.isNotEmpty) {
+      // Karena ada yang belum dijawab: lompat ke halaman pertama yang belum lengkap.
+      if (_currentPage != _pageOfQuestion(missing.first)) {
+        setState(() => _currentPage = _pageOfQuestion(missing.first));
+      }
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 22),
+              SizedBox(width: 10),
+              Text('Masih Ada yang Kosong'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${missing.length} soal wajib belum dijawab. Lengkapi dulu ya:',
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 12),
+                ...missing.take(8).map(
+                      (q) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.circle, size: 6, color: Color(0xFFDC2626)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _shortLabel(q),
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                if (missing.length > 8)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      'dan ${missing.length - 8} soal lainnya...',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK', style: TextStyle(color: Color(0xFF6B7280))),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() => _currentPage = _pageOfQuestion(missing.first));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E66D0),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Lengkapi'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1569,3 +2114,5 @@ class _FillFormPageState extends State<FillFormPage> {
     );
   }
 }
+
+enum _FileSource { gallery, camera, file }

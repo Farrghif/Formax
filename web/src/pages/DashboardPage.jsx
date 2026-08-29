@@ -646,7 +646,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="db-card-info">
-                          <p className="db-card-title">{tpl.title}</p>
+                          <p className="db-card-title">{stripHtml(tpl.title)}</p>
                           <p className="db-card-subtitle">{subtitles[idx] || tpl.description || ''}</p>
                         </div>
                       </div>
@@ -682,7 +682,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="db-card-info">
-                          <p className="db-card-title">{card.title}</p>
+                          <p className="db-card-title">{stripHtml(card.title)}</p>
                           <p className="db-card-subtitle">{card.subtitle}</p>
                         </div>
                       </div>
@@ -710,7 +710,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="db-recent-footer">
                         <div>
-                          <p className="db-recent-title">{form.title}</p>
+                          <p className="db-recent-title">{stripHtml(form.title)}</p>
                           <p className="db-recent-date">Diperbarui {formatTimeAgo(form.created_at)}</p>
                         </div>
                         <div style={{ position: 'relative' }}>
@@ -788,7 +788,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="db-recent-footer">
                         <div>
-                          <p className="db-recent-title">{tpl.title}</p>
+                          <p className="db-recent-title">{stripHtml(tpl.title)}</p>
                           <p className="db-recent-date">{tpl.is_system ? 'Templat Sistem' : 'Templat Saya'}</p>
                         </div>
                         {!tpl.is_system && (
@@ -898,7 +898,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="history-card-body">
                             <div className="history-card-info">
-                              <h3 className="history-card-title" title={form.title}>{form.title}</h3>
+                              <h3 className="history-card-title" title={stripHtml(form.title)}>{stripHtml(form.title)}</h3>
                               <div className="history-card-status-wrap">
                                 <span className={`db-status ${form.status}`}>{form.status}</span>
                               </div>
@@ -940,7 +940,7 @@ export default function DashboardPage() {
                         ← Kembali ke Riwayat Form
                       </button>
                       <h2>Riwayat Form</h2>
-                      <p>Hasil Responden - <strong>{selectedFormForResults.title}</strong></p>
+                      <p>Hasil Responden - <strong>{stripHtml(selectedFormForResults.title)}</strong></p>
                     </div>
 
                     <button
@@ -1267,7 +1267,7 @@ export default function DashboardPage() {
                                       <div key={opt.id} className="analytics-bar-item">
                                         <div className="analytics-bar-info">
                                           <div className="analytics-opt-label">
-                                            <span>{opt.label}</span>
+                                            <span>{stripHtml(opt.label)}</span>
                                             {opt.is_correct && <span className="analytics-correct-key">✓ Kunci Jawaban</span>}
                                           </div>
                                           <span className="analytics-opt-stats">
@@ -1341,8 +1341,8 @@ export default function DashboardPage() {
                     <aside className="detail-info-card">
                       <div className="detail-info-header">
                         <span className="detail-info-kicker">Informasi Responden</span>
-                        <h2 className="detail-info-title" title={formDetail?.title || selectedFormForResults?.title}>
-                          {formDetail?.title || selectedFormForResults?.title || 'Judul Form'}
+                        <h2 className="detail-info-title" title={stripHtml(formDetail?.title || selectedFormForResults?.title)}>
+                          {stripHtml(formDetail?.title || selectedFormForResults?.title || 'Judul Form')}
                         </h2>
                       </div>
 
@@ -1474,7 +1474,7 @@ export default function DashboardPage() {
                                             flexShrink: 0,
                                           }}
                                         />
-                                        <span>{opt.label}</span>
+                                        <span>{stripHtml(opt.label)}</span>
                                       </div>
 
                                       {/* Indicator */}
@@ -1639,12 +1639,12 @@ export default function DashboardPage() {
                         </div>
                         <div className="resp-answer-value">
                           <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Jawaban kamu: </span>
-                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{a.user_answer || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}</span>
+                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{stripHtml(a.user_answer) || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}</span>
                         </div>
                         {a.correct_answer && (
                           <div className="resp-answer-value" style={{ marginTop: '8px', background: '#f0fdf4', borderColor: '#bbf7d0' }}>
                             <span style={{ fontSize: '12px', color: '#15803d', fontWeight: 600 }}>Kunci: </span>
-                            <span style={{ color: '#15803d' }}>{a.correct_answer}</span>
+                            <span style={{ color: '#15803d' }}>{stripHtml(a.correct_answer)}</span>
                           </div>
                         )}
                       </div>
@@ -1769,8 +1769,8 @@ export default function DashboardPage() {
                                   return (
                                     <tr key={sub.id}>
                                       <td>
-                                        <div style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={sub.form?.title || '(Form terhapus)'}>
-                                          {sub.form?.title || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>(Form terhapus)</span>}
+                                        <div style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={stripHtml(sub.form?.title) || '(Form terhapus)'}>
+                                          {stripHtml(sub.form?.title) || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>(Form terhapus)</span>}
                                         </div>
                                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
                                           {sub.form?.slug ? `/${sub.form.slug}` : ''} {sub.is_auto_submitted ? '• auto' : ''} {durationStr !== '-' ? `• ${durationStr}` : ''}
@@ -1819,7 +1819,7 @@ export default function DashboardPage() {
                               const isCompleted = !!sub.submitted_at;
                               return (
                                 <div key={sub.id} className="activity-mobile-card">
-                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{sub.form?.title || '(Form terhapus)'}</div>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{stripHtml(sub.form?.title) || '(Form terhapus)'}</div>
                                   <div style={{ fontSize: '12px', color: '#64748b' }}>{sub.form?.owner_name || '-'} • {sub.answered_count}/{sub.total_questions} terjawab</div>
                                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Mulai: {formatDateString(sub.started_at)} • Submit: {sub.submitted_at ? formatDateString(sub.submitted_at) : 'Belum'}</div>
                                   <div style={{ marginTop: '8px' }}>
@@ -1864,7 +1864,7 @@ export default function DashboardPage() {
             </div>
             <h3 className="db-modal-title">Hapus Form</h3>
             <p className="db-modal-text">
-              Yakin ingin menghapus form <strong>"{confirmDeleteForm.title}"</strong>? Semua respons yang masuk ikut terhapus dan tindakan ini tidak bisa dibatalkan.
+              Yakin ingin menghapus form <strong>"{stripHtml(confirmDeleteForm.title)}"</strong>? Semua respons yang masuk ikut terhapus dan tindakan ini tidak bisa dibatalkan.
             </p>
             <div className="db-modal-actions">
               <button className="db-btn-cancel" onClick={() => setConfirmDeleteForm(null)}>

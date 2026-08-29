@@ -29,7 +29,7 @@ class SearchResultsView extends StatelessWidget {
     final hasHistory = publishedForms.isNotEmpty;
 
     if (!hasTemplates && !hasHistory) {
-      return _buildEmptyState();
+      return _buildEmptyState(context);
     }
 
     return SingleChildScrollView(
@@ -38,12 +38,12 @@ class SearchResultsView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasTemplates) ...[
-            const Text(
+            Text(
               'Templates',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -56,12 +56,12 @@ class SearchResultsView extends StatelessWidget {
             const SizedBox(height: 24),
           ],
           if (hasHistory) ...[
-            const Text(
+            Text(
               'Published Forms / History',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -84,7 +84,7 @@ class SearchResultsView extends StatelessWidget {
           }
         }
         if (!context.mounted) return;
-        final result = await Navigator.push<FormTemplate>(
+        final result = await Navigator.push<FormMakerResult>(
           context,
           MaterialPageRoute(
             builder: (_) => FormMakerPage(initialTemplate: fullTemplate),
@@ -99,9 +99,9 @@ class SearchResultsView extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
@@ -124,24 +124,24 @@ class SearchResultsView extends StatelessWidget {
                 children: [
                   Text(
                     template.plainTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: Color(0xFF111827),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     isBuiltIn ? 'Template Bawaan' : 'Template Saya',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.black26),
+            Icon(Icons.chevron_right, color: Colors.black26),
           ],
         ),
       ),
@@ -155,14 +155,18 @@ class SearchResultsView extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (_) => Scaffold(
-              backgroundColor: const Color(0xFFF9FAFB),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               appBar: AppBar(
-                title: const Text(
+                title: Text(
                   'Detail Form',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black87,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 elevation: 0.5,
               ),
               body: HistoryPage(highlightFormId: form.id),
@@ -175,9 +179,9 @@ class SearchResultsView extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
@@ -200,18 +204,18 @@ class SearchResultsView extends StatelessWidget {
                 children: [
                   Text(
                     form.plainTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: Color(0xFF111827),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${form.totalSubmissions} responden',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -224,28 +228,29 @@ class SearchResultsView extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       alignment: Alignment.center,
       child: Column(
         children: [
-          const Icon(Icons.search_off, size: 64, color: Colors.black12),
+          Icon(Icons.search_off, size: 64, color: colorScheme.outline),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Tidak ada template atau form yang ditemukan.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black54,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Coba gunakan kata kunci pencarian yang lain.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Colors.black38),
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),

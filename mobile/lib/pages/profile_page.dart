@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../theme/theme_controller.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -291,7 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -401,6 +402,22 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 48),
+
+                  // ─── Tampilan / Dark Mode ───────────────────────────────
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Tampilan',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildThemeToggle(),
                   const SizedBox(height: 48),
 
                   // ─── Action Buttons ──────────────────────────────────────
@@ -522,6 +539,61 @@ class _ProfilePageState extends State<ProfilePage> {
       height: 110,
       color: const Color(0xFFEEF2FF),
       child: const Icon(Icons.person, size: 50, color: Color(0xFF9CA3AF)),
+    );
+  }
+
+  Widget _buildThemeToggle() {
+    return ListenableBuilder(
+      listenable: ThemeController.instance,
+      builder: (context, _) {
+        final dark = ThemeController.instance.isDark;
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                dark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                size: 22,
+                color: const Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Mode Gelap',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      dark ? 'Aktif — tema gelap menyala' : 'Nonaktif — tema terang',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: dark,
+                activeThumbColor: Colors.white,
+                onChanged: (_) => ThemeController.instance.toggle(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

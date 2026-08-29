@@ -56,6 +56,38 @@ class ApiService {
     await prefs.remove('access_token');
   }
 
+  // Identitas responden anonim (Google-Forms style).
+  // Simpan satu UUID di shared_preferences per perangkat, dipakai sebagai X-Respondent-Key
+  // supaya orang yang membuka link tanpa login tetap bisa mengisi & melacak submission-nya.
+  static Future<String> getRespondentKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? key = prefs.getString('anonymous_respondent_key');
+    if (key == null || key.isEmpty) {
+      key = _generateUuid();
+      await prefs.setString('anonymous_respondent_key', key);
+    }
+    return key;
+  }
+
+  static String _generateUuid() {
+    // UUID v4 sederhana tanpa dependency eksternal
+    final rnd = DateTime.now().microsecondsSinceEpoch;
+    final rand = (rnd * 2654435761) % 0x7FFFFFFF;
+    final hex = rand.toRadixString(16).padLeft(8, '0');
+    return 'anon-$hex-${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  // Slug dari judul form — pola sama dengan web (generateSlug) agar konsisten.
+  static String generateSlug(String title) {
+    final base = title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-')
+        .replaceAll(RegExp(r'-+'), '-');
+    final trimmed = base.length > 60 ? base.substring(0, 60) : base;
+    return '$trimmed-${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+  }
+
   // Fungsi Login
   static Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = true}) async {
     try {
@@ -304,11 +336,25 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final parsed = _safeJson(response.body);
-        dynamic questions;
+        // /templates/mine mengembalikan List<TemplateOut>; kumpulkan pertanyaan dari
+        // masing-masing template agar diagnostik HTML membandingkan hal yang sama
+        // dengan SEND (perbandingan apples-to-apples, bukan menghitung template).
+        final questions = <dynamic>[];
         if (parsed is List) {
-          questions = parsed;
+          for (final t in parsed) {
+            if (t is Map && t['questions'] is List) {
+              questions.addAll(t['questions'] as List);
+            }
+          }
         } else if (parsed is Map) {
-          questions = parsed['items'] ?? parsed['questions'] ?? parsed['data'];
+          final items = parsed['items'] ?? parsed['questions'] ?? parsed['data'];
+          if (items is List) {
+            for (final t in items) {
+              if (t is Map && t['questions'] is List) {
+                questions.addAll(t['questions'] as List);
+              }
+            }
+          }
         }
         _logHtmlDiagnostic('getMyTemplates (RECV)', questions);
         return {'success': true, 'data': parsed};
@@ -324,6 +370,7 @@ class ApiService {
 
   // Fungsi Create Form
   static Future<Map<String, dynamic>> createForm(Map<String, dynamic> payload) async {
+    _logHtmlDiagnostic('createForm (SEND)', payload['questions']);
     try {
       final token = await getToken();
       if (token == null) {
@@ -337,29 +384,136 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode(payload),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       final data = _safeJson(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': data};
-      } else {
-        final msg = data is Map ? (data['detail'] ?? 'Failed to create form') : 'Failed to create form';
-        return {'success': false, 'message': msg.toString()};
       }
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      String detail = 'Failed to create form';
+      if (data is Map) {
+        if (data['detail'] is String) {
+          detail = data['detail'];
+        } else if (data['detail'] is List) {
+          try {
+            detail = (data['detail'] as List).map((e) => '${e['loc']?.last ?? 'field'}: ${e['msg']}').join(', ');
+          } catch (_) {
+            detail = data['detail'].toString();
+          }
+        } else if (data['message'] != null) {
+          detail = data['message'].toString();
+        }
+      }
+      if (response.statusCode == 401) detail = 'Sesi habis / token tidak valid — login ulang. ($detail)';
+      if (response.statusCode == 422) detail = 'Format data tidak valid (422): $detail';
+      return {'success': false, 'message': detail};
+    } catch (e, stack) {
+      debugPrint('[ApiService] createForm exception: $e\n$stack');
+      String msg = e.toString();
+      if (msg.contains('TimeoutException')) msg = 'Timeout koneksi ke $baseUrl — cek backend jalan & adb reverse / API_URL';
+      return {'success': false, 'message': msg};
     }
   }
 
   // FIX Bug 18: PATCH status form menjadi published setelah create
   static Future<Map<String, dynamic>> updateForm(String formId, Map<String, dynamic> payload) async {
+    _logHtmlDiagnostic('updateForm (SEND)', payload['questions']);
     try {
       final token = await getToken();
       if (token == null) return {'success': false, 'message': 'No token found'};
-      final response = await http.patch(Uri.parse('$baseUrl/forms/$formId'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode(payload)).timeout(const Duration(seconds: 10));
+      final response = await http.patch(Uri.parse('$baseUrl/forms/$formId'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode(payload)).timeout(const Duration(seconds: 15));
       final data = _safeJson(response.body);
       if (response.statusCode == 200) return {'success': true, 'data': data};
-      final msg = data is Map ? (data['detail'] ?? 'Failed to update form') : 'Failed to update form';
+      String detail = data is Map && data['detail'] is String ? data['detail'] : 'Failed to update form';
+      if (data is Map && data['detail'] is List) {
+        try { detail = (data['detail'] as List).map((e) => '${e['loc']?.last ?? 'field'}: ${e['msg']}').join(', '); } catch (_) {}
+      }
+      if (response.statusCode == 401) detail = 'Sesi habis / token tidak valid — login ulang. ($detail)';
+      if (response.statusCode == 422) detail = 'Format data tidak valid (422): $detail';
+      return {'success': false, 'message': detail};
+    } catch (e, stack) {
+      debugPrint('[ApiService] updateForm exception: $e\n$stack');
+      String msg = e.toString();
+      if (msg.contains('TimeoutException')) msg = 'Timeout koneksi ke $baseUrl — cek backend jalan & adb reverse / API_URL';
+      return {'success': false, 'message': msg};
+    }
+  }
+
+  // Ambil detail form lengkap (termasuk questions) milik owner — dipakai untuk
+  // melanjutkan draft form di FormMaker.
+  static Future<Map<String, dynamic>> getForm(String formId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .get(Uri.parse('$baseUrl/forms/$formId'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+      final parsed = _safeJson(response.body);
+      if (response.statusCode == 200) {
+        if (parsed is Map) _logHtmlDiagnostic('getForm (RECV)', parsed['questions']);
+        return {'success': true, 'data': parsed};
+      }
+      final msg = parsed is Map ? (parsed['detail'] ?? 'Failed: ${response.statusCode}') : 'Failed: ${response.statusCode}';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Hanya form dengan status 'draft' — sumber data section "Draft Saya" di Dashboard.
+  static Future<Map<String, dynamic>> getDraftForms() async {
+    final res = await getMyForms();
+    if (res['success'] != true) return res;
+    final rawList = res['data'];
+    if (rawList is! List) return {'success': true, 'data': []};
+    final drafts = rawList.where((e) => e is Map && e['status'] == 'draft').toList();
+    return {'success': true, 'data': drafts};
+  }
+
+  // Hapus form beserta semua responsnya (permanen, tidak bisa dibatalkan).
+  static Future<Map<String, dynamic>> deleteForm(String formId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/forms/$formId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map
+          ? (data['detail'] ?? 'Failed: ${response.statusCode}')
+          : 'Failed: ${response.statusCode}';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Hapus template milik pengguna (permanen).
+  static Future<Map<String, dynamic>> deleteTemplate(String templateId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/templates/$templateId'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map
+          ? (data['detail'] ?? 'Failed: ${response.statusCode}')
+          : 'Failed: ${response.statusCode}';
       return {'success': false, 'message': msg.toString()};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -558,6 +712,44 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
+  }
+
+  // Export respons form ke Excel (.xlsx). Backend mengembalikan file biner,
+  // jadi kembalikan bytes + nama file (dari Content-Disposition backend).
+  static Future<Map<String, dynamic>> exportFormSubmissions(String formId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/forms/$formId/export'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200) {
+        final cd = response.headers['content-disposition'];
+        final filename = _extractFilename(cd) ?? '$formId-hasil.xlsx';
+        return {
+          'success': true,
+          'bytes': response.bodyBytes,
+          'filename': filename,
+        };
+      }
+      final body = _safeJson(utf8.decode(response.bodyBytes, allowMalformed: true));
+      final msg = body is Map
+          ? (body['detail'] ?? 'Export gagal (${response.statusCode})')
+          : 'Export gagal (${response.statusCode})';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static String? _extractFilename(String? contentDisposition) {
+    if (contentDisposition == null) return null;
+    final match =
+        RegExp(r'filename="?([^";]+)"?').firstMatch(contentDisposition);
+    return match?.group(1)?.trim();
   }
 
   // Fungsi Upload File (untuk avatar, file upload question, dll.)

@@ -1,18 +1,21 @@
 // lib/pages/detail_response_page.dart
-// Halaman Detail Jawaban Individu — menampilkan informasi responden
-// dan semua pertanyaan beserta jawabannya.
+// Halaman Detail Jawaban Individu — info responden, skor, status curang,
+// dan per soal: jawaban + penilaian ben ar/salah + kunci jawaban (parity web).
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DetailResponsePage extends StatelessWidget {
   final String name;
   final String email;
   final String time;
   final bool isAuto;
+  final bool isCheated;
+  final String? scoreText;
   final String formTitle;
 
-  /// List jawaban dari API atau mock: [{'question': '...', 'answer': '...'}]
-  final List<Map<String, String>> answers;
+  /// List jawaban: [{'question','answer','isCorrect','correctAnswer','fileUrl'}]
+  final List<Map<String, dynamic>> answers;
 
   const DetailResponsePage({
     super.key,
@@ -20,6 +23,8 @@ class DetailResponsePage extends StatelessWidget {
     required this.email,
     required this.time,
     required this.isAuto,
+    this.isCheated = false,
+    this.scoreText,
     required this.formTitle,
     this.answers = const [],
   });
@@ -34,23 +39,75 @@ class DetailResponsePage extends StatelessWidget {
         .join(' ');
   }
 
+  String _fileNameFromUrl(String url) {
+    final segment = url.split('/').last;
+    try {
+      var name = Uri.decodeComponent(segment);
+      if (name.length > 28) name = '${name.substring(0, 25)}...';
+      return name.isEmpty ? url : name;
+    } catch (_) {
+      return segment.isEmpty ? url : segment;
+    }
+  }
+
+  Future<void> _openFile(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Link file tidak valid'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka file'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka file'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = _capitalizeWords(name);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF374151)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Detail Respons',
           style: TextStyle(
-            color: Color(0xFF2563EB),
+            color: Theme.of(context).colorScheme.primary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -62,29 +119,32 @@ class DetailResponsePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Respondent info card
-            _buildInfoCard(displayName),
+            _buildInfoCard(context, displayName),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'JAWABAN',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF6B7280),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 1.4,
               ),
             ),
             const SizedBox(height: 12),
             if (answers.isEmpty)
-              _buildEmptyAnswers()
+              _buildEmptyAnswers(context)
             else
               ...answers.asMap().entries.map(
                 (entry) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _buildAnswerCard(
+                    context,
                     entry.key + 1,
-                    entry.value['question'] ?? '',
-                    entry.value['answer'] ?? '',
+                    entry.value['question'] as String? ?? '',
+                    entry.value['answer'] as String? ?? '',
+                    entry.value['isCorrect'] as bool?,
+                    entry.value['correctAnswer'] as String?,
+                    entry.value['fileUrl'] as String?,
                   ),
                 ),
               ),
@@ -94,14 +154,15 @@ class DetailResponsePage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(String displayName) {
+  Widget _buildInfoCard(BuildContext context, String displayName) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         children: [
@@ -120,31 +181,92 @@ class DetailResponsePage extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             displayName,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             email,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.access_time, size: 15, color: Color(0xFF6B7280)),
+              Icon(Icons.access_time, size: 15, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 5),
               Text(
                 time,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+                style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
               ),
               const SizedBox(width: 14),
               _buildMethodChip(),
             ],
           ),
+          if (scoreText != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1FAE5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    scoreText!,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF065F46),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Total Nilai',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF047857)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (isCheated) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 18, color: Color(0xFFB91C1C)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Responden ini terdeteksi curang karena keluar dari mode full screen saat mengisi form.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF991B1B),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -180,18 +302,26 @@ class DetailResponsePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAnswerCard(int number, String question, String answer) {
+  Widget _buildAnswerCard(
+    BuildContext context,
+    int number,
+    String question,
+    String answer,
+    bool? isCorrect,
+    String? correctAnswer,
+    String? fileUrl,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Question
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
@@ -219,17 +349,17 @@ class DetailResponsePage extends StatelessWidget {
                 Expanded(
                   child: Text(
                     question,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
+                      color: colorScheme.onSurface,
                     ),
                   ),
                 ),
+                if (isCorrect != null) _buildCorrectBadge(isCorrect),
               ],
             ),
           ),
-          // Answer
           Container(
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -238,13 +368,72 @@ class DetailResponsePage extends StatelessWidget {
               color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              answer,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF1F2937),
-                height: 1.5,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (answer.isNotEmpty &&
+                    !(fileUrl != null && fileUrl.isNotEmpty && answer == fileUrl))
+                Text(
+                  answer,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF1F2937),
+                    height: 1.5,
+                  ),
+                ),
+                if (correctAnswer != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Kunci Jawaban: $correctAnswer',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF047857),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+                if (fileUrl != null && fileUrl.isNotEmpty) ...[
+                  if (answer.isNotEmpty && answer != fileUrl)
+                    const SizedBox(height: 8)
+                  else
+                    const SizedBox(height: 2),
+                  InkWell(
+                    onTap: () => _openFile(context, fileUrl),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDBEAFE),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.attach_file,
+                              size: 16, color: Color(0xFF1D4ED8)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _fileNameFromUrl(fileUrl),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF1D4ED8),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.open_in_new,
+                              size: 14, color: Color(0xFF1D4ED8)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -252,17 +441,50 @@ class DetailResponsePage extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyAnswers() {
+  Widget _buildCorrectBadge(bool isCorrect) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isCorrect ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isCorrect ? Icons.check_circle : Icons.cancel,
+            size: 12,
+            color: isCorrect ? const Color(0xFF059669) : const Color(0xFFDC2626),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            isCorrect ? 'Benar' : 'Salah',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isCorrect ? const Color(0xFF059669) : const Color(0xFFDC2626),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAnswers(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32),
       alignment: Alignment.center,
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.question_answer_outlined, size: 40, color: Colors.black12),
-          SizedBox(height: 8),
+          Icon(Icons.question_answer_outlined, size: 40, color: colorScheme.outline),
+          const SizedBox(height: 8),
           Text(
             'Tidak ada jawaban tersimpan',
-            style: TextStyle(fontSize: 13, color: Colors.black38),
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),
