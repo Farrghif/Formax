@@ -1645,6 +1645,127 @@
 }
 
 /* ============================================================
+   DETAIL — 2 KOLOM: KIRI INFO STICKY, KANAN JAWABAN SCROLL
+   ============================================================ */
+.detail-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 12px;
+}
+.detail-info-card {
+  position: sticky;
+  top: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+.detail-info-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.detail-info-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.detail-info-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 6px 0 0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.detail-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.detail-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+}
+.detail-info-row.cheated {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.detail-info-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.detail-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.detail-info-value.cheated {
+  color: #dc2626;
+}
+.detail-score-box.left {
+  width: 100%;
+  margin-top: 2px;
+}
+.detail-answers-pane {
+  min-width: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.detail-answers-pane::-webkit-scrollbar {
+  width: 6px;
+}
+.detail-answers-pane::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.detail-answers-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+.detail-answers-list {
+  display: flex;
+  flex-direction: column;
+}
+.detail-answers-list .detail-question-card:first-child {
+  margin-top: 0;
+}
+@media (max-width: 900px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .detail-info-card {
+    position: static;
+  }
+  .detail-answers-pane {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+/* ============================================================
    VISUAL ANALYTICS SUMMARY & CHARTS SECTION
    ============================================================ */
 

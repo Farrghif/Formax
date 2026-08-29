@@ -1301,7 +1301,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* SUBVIEW 3: INDIVIDUAL RESPONDENT ANSWER DETAIL (Image 2 Mockup) */}
+              {/* SUBVIEW 3: INDIVIDUAL RESPONDENT ANSWER DETAIL — 2 kolom: kiri info, kanan jawaban scroll */}
               {historySubView === 'detail' && selectedRespondent && (
                 <div className="results-page-container">
                   <button
@@ -1311,59 +1311,79 @@ export default function DashboardPage() {
                     ← Kembali ke Daftar Responden
                   </button>
 
-                  {/* Header Summary Card */}
-                  <div className="detail-header-card">
-                    <div>
-                      <span className="detail-header-formtitle">
-                        {formDetail?.title || selectedFormForResults?.title}
-                      </span>
-                      <h2 className="detail-header-name">
-                        {selectedRespondent.user?.full_name || 'Responden (User)'}
-                      </h2>
-                      <div className="detail-header-metarow">
-                        <span className="detail-meta-item">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          {selectedRespondent.user?.email || '-'}
-                        </span>
-                        <span className="detail-meta-item">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {selectedRespondent.durationStr}
-                        </span>
-                        <span className="detail-meta-item">
-                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatDateString(selectedRespondent.submitted_at || selectedRespondent.started_at)} WIB
-                        </span>
+                  <div className="detail-layout">
+                    {/* KIRI — Info ringkas rapih ke bawah (sticky) */}
+                    <aside className="detail-info-card">
+                      <div className="detail-info-header">
+                        <span className="detail-info-kicker">Informasi Responden</span>
+                        <h2 className="detail-info-title" title={formDetail?.title || selectedFormForResults?.title}>
+                          {formDetail?.title || selectedFormForResults?.title || 'Judul Form'}
+                        </h2>
                       </div>
-                    </div>
 
-                    {selectedRespondent.scorePercent !== null && (
-                      <div className="detail-score-box">
-                        <p className="detail-score-label">Total Nilai</p>
-                        <h3 className="detail-score-num">{selectedRespondent.scorePercent}/100</h3>
+                      <div className="detail-info-list">
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            Nama
+                          </span>
+                          <strong className="detail-info-value">{selectedRespondent.user?.full_name || 'Responden (User)'}</strong>
+                        </div>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                            Email
+                          </span>
+                          <strong className="detail-info-value" title={selectedRespondent.user?.email || '-'}>{selectedRespondent.user?.email || '-'}</strong>
+                        </div>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Waktu Pengerjaan
+                          </span>
+                          <strong className="detail-info-value">{selectedRespondent.durationStr}</strong>
+                        </div>
+                        <div className="detail-info-row">
+                          <span className="detail-info-label">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            Tanggal Submit
+                          </span>
+                          <strong className="detail-info-value">{formatDateString(selectedRespondent.submitted_at || selectedRespondent.started_at)} WIB</strong>
+                        </div>
+                        {selectedRespondent.is_cheated && (
+                          <div className="detail-info-row cheated">
+                            <span className="detail-info-label">
+                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                              Status
+                            </span>
+                            <strong className="detail-info-value cheated">Curang — keluar fullscreen</strong>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Banner penanda curang (keluar mode full screen) */}
-                  {selectedRespondent.is_cheated && (
-                    <div className="detail-cheated-banner">
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <span>
-                        Responden ini terdeteksi <strong>curang</strong> karena keluar dari mode full screen saat mengisi form.
-                      </span>
-                    </div>
-                  )}
+                      {selectedRespondent.scorePercent !== null && (
+                        <div className="detail-score-box left">
+                          <p className="detail-score-label">Total Nilai</p>
+                          <h3 className="detail-score-num">{selectedRespondent.scorePercent}/100</h3>
+                        </div>
+                      )}
+                    </aside>
 
-                  {/* Questions & Answers Breakdown */}
-                  <div>
+                    {/* KANAN — Hasil jawaban rapih ke bawah, bisa digulir */}
+                    <section className="detail-answers-pane">
+                      {/* Banner penanda curang (tetap di kanan juga) */}
+                      {selectedRespondent.is_cheated && (
+                        <div className="detail-cheated-banner">
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span>
+                            Responden ini terdeteksi <strong>curang</strong> karena keluar dari mode full screen saat mengisi form.
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="detail-answers-list">
                     {(formDetail?.questions || [])
                       .sort((a, b) => a.order_index - b.order_index)
                       .map((q, idx) => {
@@ -1495,8 +1515,10 @@ export default function DashboardPage() {
                           </div>
                         );
                       })}
-                  </div>
+                    </div>
+                  </section>
                 </div>
+              </div>
               )}
             </>
           )}
