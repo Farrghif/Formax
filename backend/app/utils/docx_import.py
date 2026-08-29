@@ -20,6 +20,54 @@ ANSWER_RE = re.compile(
 )
 
 
+def _iter_block_paragraphs(document):
+    """Yield paragraphs in document order, including those inside tables.
+    Preserves order between normal paragraphs and tables."""
+    body = document.element.body
+    for child in body.iterchildren():
+        # w:p = paragraph, w:tbl = table
+        if child.tag.endswith('}p'):
+            # find the Paragraph object matching this element
+            for para in document.paragraphs:
+                if para._p is child:
+                    yield para
+                    break
+            else:
+                # fallback: create temp paragraph wrapper
+                from docx.text.paragraph import Paragraph
+                yield Paragraph(child, document)
+        elif child.tag.endswith('}tbl'):
+            # find matching Table
+            for table in document.tables:
+                if table._tbl is child:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for para in cell.paragraphs:
+                                yield para
+                    break
+
+def _is_list_paragraph(para):
+    """Detect if paragraph is part of a Word auto-numbered/bulleted list (A., B.)"""
+    try:
+        pPr = para._p.pPr
+        if pPr is not None and pPr.numPr is not None:
+            return True
+    except Exception:
+        pass
+    style = getattr(para.style, 'name', '') or ''
+    if 'list' in style.lower():
+        return True
+    return False
+
+def _normalize_line(text: str) -> str:
+    if not text:
+        return ''
+    # hapus zero-width, NBSP, dan normalisasi spasi
+    text = text.replace('\xa0', ' ').replace('\u200b', '').replace('\ufeff', '').replace('\r', ' ')
+    # ganti tab dengan spasi
+    text = text.replace('\t', ' ')
+    return text.strip()
+
 def parse_docx_questions(file: BinaryIO) -> dict:
     """Parse file .docx menjadi daftar soal pilihan ganda.
 
@@ -42,64 +90,110 @@ def parse_docx_questions(file: BinaryIO) -> dict:
     questions = []
     current = None
     seen_numbers = set()
+    # auto-letter untuk list tanpa huruf (Word auto-numbering)
+    next_auto_letter_ord = None
 
-    for para in document.paragraphs:
-        line = (para.text or "").strip()
-        if not line:
-            continue
+    # gunakan iterator yang mencakup table
+    try:
+        paragraphs = list(_iter_block_paragraphs(document))
+        # fallback jika iterator kosong (compat)
+        if not paragraphs:
+            paragraphs = document.paragraphs
+    except Exception:
+        paragraphs = document.paragraphs
 
-        answer_match = ANSWER_RE.match(line)
-        if answer_match and current is not None:
-            letter = answer_match.group(1).upper()
-            matched = [o for o in current["options"] if o["letter"] == letter]
-            if matched:
-                for o in current["options"]:
-                    o["is_correct"] = o["letter"] == letter
-            else:
-                current["errors"].append(
-                    f"Kunci jawaban '{letter}' tidak ada di daftar opsi"
-                )
-            continue
+    for para in paragraphs:
+        raw = para.text or ""
+        # Word soft break (Shift+Enter) menyimpan \n di dalam satu paragraph — split jadi baris terpisah
+        # juga handle jika satu paragraph mengandung beberapa opsi dipisah newline
+        lines = raw.splitlines() if '\n' in raw or '\r' in raw else [raw]
+        for raw_line in lines:
+            line = _normalize_line(raw_line)
+            if not line:
+                continue
 
-        question_match = QUESTION_RE.match(line)
-        option_match = OPTION_RE.match(line) if not question_match else None
+            answer_match = ANSWER_RE.match(line)
+            if answer_match and current is not None:
+                letter = answer_match.group(1).upper()
+                matched = [o for o in current["options"] if o["letter"] == letter]
+                if matched:
+                    for o in current["options"]:
+                        o["is_correct"] = o["letter"] == letter
+                else:
+                    current["errors"].append(
+                        f"Kunci jawaban '{letter}' tidak ada di daftar opsi"
+                    )
+                continue
 
-        if question_match:
-            number = int(question_match.group(1))
-            current = {
-                "number": number,
-                "label": question_match.group(2).strip(),
-                "options": [],
-                "errors": [],
-            }
-            questions.append(current)
-            if number in seen_numbers:
-                current["errors"].append(f"Nomor soal {number} duplikat")
-            seen_numbers.add(number)
-            continue
+            question_match = QUESTION_RE.match(line)
+            option_match = OPTION_RE.match(line) if not question_match else None
 
-        if option_match and current is not None:
-            letter = option_match.group(1).upper()
-            text = option_match.group(2).strip()
-            is_correct = line.lstrip().startswith("*")
-            existing = next((o for o in current["options"] if o["letter"] == letter), None)
-            if existing is None:
-                current["options"].append({
-                    "letter": letter,
-                    "label": text,
-                    "value": text,
-                    "order_index": len(current["options"]),
-                    "is_correct": is_correct,
-                })
-            else:
-                existing.update({"label": text, "value": text})
-                if is_correct:
-                    existing["is_correct"] = True
-            continue
+            if question_match:
+                number = int(question_match.group(1))
+                current = {
+                    "number": number,
+                    "label": question_match.group(2).strip(),
+                    "options": [],
+                    "errors": [],
+                }
+                questions.append(current)
+                if number in seen_numbers:
+                    current["errors"].append(f"Nomor soal {number} duplikat")
+                seen_numbers.add(number)
+                next_auto_letter_ord = ord('A')
+                continue
 
-        # Baris lain: anggap lanjutan teks soal
-        if current is not None and not current["options"]:
-            current["label"] = f"{current['label']} {line}".strip()
+            if option_match and current is not None:
+                letter = option_match.group(1).upper()
+                text = option_match.group(2).strip()
+                is_correct = line.lstrip().startswith("*")
+                existing = next((o for o in current["options"] if o["letter"] == letter), None)
+                if existing is None:
+                    current["options"].append({
+                        "letter": letter,
+                        "label": text,
+                        "value": text,
+                        "order_index": len(current["options"]),
+                        "is_correct": is_correct,
+                    })
+                else:
+                    existing.update({"label": text, "value": text})
+                    if is_correct:
+                        existing["is_correct"] = True
+                # sync auto-letter ke huruf berikutnya
+                try:
+                    next_auto_letter_ord = ord(letter) + 1
+                except Exception:
+                    pass
+                continue
+
+            # Fallback: opsi tanpa huruf karena Word auto-numbering (list A. tidak ada di text)
+            if current is not None and _is_list_paragraph(para) and line and not question_match and not answer_match:
+                # hanya anggap sebagai opsi jika belum banyak opsi dan teks tidak terlalu panjang untuk soal
+                # dan kita sedang dalam blok opsi (sudah ada opsi sebelumnya atau baris terlihat seperti jawaban pendek)
+                is_correct_fallback = line.lstrip().startswith("*")
+                clean_text = line.lstrip().lstrip("*").strip()
+                # hindari mengubah lanjutan soal yang panjang (>120 char) menjadi opsi
+                if clean_text and len(clean_text) < 180:
+                    # tentukan huruf auto
+                    if next_auto_letter_ord is None:
+                        next_auto_letter_ord = ord('A') + len(current["options"])
+                    letter = chr(next_auto_letter_ord)
+                    # jangan duplikat huruf yang sudah ada
+                    if not any(o["letter"] == letter for o in current["options"]):
+                        current["options"].append({
+                            "letter": letter,
+                            "label": clean_text,
+                            "value": clean_text,
+                            "order_index": len(current["options"]),
+                            "is_correct": is_correct_fallback,
+                        })
+                        next_auto_letter_ord += 1
+                        continue
+
+            # Baris lain: anggap lanjutan teks soal
+            if current is not None and not current["options"]:
+                current["label"] = f"{current['label']} {line}".strip()
 
     result = []
     for q in questions:
