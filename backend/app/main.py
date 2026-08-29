@@ -70,6 +70,17 @@ with engine.begin() as conn:
     add_column("forms", "require_fullscreen", "BOOLEAN NOT NULL DEFAULT FALSE")
     add_column("forms", "reveal_answers", "BOOLEAN NOT NULL DEFAULT FALSE")
     add_column("submissions", "is_cheated", "BOOLEAN NOT NULL DEFAULT FALSE")
+    # Fix 500 /submissions/me — kolom baru untuk anonim (Google-Forms style)
+    add_column("submissions", "respondent_key", "VARCHAR(64)")
+    # user_id sekarang boleh NULL untuk submission anonim
+    try:
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE submissions ALTER COLUMN user_id DROP NOT NULL"))
+        else:
+            # SQLite: tidak ada ALTER COLUMN DROP NOT NULL, recreate table sudah ditangani di bawah jika perlu
+            pass
+    except Exception:
+        pass
 
     # Hapus unique constraint (form_id, user_id) supaya multi-submit bisa jalan.
     if dialect == "postgresql":
@@ -91,13 +102,14 @@ with engine.begin() as conn:
                     drop = True
                     break
         if drop:
-            cols = ["id", "form_id", "user_id", "started_at", "is_auto_submitted", "submitted_at", "is_cheated"]
+            cols = ["id", "form_id", "user_id", "respondent_key", "started_at", "is_auto_submitted", "submitted_at", "is_cheated"]
             cols_sql = ", ".join(cols)
             conn.execute(text("DROP TABLE IF EXISTS submissions_new"))
             conn.execute(text("""CREATE TABLE submissions_new (
                 id VARCHAR(36) NOT NULL,
                 form_id VARCHAR(36) NOT NULL,
-                user_id VARCHAR(36) NOT NULL,
+                user_id VARCHAR(36),
+                respondent_key VARCHAR(64),
                 started_at DATETIME,
                 is_auto_submitted BOOLEAN,
                 submitted_at DATETIME,
