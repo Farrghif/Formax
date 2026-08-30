@@ -128,10 +128,12 @@ _allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
 _allowed_origins = [o.strip() for o in _allowed_origins_raw.split(",") if o.strip()] if _allowed_origins_raw.strip() else []
 
 if _allowed_origins:
-    # Production: hanya origin yang di-whitelist
+    # Production: origin eksplisit + regex untuk semua preview Vercel (formax-*.vercel.app)
+    # Ini fix OPTIONS 400 di branch preview seperti fathinjam -> https://formax-b68duq2b1-fthnjamaluddn.vercel.app
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins,
+        allow_origin_regex=r"https://formax.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

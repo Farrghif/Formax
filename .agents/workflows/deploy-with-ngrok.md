@@ -100,6 +100,6 @@ Saat ditanya environment variables, atau lewat dashboard Vercel:
 |-----|------------|
 | **Ngrok URL berubah** | Setiap restart ngrok, URL berubah. Update di Vercel + backend `.env`, lalu re-deploy |
 | **Ngrok gratis** | Ada rate limit & URL berubah. Untuk URL tetap, pakai ngrok berbayar (`ngrok http 8000 --domain=xxx.ngrok-free.app`) |
-| **CORS** | Sudah di-set `allow_origin_regex=".*"` di backend, jadi semua origin diizinkan |
+| **CORS** | `backend/app/main.py:131` pakai `allow_origins` dari `ALLOWED_ORIGINS` + `allow_origin_regex=r"https://formax.*\.vercel\.app"` untuk allow semua preview Vercel (`formax-*.vercel.app`). Tanpa ini `OPTIONS /auth/login` di branch preview akan `400` |
 | **Backend harus nyala** | Selama web dipakai, backend + ngrok harus tetap jalan di komputer kamu |
 | **Upload/QR Code** | URL hasil upload & QR code sudah pakai `BASE_URL` dari `.env`, jadi otomatis ikut ngrok |
