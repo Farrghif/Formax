@@ -5,6 +5,8 @@ import { uploadFile } from '../api/uploads';
 import { getMe } from '../api/auth';
 import ThemeToggle from '../components/ThemeToggle';
 import NgrokImage from '../components/NgrokImage';
+import NgrokAudio from '../components/NgrokAudio';
+import { apiFetch } from '../api/config';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 4;
@@ -32,6 +34,56 @@ function normalizeColors(html) {
 // dirender React. Dipakai untuk judul, deskripsi, label soal & opsi agar tampil
 // terformat (mirip RichTextView di aplikasi mobile), bukan sebagai tag mentah.
 const richHtml = (html) => ({ __html: normalizeColors(html ?? '') });
+
+// Hook untuk fix audio ngrok di dalam container dangerouslySetInnerHTML
+// Browser <audio> tidak bisa kirim header ngrok-skip-browser-warning -> perlu blob
+function useNgrokAudioFix(containerRef, html) {
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !html) return;
+    const audios = el.querySelectorAll('audio[src*="ngrok-free"]');
+    if (audios.length === 0) return;
+    const controllers = [];
+    audios.forEach((audio) => {
+      const src = audio.getAttribute('src');
+      if (!src || src.startsWith('data:audio/') || src.startsWith('data:video/') || audio.dataset.ngrokFixed) return;
+      audio.dataset.ngrokFixed = '1';
+      const controller = new AbortController();
+      controllers.push(controller);
+      // Placeholder style sambil load
+      audio.style.opacity = '0.6';
+      apiFetch(src, { signal: controller.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (blob.type && blob.type.startsWith('text/html')) throw new Error('Ngrok HTML');
+          const blobUrl = URL.createObjectURL(blob);
+          audio.src = blobUrl;
+          audio.load();
+          audio.style.opacity = '1';
+          // cleanup saat unmount / html ganti
+          audio.dataset.blobUrl = blobUrl;
+        })
+        .catch((err) => {
+          if (err.name === 'AbortError') return;
+          console.error('[NgrokAudioFix] gagal:', src, err);
+          audio.style.opacity = '1';
+        });
+    });
+    return () => {
+      controllers.forEach((c) => c.abort());
+      // revoke blob URLs
+      if (el) {
+        el.querySelectorAll('audio[data-blob-url]').forEach((a) => {
+          const u = a.dataset.blobUrl;
+          if (u) URL.revokeObjectURL(u);
+        });
+      }
+    };
+  }, [html]);
+}
 
 // Buang semua markup HTML jadi teks polos. Dipakai untuk konten responden
 // (jawaban) dan elemen yang tidak bisa memuat markup seperti <option>.
@@ -1000,12 +1052,7 @@ export default function FormFillPage() {
           )}
           <div className="form-header-details">
             <h2 className="form-title" dangerouslySetInnerHTML={richHtml(form?.title)} />
-            {form?.description && (
-              <div
-                className="form-description"
-                dangerouslySetInnerHTML={richHtml(form.description)}
-              />
-            )}
+            {form?.description && <FormDescriptionWithAudio html={form.description} />}
           </div>
 
           {/* Warning Banner */}
@@ -1030,7 +1077,7 @@ export default function FormFillPage() {
                 <div className="question-card-header">
                   <div className="question-label">
                     <span className="question-number">{globalNumber}.</span>
-                    <div className="question-label-content" dangerouslySetInnerHTML={richHtml(q.label)} />
+                    <QuestionLabelWithAudio html={q.label} />
                     {q.is_required && <span className="required-star">*</span>}
                   </div>
                   <div className="question-header-right">
@@ -1167,4 +1214,16 @@ export default function FormFillPage() {
       )}
     </div>
   );
+}
+
+function FormDescriptionWithAudio({ html }) {
+  const ref = useRef(null);
+  useNgrokAudioFix(ref, html);
+  return <div ref={ref} className="form-description" dangerouslySetInnerHTML={richHtml(html)} />;
+}
+
+function QuestionLabelWithAudio({ html }) {
+  const ref = useRef(null);
+  useNgrokAudioFix(ref, html);
+  return <div ref={ref} className="question-label-content" dangerouslySetInnerHTML={richHtml(html)} />;
 }

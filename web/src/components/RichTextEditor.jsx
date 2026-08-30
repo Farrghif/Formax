@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { uploadFile } from '../api/uploads'
+import { apiFetch } from '../api/config'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import hljs from 'highlight.js'
@@ -180,6 +181,46 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
       }
     })
   }, [])
+
+  // Fix audio ngrok di dalam editor preview (builder) — sama seperti FormFillPage
+  // hemat preload metadata, data:audio langsung
+  useEffect(() => {
+    const editor = quillRef.current?.getEditor()
+    if (!editor || !value || !value.includes('ngrok-free')) return
+    const root = editor.root
+    const audios = root.querySelectorAll('audio[src*="ngrok-free"]')
+    if (audios.length === 0) return
+    const controllers = []
+    audios.forEach((audio) => {
+      const src = audio.getAttribute('src')
+      if (!src || src.startsWith('data:audio/') || audio.dataset.ngrokFixed) return
+      audio.dataset.ngrokFixed = '1'
+      const controller = new AbortController()
+      controllers.push(controller)
+      audio.style.opacity = '0.6'
+      apiFetch(src, { signal: controller.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.blob()
+        })
+        .then((blob) => {
+          if (blob.type && blob.type.startsWith('text/html')) throw new Error('Ngrok HTML')
+          const blobUrl = URL.createObjectURL(blob)
+          audio.src = blobUrl
+          audio.load()
+          audio.style.opacity = '1'
+          audio.dataset.blobUrl = blobUrl
+        })
+        .catch((err) => {
+          if (err.name === 'AbortError') return
+          console.error('[RichTextEditor NgrokAudio] gagal:', src, err)
+          audio.style.opacity = '1'
+        })
+    })
+    return () => {
+      controllers.forEach((c) => c.abort())
+    }
+  }, [value])
 
   return (
     <ReactQuill
