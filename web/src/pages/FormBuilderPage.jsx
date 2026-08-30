@@ -218,83 +218,67 @@ export default function FormBuilderPage() {
     setSaving(true);
     try {
       if (formData.id) {
-        // Update existing form
-        await updateForm(token, formData.id, {
-          title: formData.title,
-          description: formData.description,
-          status: statusToSave,
-          accept_responses: formData.accept_responses,
-          allow_see_result: formData.allow_see_result,
-          max_submissions: formData.max_submissions,
-          require_fullscreen: formData.require_fullscreen,
-          reveal_answers: formData.reveal_answers,
-          banner_url: formData.banner_url,
-          start_date: formData.start_date || null,
-          end_date: formData.end_date || null,
-        });
+        // Rekomendasi: atomic save — kirim semua questions sekali via PATCH /forms/{id}
+        // Ini fix bug "hapus soal lalu Simpan Draf malah nambah": sebelumnya loop per-question
+        // hanya update/create (q.id && _saved) tanpa delete orphan, dan skip q.id && !_saved.
+        // Backend forms.py:211 akan delete orphan atomik. Jika sudah ada submission, backend 409 (sengaja).
+        const questionsPayload = questions.map((q, idx) => ({
+          type: q.type,
+          label: q.label,
+          placeholder: q.placeholder || '',
+          is_required: q.is_required,
+          order_index: idx,
+          settings: q.settings || {},
+          options: (q.options || []).map((o, oidx) => ({
+            label: o.label,
+            value: o.value || '',
+            order_index: oidx,
+            is_correct: !!o.is_correct,
+            is_other: !!o.is_other,
+          })),
+        }));
 
-        // Save questions
-        let updatedQuestions = [...questions];
-        for (let i = 0; i < updatedQuestions.length; i++) {
-          let q = { ...updatedQuestions[i] };
-          if (q.id && q._saved) {
-            // Update existing question
-            await updateQuestion(token, q.id, {
-              type: q.type,
-              label: q.label,
-              placeholder: q.placeholder,
-              is_required: q.is_required,
-              order_index: q.order_index,
-              settings: q.settings,
-            });
-            // Handle options
-            let updatedOptions = [...q.options];
-            for (let j = 0; j < updatedOptions.length; j++) {
-              let opt = { ...updatedOptions[j] };
-              if (opt.id && opt._saved) {
-                await updateOption(token, opt.id, {
-                  label: opt.label,
-                  value: opt.value,
-                  order_index: opt.order_index,
-                  is_correct: opt.is_correct || false,
-                });
-              } else if (!opt.id) {
-                const newOpt = await createOption(token, q.id, {
-                  label: opt.label,
-                  value: opt.value || '',
-                  order_index: opt.order_index,
-                  is_correct: opt.is_correct || false,
-                });
-                opt = { ...opt, id: newOpt.id, _saved: true };
-              }
-              updatedOptions[j] = opt;
-            }
-            q.options = updatedOptions;
-          } else if (!q.id) {
-            // Create new question
-            const newQ = await createQuestionInForm(token, formData.id, {
-              type: q.type,
-              label: q.label,
-              placeholder: q.placeholder || '',
-              is_required: q.is_required,
-              order_index: q.order_index,
-              settings: q.settings || {},
-              options: q.options.map((o) => ({
-                label: o.label,
-                value: o.value || '',
-                order_index: o.order_index,
-                is_correct: o.is_correct || false,
-              })),
-            });
-            q = { ...q, id: newQ.id, _saved: true, options: (newQ.options || []).map((o) => ({ ...o, _saved: true })) };
+        let updatedForm;
+        try {
+          updatedForm = await updateForm(token, formData.id, {
+            title: formData.title,
+            description: formData.description,
+            status: statusToSave,
+            accept_responses: formData.accept_responses,
+            allow_see_result: formData.allow_see_result,
+            max_submissions: formData.max_submissions,
+            require_fullscreen: formData.require_fullscreen,
+            reveal_answers: formData.reveal_answers,
+            banner_url: formData.banner_url,
+            start_date: formData.start_date || null,
+            end_date: formData.end_date || null,
+            questions: questionsPayload,
+          });
+        } catch (err) {
+          // Rekomendasi 2: jika form sudah ada jawaban, backend 409 — jangan hilangkan data
+          if (err.message && err.message.toLowerCase().includes('sudah punya jawaban')) {
+            showToast('Form sudah ada jawaban responden — hapus soal akan menghapus jawaban. Duplikasi form dulu jika perlu.', 'error');
+            throw err;
           }
-          updatedQuestions[i] = q;
+          throw err;
+        }
+
+        // Sync local state dari response atomik (sudah pasti _saved)
+        if (updatedForm && updatedForm.questions) {
+          setQuestions(
+            updatedForm.questions
+              .sort((a, b) => a.order_index - b.order_index)
+              .map((q) => ({
+                ...q,
+                _saved: true,
+                options: (q.options || []).sort((a, b) => a.order_index - b.order_index).map((o) => ({ ...o, _saved: true })),
+              }))
+          );
         }
 
         if (publish) {
-          setFormData((prev) => ({ ...prev, status: 'published' }));
+          setFormData((prev) => ({ ...prev, status: 'published', title: updatedForm?.title ?? prev.title, description: updatedForm?.description ?? prev.description }));
           showToast('Form berhasil dipublikasikan! Link siap dibagikan.', 'success');
-          // Auto-generate QR jika belum ada
           if (formData.id) {
             try {
               const qr = await generateQR(token, formData.id);

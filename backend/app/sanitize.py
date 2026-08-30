@@ -19,6 +19,8 @@ _ALLOWED_TAGS = {
     "p", "br", "strong", "b", "em", "i", "u", "s", "strike", "del",
     "span", "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote",
     "a", "sub", "sup", "font", "div", "pre",
+    # audio/video untuk RichTextEditor dcb894e — harus di-allow agar tidak di-strip
+    "audio", "video", "source",
 }
 
 _DROP_TAGS = {
@@ -26,7 +28,7 @@ _DROP_TAGS = {
     "meta", "base", "noscript", "svg", "math",
 }
 
-_VOID_TAGS = {"br", "hr", "img", "wbr"}
+_VOID_TAGS = {"br", "hr", "img", "wbr", "source"}
 
 _ALLOWED_ATTRS = {
     "a": {"href", "title", "target", "rel"},
@@ -34,13 +36,16 @@ _ALLOWED_ATTRS = {
     "span": {"style", "title"},
     "font": {"color", "face", "size"},
     "ol": {"start"},
+    "audio": {"src", "controls", "style", "preload", "title"},
+    "video": {"src", "controls", "style", "width", "height", "preload"},
+    "source": {"src", "type"},
 }
 
 # Pola berbahaya yang tidak boleh ada di dalam nilai atribut style/href/src.
 _UNSAFE_STYLE = _re.compile(
     r"(url\s*\(|expression\s*\(|javascript:|@import|behavior\s*:|-moz-binding)"
 )
-_SAFE_PREFIXES = ("http://", "https://", "mailto:", "tel:", "/", "#", "data:image/")
+_SAFE_PREFIXES = ("http://", "https://", "mailto:", "tel:", "/", "#", "data:image/", "data:audio/", "data:video/")
 
 _STRIP_TAG_RE = _re.compile(r"<[^>]+>")
 
