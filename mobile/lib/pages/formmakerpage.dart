@@ -150,10 +150,8 @@ class _FormMakerPageState extends State<FormMakerPage>
     DateTime? endDate;
     final isPerRespondent = _timerMode == 'Start when respondent opens the form';
     if (_enableTimer && !isPerRespondent) {
-      // Start at specific date and time → window global. 
-      // Backend mengharapkan format waktu LOKAL (WIB) tanpa zona (seperti datetime-local di web).
-      // Kurangi 5 menit (bukan 60s) untuk mencegah error "Form belum dibuka" jika jam HP lebih cepat dari server.
-      startDate = DateTime.now().subtract(const Duration(minutes: 5));
+      // Start at specific date and time → window global. Kurangi 60s untuk race/latency + pakai UTC biar tidak miss WIB
+      startDate = DateTime.now().toUtc().subtract(const Duration(seconds: 60));
       final durText = _durationCtrl.text.trim();
       final num =
           int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ??
@@ -189,9 +187,9 @@ class _FormMakerPageState extends State<FormMakerPage>
       'reveal_answers': _correctAnswers,
       'accept_responses': _acceptResponses,
       'status': _formStatus,
-      // Kirim waktu lokal tanpa Z, sesuai ekspektasi backend (seperti datetime-local)
-      if (startDate != null) 'start_date': startDate.toIso8601String(),
-      if (endDate != null) 'end_date': endDate.toIso8601String(),
+      // Kirim UTC (Z) biar backend tidak salah label WIB 1-7 jam (WITA/WIT/emulator UTC)
+      if (startDate != null) 'start_date': startDate.toUtc().toIso8601String(),
+      if (endDate != null) 'end_date': endDate.toUtc().toIso8601String(),
     };
   }
 
