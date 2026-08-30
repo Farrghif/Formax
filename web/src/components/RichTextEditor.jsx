@@ -58,7 +58,9 @@ class AudioBlot extends BlockEmbed {
   }
 
   static value(node) {
-    return node.getAttribute('src')
+    // Fix hilang setelah Simpan: jika src sudah jadi blob:URL karena ngrok patch,
+    // kembalikan originalSrc agar yang tersimpan di DB tetap ngrok URL (bukan blob yang akan di-strip sanitize)
+    return node.dataset?.originalSrc || node.getAttribute('src')
   }
 }
 AudioBlot.blotName = 'audio'
@@ -193,8 +195,9 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
     const controllers = []
     audios.forEach((audio) => {
       const src = audio.getAttribute('src')
-      if (!src || src.startsWith('data:audio/') || audio.dataset.ngrokFixed) return
+      if (!src || src.startsWith('data:audio/') || src.startsWith('blob:') || audio.dataset.ngrokFixed) return
       audio.dataset.ngrokFixed = '1'
+      audio.dataset.originalSrc = src
       const controller = new AbortController()
       controllers.push(controller)
       audio.style.opacity = '0.6'

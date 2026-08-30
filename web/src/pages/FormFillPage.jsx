@@ -46,8 +46,9 @@ function useNgrokAudioFix(containerRef, html) {
     const controllers = [];
     audios.forEach((audio) => {
       const src = audio.getAttribute('src');
-      if (!src || src.startsWith('data:audio/') || src.startsWith('data:video/') || audio.dataset.ngrokFixed) return;
+      if (!src || src.startsWith('data:audio/') || src.startsWith('data:video/') || src.startsWith('blob:') || audio.dataset.ngrokFixed) return;
       audio.dataset.ngrokFixed = '1';
+      audio.dataset.originalSrc = src;
       const controller = new AbortController();
       controllers.push(controller);
       // Placeholder style sambil load
