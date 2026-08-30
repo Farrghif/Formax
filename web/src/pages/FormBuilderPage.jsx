@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import RichTextEditor from '../components/RichTextEditor';
 import { getMe, logout } from '../api/auth';
 import { createForm, getForm, updateForm, generateQR } from '../api/forms';
 import { getTemplate, createTemplate } from '../api/templates';
@@ -21,35 +20,6 @@ import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
 import NgrokImage from '../components/NgrokImage';
 
-// Register custom fonts with Quill
-const Quill = ReactQuill.Quill;
-const Font = Quill.import('formats/font');
-Font.whitelist = [
-  false, // default
-  'inter',
-  'roboto',
-  'poppins',
-  'montserrat',
-  'open-sans',
-  'lato',
-  'nunito',
-  'raleway',
-  'source-code-pro',
-  'fira-code',
-  'jetbrains-mono',
-  'arial',
-  'georgia',
-  'times-new-roman',
-  'courier-new',
-  'comic-sans',
-];
-Quill.register(Font, true);
-
-// Register custom font sizes
-const Size = Quill.import('formats/size');
-Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
-Quill.register(Size, true);
-
 const QUESTION_TYPES = [
   { value: 'text', label: 'Teks' },
   { value: 'single_choice', label: 'Pilihan Ganda' },
@@ -57,42 +27,6 @@ const QUESTION_TYPES = [
   { value: 'dropdown', label: 'Dropdown' },
   { value: 'date', label: 'Tanggal' },
   { value: 'file_upload', label: 'Upload File' },
-];
-
-// Full toolbar for form description
-const QUILL_MODULES = {
-  toolbar: [
-    [{ font: Font.whitelist }, { size: Size.whitelist }, { header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    ['code-block', 'blockquote'],
-    [{ list: 'ordered' }, { list: 'bullet' }, { align: [] }],
-    ['link', 'image', 'video'],
-    ['clean'],
-  ],
-};
-
-// Sleek, compact single-line toolbar for question labels
-const QUILL_QUESTION_MODULES = {
-  toolbar: [
-    [{ font: Font.whitelist }, { size: Size.whitelist }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    ['code-block', 'blockquote'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link', 'image'],
-    ['clean'],
-  ],
-};
-
-const QUILL_FORMATS = [
-  'font', 'size', 'header',
-  'bold', 'italic', 'underline', 'strike',
-  'color', 'background',
-  'script',
-  'blockquote', 'code-block',
-  'list', 'indent', 'direction', 'align',
-  'link', 'image', 'video', 'formula',
 ];
 
 function generateSlug(title) {
@@ -1132,12 +1066,10 @@ export default function FormBuilderPage() {
                   />
                   <p className="fb-desc-label">Deskripsi</p>
                   <div className="fb-wysiwyg-wrap">
-                    <ReactQuill
-                      theme="snow"
+                    <RichTextEditor
                       value={formData.description}
                       onChange={(val) => setFormData((prev) => ({ ...prev, description: val }))}
-                      modules={QUILL_MODULES}
-                      formats={QUILL_FORMATS}
+                      variant="full"
                       placeholder="Deskripsi formulir..."
                     />
                   </div>
@@ -1245,12 +1177,10 @@ export default function FormBuilderPage() {
 
                       {/* WYSIWYG Question Label */}
                       <div className="fb-question-wysiwyg-wrap">
-                        <ReactQuill
-                          theme="snow"
+                        <RichTextEditor
                           value={q.label}
                           onChange={(val) => updateQuestionLocal(qIdx, { label: val })}
-                          modules={QUILL_QUESTION_MODULES}
-                          formats={QUILL_FORMATS}
+                          variant="compact"
                           placeholder="Tulis pertanyaan di sini..."
                         />
                       </div>
