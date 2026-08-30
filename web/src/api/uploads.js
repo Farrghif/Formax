@@ -1,7 +1,9 @@
-import { API_BASE_URL, apiFetch } from './config';
+import { API_BASE_URL, apiFetch, getAuthHeaders } from './config';
 
 /**
  * Upload file (banner form, avatar, dll). Kembalikan { file_url }.
+ * Support login (Bearer) ATAU anonim (X-Respondent-Key) — konsisten dengan backend deps.py
+ * Fix: sebelumnya kirim "Bearer null" saat token kosong → 401 di flow anon.
  */
 export async function uploadFile(token, file) {
   const formData = new FormData();
@@ -10,7 +12,7 @@ export async function uploadFile(token, file) {
   try {
     res = await apiFetch(`${API_BASE_URL}/uploads`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...getAuthHeaders(token) },
       body: formData,
     });
   } catch (e) {

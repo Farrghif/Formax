@@ -17,6 +17,8 @@ BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").strip().rstrip("/")
 ALLOWED_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf",
     ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
+    # audio untuk RichTextEditor (fitur sisipkan audio dcb894e) — Opsi A
+    ".mp3", ".wav", ".ogg", ".m4a", ".aac",
 }
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 
