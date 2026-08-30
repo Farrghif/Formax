@@ -202,7 +202,10 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const Text(
                             'Remember me',
-                            style: TextStyle(fontSize: 12),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _labelColor,
+                            ),
                           ),
                         ],
                       ),
@@ -319,7 +322,11 @@ class _LoginPageState extends State<LoginPage> {
                                         email,
                                         password,
                                       );
-                                      if (registered != null) {
+                                      // registered == true hanya saat
+                                      // verifikasi OTP BERHASIL (pop true).
+                                      // Batal / waktu habis → pop false →
+                                      // jangan lanjut masuk aplikasi.
+                                      if (registered == true) {
                                         result = {'success': true};
                                       } else {
                                         return;
@@ -382,7 +389,10 @@ class _LoginPageState extends State<LoginPage> {
                             isLogin
                                 ? "No account? "
                                 : "Already have an account? ",
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: _labelColor,
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => setState(() => isLogin = !isLogin),
@@ -424,6 +434,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  // Halaman login/register dirancang dengan kartu terang (light) dan textfield
+  // berlatar putih, apapun tema sistem. Warna teks ditetapkan eksplisit agar
+  // label & ketikan selalu hitam (tidak ikut tema gelap yang membuatnya putih
+  // sehingga tak terlihat di atas latar putih/light-blue yang dikunci).
+  static const _labelColor = Color(0xFF111827);
+  static const _inputTextColor = Color(0xFF111827);
+  static const _hintColor = Color(0xFF9CA3AF);
+
   Widget _buildLabel(String text) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -431,7 +449,11 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _labelColor,
+          ),
         ),
       ),
     );
@@ -446,10 +468,21 @@ class _LoginPageState extends State<LoginPage> {
     return TextField(
       controller: controller,
       obscureText: isPassword ? !_showPassword : obscureText,
+      style: const TextStyle(color: _inputTextColor, fontSize: 14),
+      cursorColor: const Color(0xFF1E66D0),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(color: _hintColor, fontSize: 14),
         filled: true,
         fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFF1E66D0), width: 1.5),
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,

@@ -29,6 +29,7 @@ class FormPageModel {
 class FormBuilderState extends ChangeNotifier {
   String formTitle;
   String formDescription;
+  String? bannerUrl; // URL banner form (opsional)
   List<FormPageModel> pages;
   
   // State for Editor
@@ -39,6 +40,7 @@ class FormBuilderState extends ChangeNotifier {
   FormBuilderState({
     this.formTitle = '',
     this.formDescription = '',
+    this.bannerUrl,
     List<FormPageModel>? pages,
   }) : pages = pages ?? [FormPageModel()] {
     if (this.pages.isEmpty) {
@@ -57,6 +59,7 @@ class FormBuilderState extends ChangeNotifier {
     final state = FormBuilderState(
       formTitle: template.title,
       formDescription: template.subtitle,
+      bannerUrl: template.bannerUrl,
       pages: [],
     );
     state.pages.clear(); // Clear the default page added by the constructor
@@ -98,7 +101,9 @@ class FormBuilderState extends ChangeNotifier {
 
       // Extract settings if present — FIX: handle LinkedMap<dynamic,dynamic>
       final settingsRaw = q['settings'];
-      final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
+      final settings = settingsRaw is Map
+          ? <String, dynamic>{for (final e in settingsRaw.entries) e.key.toString(): e.value}
+          : <String, dynamic>{};
       final imageUrl = settings['image_url'] as String?;
       final rowLabels = (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
       final scaleMin = (settings['scale_min'] as int?) ?? 1;
@@ -110,6 +115,7 @@ class FormBuilderState extends ChangeNotifier {
       final allowedFileTypes = (settings['allowed_file_types'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
       final maxFileSizeMB = (settings['max_file_size_mb'] as int?) ?? 10;
       final maxFileCount = (settings['max_file_count'] as int?) ?? 1;
+      final points = (settings['points'] as int?) ?? 1;
 
       currentPage.questions.add(
         QuestionData(
@@ -129,6 +135,7 @@ class FormBuilderState extends ChangeNotifier {
           allowedFileTypes: allowedFileTypes,
           maxFileSizeMB: maxFileSizeMB,
           maxFileCount: maxFileCount,
+          points: points,
         ),
       );
     }
@@ -150,12 +157,14 @@ class FormBuilderState extends ChangeNotifier {
   // dengan template karena bentuk questions JSON-nya identik.
   factory FormBuilderState.fromForm(Map<String, dynamic> formJson) {
     final questionsRaw = formJson['questions'];
-    return FormBuilderState.fromTemplate(FormTemplate(
+    final state = FormBuilderState.fromTemplate(FormTemplate(
       id: formJson['id']?.toString(),
       title: (formJson['title'] as String?) ?? '',
       subtitle: (formJson['description'] as String?) ?? '',
+      bannerUrl: formJson['banner_url']?.toString(),
       questionsJson: questionsRaw is List ? questionsRaw : null,
     ));
+    return state;
   }
 
   // === Actions ===
@@ -303,6 +312,22 @@ class FormBuilderState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Set semua soal yang bisa dijawab menjadi wajib diisi (bulk). Data structural
+  // (halaman/teks/gambar/pemisah) tidak ikut ditandai wajib.
+  void setAllQuestionsRequired(bool value) {
+    for (final page in pages) {
+      for (final q in page.questions) {
+        if (q.type == QuestionType.pageBreak ||
+            q.type == QuestionType.text ||
+            q.type == QuestionType.image) {
+          continue;
+        }
+        q.isRequired = value;
+      }
+    }
+    notifyListeners();
+  }
+
   // --- API Payload Builder ---
   // Dipakai untuk createTemplate & createForm — harus 100% kompatibel dengan backend QuestionType enum
   List<Map<String, dynamic>> buildApiPayload() {
@@ -370,6 +395,7 @@ class FormBuilderState extends ChangeNotifier {
         if (q.rowLabels.isNotEmpty) {
           settings['row_labels'] = q.rowLabels;
         }
+        settings['points'] = q.points;
 
         result.add({
           'type': q.type.apiValue,

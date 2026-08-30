@@ -420,13 +420,19 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Halaman Template Maker dirancang light-only (latar 0xFFE8F0FE + teks hitam
+    // yang dikunci). Bungkus dengan tema terang agar teks tanpa warna eksplisit
+    // tetap gelap & terbaca walau aplikasi sedang dalam mode gelap.
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFE8F0FE),
-        appBar: _buildAppBar(),
-        body: TabBarView(children: [_buildSoalTab(), _buildSetelanTab()]),
-        floatingActionButton: _buildFAB(),
+      child: Theme(
+        data: ThemeData.light(),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFE8F0FE),
+          appBar: _buildAppBar(),
+          body: TabBarView(children: [_buildSoalTab(), _buildSetelanTab()]),
+          floatingActionButton: _buildFAB(),
+        ),
       ),
     );
   }

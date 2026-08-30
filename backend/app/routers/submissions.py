@@ -176,6 +176,15 @@ def save_answer(
     if form.end_date and _window_now() > _window_dt(form.end_date):
         raise HTTPException(status_code=403, detail="Waktu pengisian sudah habis")
 
+    # FIX: pastikan question milik form submission ini — kalau tidak, tolak supaya
+    # tidak terjadi injeksi jawaban lintas form / IntegrityError FK → 500.
+    belongs_to_form = db.query(models.Question.id).filter(
+        models.Question.id == str(payload.question_id),
+        models.Question.form_id == submission.form_id,
+    ).first() is not None
+    if not belongs_to_form:
+        raise HTTPException(status_code=400, detail="Soal tidak ditemukan pada form ini")
+
     answer = (
         db.query(models.Answer)
         .filter(models.Answer.submission_id == submission_id, models.Answer.question_id == str(payload.question_id))
@@ -334,20 +343,27 @@ def list_submissions_for_form(
 # HELPERS SKOR (sama dengan logika export.py)
 # ============================================================
 def _correct_keys(question):
-    return {o.label for o in question.options if o.is_correct}
+    return {_strip_grid_row(o.label) for o in question.options if o.is_correct}
 
 
 def _is_graded(question):
     return len(_correct_keys(question)) > 0
 
 
+def _strip_grid_row(value):
+    """Grid jawaban mobile disimpan 'NamaBaris => Opsi'; buang prefix baris utk tampil/skor."""
+    if isinstance(value, str) and " => " in value:
+        return value.split(" => ", 1)[1]
+    return value
+
+
 def _user_answer_str(ans):
     if not ans:
         return ""
     if ans.answer_text:
-        return ans.answer_text
+        return _strip_grid_row(ans.answer_text)
     if ans.answer_options:
-        return ", ".join(ans.answer_options)
+        return ", ".join(_strip_grid_row(x) for x in ans.answer_options)
     if ans.file_url:
         return ans.file_url
     return ""
@@ -359,7 +375,7 @@ def _is_answer_correct(question, ans):
         return None
     if ans is None:
         return False
-    selected = set(ans.answer_options) if ans.answer_options else ({ans.answer_text} if ans.answer_text else set())
+    selected = {_strip_grid_row(x) for x in ans.answer_options} if ans.answer_options else ({ans.answer_text} if ans.answer_text else set())
     return keys == selected
 
 

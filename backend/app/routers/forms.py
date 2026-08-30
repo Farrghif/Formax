@@ -188,6 +188,20 @@ def update_form(
     data = payload.model_dump(exclude_unset=True)
     questions_data = data.pop("questions", None)
 
+    # FIX data-loss: mengganti semua question dengan delete-orphan akan menghapus
+    # seluruh jawaban responden (Answer.question_id ON DELETE CASCADE). Kalau form
+    # sudah punya submission/jawaban, tolak pergantian pertanyaan supaya data
+    # responden tidak musnah diam-diam.
+    if questions_data is not None:
+        has_answers = db.query(models.Submission.id).filter(
+            models.Submission.form_id == form.id
+        ).first() is not None
+        if has_answers:
+            raise HTTPException(
+                status_code=409,
+                detail="Form sudah punya jawaban; mengubah pertanyaan akan menghapus jawaban responden. Duplikasi form dulu (atau cadangkan jawaban) sebelum mengganti pertanyaan.",
+            )
+
     for key, value in data.items():
         setattr(form, key, value)
 

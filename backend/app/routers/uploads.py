@@ -12,6 +12,14 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 UPLOAD_DIR = "static/uploads"
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").strip().rstrip("/")
 
+# FIX Bug: batchasi tipe file supaya tidak bisa upload HTML/JS (stored XSS kalau
+# diserve static) atau file raksasa yang memenuhi disk.
+ALLOWED_EXTENSIONS = {
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf",
+    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
+}
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 @router.post("")
 async def upload_file(
@@ -28,13 +36,19 @@ async def upload_file(
     if current_user is None and not respondent_key:
         raise HTTPException(status_code=401, detail="Identitas diperlukan untuk upload file")
 
+    ext = (os.path.splitext(file.filename or "")[1] or "").lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Tipe file '{ext or '(tanpa ekstensi)'}' tidak diizinkan")
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Ukuran file melebihi batas 10 MB")
+
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    ext = os.path.splitext(file.filename)[1]
     filename = f"{uuid.uuid4()}{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
     with open(filepath, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     return {"file_url": f"{BASE_URL}/static/uploads/{filename}"}

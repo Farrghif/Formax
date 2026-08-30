@@ -18,6 +18,7 @@ class QuestionOption {
   final String? value;
   final int orderIndex;
   final bool isCorrect;
+  final bool isOther;
 
   QuestionOption({
     required this.id,
@@ -25,6 +26,7 @@ class QuestionOption {
     this.value,
     this.orderIndex = 0,
     this.isCorrect = false,
+    this.isOther = false,
   });
 
   factory QuestionOption.fromJson(Map<dynamic, dynamic> json) {
@@ -35,6 +37,7 @@ class QuestionOption {
       value: map['value'],
       orderIndex: map['order_index'] ?? 0,
       isCorrect: map['is_correct'] ?? false,
+      isOther: map['is_other'] ?? false,
     );
   }
 }
@@ -158,6 +161,11 @@ class _FillFormPageState extends State<FillFormPage> {
   final Set<String> _uploadingQids = {};
   final Map<String, Future<void>> _pendingUploads = {};
 
+  // State opsi "Lainnya" (is_other): teks bebas + status terpilih per soal
+  final Map<String, TextEditingController> _otherCtrls = {};
+  final Map<String, bool> _otherSelected = {};
+  final Map<String, String> _lastOtherText = {};
+
   // Join Token
   bool _showJoinTokenDialog = false;
   final TextEditingController _joinTokenController = TextEditingController();
@@ -172,6 +180,12 @@ class _FillFormPageState extends State<FillFormPage> {
   static const int _questionsPerPage = 4;
   int _currentPage = 0;
 
+  // Zoom (50%–200%): menskalakan teks form untuk keterbacaan.
+  double _zoom = 1.0;
+  // Bookmark per soal: id soal yang ditandai + mode filter.
+  final Set<String> _bookmarkedQids = {};
+  bool _showBookmarkedOnly = false;
+
   static bool _looksLikeHtml(String s) => s.contains('<');
 
   @override
@@ -185,6 +199,7 @@ class _FillFormPageState extends State<FillFormPage> {
     _joinTokenController.dispose();
     _countdownTimer?.cancel();
     for (var c in _textCtrls.values) { c.dispose(); }
+    for (var c in _otherCtrls.values) { c.dispose(); }
     super.dispose();
   }
 
@@ -538,6 +553,23 @@ class _FillFormPageState extends State<FillFormPage> {
     return t.length > 28 ? '${t.substring(0, 28)}...' : t;
   }
 
+  void _toggleBookmark(String questionId) {
+    setState(() {
+      if (!_bookmarkedQids.remove(questionId)) {
+        _bookmarkedQids.add(questionId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Soal ditandai. Ketuk ikon tanda lagi untuk batal.'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
+  }
+
   void _updateAnswer(String questionId, {String? text, List<String>? options}) {
     setState(() {
       _answers[questionId] = {
@@ -579,6 +611,107 @@ class _FillFormPageState extends State<FillFormPage> {
         ),
       ),
       centerTitle: true,
+      actions: [
+        IconButton(
+          tooltip: 'Zoom (${(_zoom * 100).round()}%)',
+          icon: const Icon(Icons.zoom_in, color: Color(0xFF374151)),
+          onPressed: _showZoomDialog,
+        ),
+        IconButton(
+          tooltip: _showBookmarkedOnly
+              ? 'Tampilkan semua soal'
+              : 'Tampilkan soal yang ditandai',
+          icon: Icon(
+            _showBookmarkedOnly
+                ? Icons.filter_alt
+                : Icons.bookmarks_outlined,
+            color: _showBookmarkedOnly
+                ? const Color(0xFFB45309)
+                : const Color(0xFF374151),
+          ),
+          onPressed: () {
+            if (_bookmarkedQids.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Belum ada soal yang ditandai. Ketuk ikon tanda pada soal.',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+            setState(() {
+              _showBookmarkedOnly = !_showBookmarkedOnly;
+              if (_showBookmarkedOnly) _currentPage = 0;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showZoomDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Ukuran Tampilan (Zoom)'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(_zoom * 100).round()}%',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E66D0),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('50%', style: TextStyle(fontSize: 12)),
+                    Expanded(
+                      child: Slider(
+                        value: _zoom,
+                        min: 0.5,
+                        max: 2.0,
+                        divisions: 15,
+                        label: '${(_zoom * 100).round()}%',
+                        onChanged: (v) => setDialogState(() {
+                          setState(() => _zoom = v);
+                        }),
+                      ),
+                    ),
+                    const Text('200%', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Memperbesar/memperkecil ukuran teks form agar mudah dibaca.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => setDialogState(() {
+                  setState(() => _zoom = 1.0);
+                }),
+                child: const Text('Reset 100%'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Selesai'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -855,39 +988,112 @@ class _FillFormPageState extends State<FillFormPage> {
   // FORM CONTENT
   // ============================================================
   Widget _buildFormContent() {
-    final questions = _currentQuestions;
+    // Saat mode "hanya yang ditandai" aktif, tampilkan semua soal yang
+    // di-bookmark (ignore pagination) agar mudah navigasi.
+    final bookmarkedMode = _showBookmarkedOnly;
+    final questions = bookmarkedMode
+        ? (_formData?.questions
+                .where((q) => _bookmarkedQids.contains(q.id))
+                .toList() ??
+            [])
+        : _currentQuestions;
 
     return Column(
       children: [
-        // Progress bar
-        _buildProgressBar(),
+        if (bookmarkedMode) _buildBookmarkIndicator(),
+        if (!bookmarkedMode) _buildProgressBar(),
 
         // Questions list
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Form header (only on first page)
-                if (_currentPage == 0) _buildFormHeader(),
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(_zoom),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Form header (only on first page)
+                  if (_currentPage == 0 && !bookmarkedMode)
+                    _buildFormHeader(),
 
-                // Questions
-                ...questions.asMap().entries.map((entry) {
-                  final globalIndex =
-                      _currentPage * _questionsPerPage + entry.key;
-                  return _buildQuestionCard(entry.value, globalIndex);
-                }),
+                  // Questions
+                  if (bookmarkedMode && questions.isEmpty)
+                    _buildNoBookmarkState()
+                  else
+                    ...questions.asMap().entries.map((entry) {
+                      return _buildQuestionCard(entry.value, entry.key);
+                    }),
 
-                const SizedBox(height: 16),
-              ],
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         ),
 
         // Navigation buttons
-        _buildNavigationButtons(),
+        if (!bookmarkedMode) _buildNavigationButtons(),
       ],
+    );
+  }
+
+  Widget _buildBookmarkIndicator() {
+    final count = _bookmarkedQids.length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: const Color(0xFFFEF9C3),
+      child: Row(
+        children: [
+          const Icon(Icons.bookmark, size: 16, color: Color(0xFFB45309)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              count == 0
+                  ? 'Belum ada soal yang ditandai'
+                  : 'Menampilkan $count soal yang ditandai',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF92400E),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => setState(() => _showBookmarkedOnly = false),
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Tutup'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF92400E),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoBookmarkState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        children: [
+          const Icon(Icons.bookmark_border, size: 48, color: Color(0xFF9CA3AF)),
+          const SizedBox(height: 12),
+          const Text(
+            'Belum ada soal yang ditandai',
+            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Ketik ikon tanda pada setiap soal untuk mengaturnya.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1162,6 +1368,23 @@ class _FillFormPageState extends State<FillFormPage> {
                         ),
                       ),
               ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => _toggleBookmark(question.id),
+                tooltip: _bookmarkedQids.contains(question.id)
+                    ? 'Hapus tanda'
+                    : 'Tandai soal ini',
+                visualDensity: VisualDensity.compact,
+                iconSize: 20,
+                icon: Icon(
+                  _bookmarkedQids.contains(question.id)
+                      ? Icons.bookmark
+                      : Icons.bookmark_border,
+                  color: _bookmarkedQids.contains(question.id)
+                      ? const Color(0xFFB45309)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1242,128 +1465,234 @@ class _FillFormPageState extends State<FillFormPage> {
         : Text(label, style: style);
   }
 
+  TextEditingController _otherCtrl(String questionId) {
+    return _otherCtrls.putIfAbsent(questionId, () => TextEditingController());
+  }
+
   Widget _buildSingleChoiceInput(Question question) {
+    final other = question.options.where((o) => o.isOther).firstOrNull;
     final selectedValue = _answers[question.id]?['answer_text'] ?? '';
+    final otherActive = _otherSelected[question.id] ?? false;
 
     return Column(
-      children: question.options.map((option) {
-        final isSelected = selectedValue == option.label;
-        return InkWell(
-          onTap: () => _updateAnswer(question.id, text: option.label),
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFEFF6FF)
-                  : Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...question.options.map((option) {
+          final isOther = option.isOther;
+          final isSelected = isOther ? otherActive : selectedValue == option.label;
+          return InkWell(
+            onTap: () {
+              if (isOther) {
+                setState(() {
+                  _otherSelected[question.id] = true;
+                  _answers[question.id] = {
+                    'answer_text': _otherCtrl(question.id).text,
+                    'answer_options': null,
+                  };
+                });
+                _saveAnswer(question.id);
+              } else {
+                _otherSelected[question.id] = false;
+                _otherCtrl(question.id).clear();
+                _updateAnswer(question.id, text: option.label);
+              }
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFF1E66D0)
-                    : Theme.of(context).colorScheme.outlineVariant,
-                width: isSelected ? 2 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
+                    ? const Color(0xFFEFF6FF)
+                    : Theme.of(context).colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
                   color: isSelected
                       ? const Color(0xFF1E66D0)
-                      : const Color(0xFF9CA3AF),
-                  size: 22,
+                      : Theme.of(context).colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _renderOptionText(
-                    option.label,
-                    TextStyle(
-                      fontSize: 15,
-                      color: isSelected
-                          ? const Color(0xFF1E40AF)
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: isSelected
+                        ? const Color(0xFF1E66D0)
+                        : const Color(0xFF9CA3AF),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _renderOptionText(
+                      option.label,
+                      TextStyle(
+                        fontSize: 15,
+                        color: isSelected
+                            ? const Color(0xFF1E40AF)
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (other != null && otherActive)
+          Padding(
+            padding: const EdgeInsets.only(left: 34, top: 4),
+            child: TextField(
+              key: ValueKey('other_${question.id}'),
+              controller: _otherCtrl(question.id),
+              onChanged: (v) => _updateAnswer(question.id, text: v),
+              maxLines: 2,
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Tulis jawabanmu...',
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFC7D2FE)),
                 ),
-              ],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 
   // --- CHECKBOX (MULTI CHOICE) ---
   Widget _buildCheckboxInput(Question question) {
+    final other = question.options.where((o) => o.isOther).firstOrNull;
     final selectedOptions = List<String>.from(
       _answers[question.id]?['answer_options'] ?? [],
     );
+    final otherActive = _otherSelected[question.id] ?? false;
+
+    void commit(List<String> newOptions) {
+      _updateAnswer(question.id, options: newOptions);
+    }
 
     return Column(
-      children: question.options.map((option) {
-        final isSelected = selectedOptions.contains(option.label);
-        return InkWell(
-          onTap: () {
-            final newOptions = List<String>.from(selectedOptions);
-            if (isSelected) {
-              newOptions.remove(option.label);
-            } else {
-              newOptions.add(option.label);
-            }
-            _updateAnswer(question.id, options: newOptions);
-          },
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFEFF6FF)
-                  : Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...question.options.map((option) {
+          final isOther = option.isOther;
+          final isSelected = isOther ? otherActive : selectedOptions.contains(option.label);
+          return InkWell(
+            onTap: () {
+              final newOptions = List<String>.from(selectedOptions);
+              if (isOther) {
+                if (otherActive) {
+                  _otherSelected[question.id] = false;
+                  final last = _lastOtherText[question.id];
+                  if (last != null && last.isNotEmpty) {
+                    newOptions.remove(last);
+                  }
+                  _lastOtherText[question.id] = '';
+                  _otherCtrl(question.id).clear();
+                  commit(newOptions);
+                } else {
+                  _otherSelected[question.id] = true;
+                  final text = _otherCtrl(question.id).text;
+                  if (text.isNotEmpty && !newOptions.contains(text)) {
+                    newOptions.add(text);
+                  }
+                  commit(newOptions);
+                }
+              } else {
+                if (isSelected) {
+                  newOptions.remove(option.label);
+                } else {
+                  newOptions.add(option.label);
+                }
+                commit(newOptions);
+              }
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFF1E66D0)
-                    : Theme.of(context).colorScheme.outlineVariant,
-                width: isSelected ? 2 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                    ? const Color(0xFFEFF6FF)
+                    : Theme.of(context).colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
                   color: isSelected
                       ? const Color(0xFF1E66D0)
-                      : const Color(0xFF9CA3AF),
-                  size: 22,
+                      : Theme.of(context).colorScheme.outlineVariant,
+                  width: isSelected ? 2 : 1,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _renderOptionText(
-                    option.label,
-                    TextStyle(
-                      fontSize: 15,
-                      color: isSelected
-                          ? const Color(0xFF1E40AF)
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                    color: isSelected
+                        ? const Color(0xFF1E66D0)
+                        : const Color(0xFF9CA3AF),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _renderOptionText(
+                      option.label,
+                      TextStyle(
+                        fontSize: 15,
+                        color: isSelected
+                            ? const Color(0xFF1E40AF)
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (other != null && otherActive)
+          Padding(
+            padding: const EdgeInsets.only(left: 34, top: 4),
+            child: TextField(
+              key: ValueKey('other_${question.id}'),
+              controller: _otherCtrl(question.id),
+              onChanged: (v) {
+                final newOptions = List<String>.from(
+                  (_answers[question.id]?['answer_options'] as List? ?? [])
+                      .where((x) => x.toString() != _lastOtherText[question.id])
+                      .toList(),
+                );
+                if (v.isNotEmpty) newOptions.add(v);
+                _lastOtherText[question.id] = v;
+                commit(newOptions);
+              },
+              maxLines: 2,
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Tulis jawabanmu...',
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFC7D2FE)),
                 ),
-              ],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 
@@ -1523,9 +1852,16 @@ class _FillFormPageState extends State<FillFormPage> {
   Widget _buildGridInput(Question question) {
     final rowLabels = (question.settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? ['Baris 1'];
     final isRadio = question.type == 'multiple_choice_grid';
-    final selected = _answers[question.id]?['answer_options'] as List<dynamic>? ?? [];
+    final selectedSet =
+        (_answers[question.id]?['answer_options'] as List<dynamic>? ?? [])
+            .map((e) => e.toString())
+            .toSet();
+    // Setiap baris disimpan sebagai "NamaBaris => Opsi" supaya pilihan tiap baris
+    // independen (FIX: sebelumnya radio membersihkan seluruh baris → data hilang).
+    String keyFor(String row, String label) => '$row => $label';
     return Column(
       children: rowLabels.map((row) {
+        final rowKeyPrefix = '$row => ';
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1537,7 +1873,8 @@ class _FillFormPageState extends State<FillFormPage> {
             Wrap(
               spacing: 8,
               children: question.options.map((opt) {
-                final isSel = selected.contains(opt.label);
+                final k = keyFor(row, opt.label);
+                final isSel = selectedSet.contains(k);
                 return FilterChip(
                   label: _renderOptionText(
                     opt.label,
@@ -1545,10 +1882,20 @@ class _FillFormPageState extends State<FillFormPage> {
                   ),
                   selected: isSel,
                   onSelected: (_) {
-                  final cur = List<String>.from(selected.map((e) => e.toString()));
-                  if (isRadio) { cur.clear(); cur.add(opt.label); } else { if (cur.contains(opt.label)) cur.remove(opt.label); else cur.add(opt.label); }
-                  _updateAnswer(question.id, text: null, options: cur);
-                });
+                    final cur = selectedSet.toList();
+                    if (isRadio) {
+                      cur.removeWhere((e) => e.startsWith(rowKeyPrefix));
+                      cur.add(k);
+                    } else {
+                      if (cur.contains(k)) {
+                        cur.remove(k);
+                      } else {
+                        cur.add(k);
+                      }
+                    }
+                    _updateAnswer(question.id, text: null, options: cur);
+                  },
+                );
               }).toList(),
             ),
           ]),

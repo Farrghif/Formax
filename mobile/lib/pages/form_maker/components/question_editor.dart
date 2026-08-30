@@ -24,12 +24,14 @@ class _QuestionEditorState extends State<QuestionEditor> {
   // Debounce controllers for linear scale configs etc.
   late TextEditingController _minLabelCtrl;
   late TextEditingController _maxLabelCtrl;
+  late TextEditingController _pointsCtrl;
 
   @override
   void initState() {
     super.initState();
     _minLabelCtrl = TextEditingController(text: widget.question.minLabel);
     _maxLabelCtrl = TextEditingController(text: widget.question.maxLabel);
+    _pointsCtrl = TextEditingController(text: '${widget.question.points}');
   }
 
   @override
@@ -38,6 +40,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
     if (oldWidget.question.id != widget.question.id) {
       _minLabelCtrl.text = widget.question.minLabel;
       _maxLabelCtrl.text = widget.question.maxLabel;
+      _pointsCtrl.text = '${widget.question.points}';
     }
   }
 
@@ -45,6 +48,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
   void dispose() {
     _minLabelCtrl.dispose();
     _maxLabelCtrl.dispose();
+    _pointsCtrl.dispose();
     super.dispose();
   }
 
@@ -130,10 +134,76 @@ class _QuestionEditorState extends State<QuestionEditor> {
           ],
         ),
         const SizedBox(height: 20),
-        
+
+        // Poin per soal (bobot nilai) — hanya untuk jenis yang bisa dinilai
+        if (_canGrade(widget.question)) ...[
+          _buildPointsRow(widget.question),
+          const SizedBox(height: 12),
+        ],
+
         // Editor Body based on type
         _buildEditorBody(),
       ],
+    );
+  }
+
+  bool _canGrade(QuestionData q) {
+    return q.type != QuestionType.image &&
+        q.type != QuestionType.text &&
+        q.type != QuestionType.pageBreak &&
+        q.type != QuestionType.fileUpload;
+  }
+
+  Widget _buildPointsRow(QuestionData q) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E6F0)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.stars_outlined, size: 18, color: Color(0xFF6B7280)),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Poin soal',
+              style: TextStyle(fontSize: 14, color: Color(0xFF374151)),
+            ),
+          ),
+          Container(
+            width: 56,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFD1D5DB)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: TextField(
+              controller: _pointsCtrl,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (v) {
+                final parsed = int.tryParse(v);
+                q.points = (parsed ?? 0).clamp(0, 99999);
+                widget.onChanged();
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'poin',
+            style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -303,6 +373,51 @@ class _QuestionEditorState extends State<QuestionEditor> {
                       },
                     ),
                   ),
+                if (!opt.isOther &&
+                    (q.type == QuestionType.multipleChoice ||
+                        q.type == QuestionType.checkboxes ||
+                        q.type == QuestionType.dropdown))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Tooltip(
+                      message: opt.isCorrect
+                          ? 'Kunci Jawaban'
+                          : 'Jadikan Kunci Jawaban',
+                      child: InkWell(
+                        key: ValueKey('is_correct_${opt.id}'),
+                        borderRadius: BorderRadius.circular(6),
+                        onTap: () {
+                          _toggleCorrect(q, opt);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                opt.isCorrect
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                size: 22,
+                                color: opt.isCorrect
+                                    ? const Color(0xFF4F46E5)
+                                    : Colors.black26,
+                              ),
+                              if (opt.isCorrect)
+                                const Text(
+                                  'Kunci',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Color(0xFF4F46E5),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -338,5 +453,18 @@ class _QuestionEditorState extends State<QuestionEditor> {
         )
       ],
     );
+  }
+
+  void _toggleCorrect(QuestionData q, QuestionOptionData opt) {
+    if (q.type == QuestionType.checkboxes) {
+      opt.isCorrect = !opt.isCorrect;
+    } else {
+      final willBeCorrect = !opt.isCorrect;
+      for (final o in q.options) {
+        o.isCorrect = false;
+      }
+      opt.isCorrect = willBeCorrect;
+    }
+    widget.onChanged();
   }
 }

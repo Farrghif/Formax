@@ -659,6 +659,54 @@ class ApiService {
     }
   }
 
+  // AKTIVITAS SAYA — daftar form yang pernah/sedang diisi user sebagai responden.
+  // Endpoint backend: GET /submissions/me → List[MySubmissionOut]
+  static Future<Map<String, dynamic>> getMySubmissions() async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/submissions/me'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': _safeJson(response.body)};
+      }
+      final body = _safeJson(response.body);
+      final msg = body is Map ? (body['detail'] ?? 'Failed') : 'Failed';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Hasil submission milik responden (untuk "Lihat Hasil" di Aktivitas Saya).
+  // Endpoint backend: GET /submissions/{submission_id}/result → SubmissionResultOut
+  static Future<Map<String, dynamic>> getSubmissionResult(String submissionId) async {
+    try {
+      final token = await getToken();
+      final respondentKey = await getRespondentKey();
+      final response = await http.get(
+        Uri.parse('$baseUrl/submissions/$submissionId/result'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Respondent-Key': respondentKey,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      }
+      final msg = data is Map ? (data['detail'] ?? 'Gagal memuat hasil') : 'Gagal memuat hasil';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Fungsi Search (untuk Dashboard Search)
   static Future<Map<String, dynamic>> search(String query) async {
     try {

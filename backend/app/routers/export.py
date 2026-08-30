@@ -112,18 +112,28 @@ def _duration_str(sub):
 
 
 def _correct_keys(question):
-    return {o.label for o in question.options if o.is_correct}
+    return {_strip_grid_row(o.label) for o in question.options if o.is_correct}
 
 
 def _is_graded(question):
     return len(_correct_keys(question)) > 0
 
 
+def _strip_grid_row(value):
+    """Grid jawaban mobile disimpan 'NamaBaris => Opsi'; buang prefix baris utk tampil/skor."""
+    if isinstance(value, str) and " => " in value:
+        return value.split(" => ", 1)[1]
+    return value
+
+
 def _user_selected(ans):
     if not ans:
         return []
     if ans.answer_options:
-        return list(ans.answer_options)
+        return [_strip_grid_row(x) for x in ans.answer_options]
+    if ans.answer_text:
+        return [_strip_grid_row(ans.answer_text)]
+    return []
     if ans.answer_text:
         return [ans.answer_text]
     return []
@@ -138,9 +148,9 @@ def _answer_value(ans):
     if not ans:
         return ""
     if ans.answer_text:
-        return ans.answer_text
+        return _strip_grid_row(ans.answer_text)
     if ans.answer_options:
-        return ", ".join(ans.answer_options)
+        return ", ".join(_strip_grid_row(x) for x in ans.answer_options)
     if ans.file_url:
         return ans.file_url
     return ""

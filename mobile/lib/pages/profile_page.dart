@@ -1,6 +1,7 @@
 // lib/pages/profile_page.dart
 // Halaman pengaturan profil pengguna. Mendukung edit username/foto profil,
 // menampilkan email read-only, dan menyimpan perubahan ke backend.
+// Seluruh warna memakai colorScheme tema agar tampil benar di mode terang & gelap.
 
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -73,9 +74,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildImagePickerSheet() {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       child: Column(
@@ -85,17 +86,17 @@ class _ProfilePageState extends State<ProfilePage> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.black12,
+              color: Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Foto Profil',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -167,7 +168,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 fontWeight: FontWeight.w500,
                 color: color == const Color(0xFFDC2626)
                     ? color
-                    : Colors.black87,
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -291,28 +292,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: cs.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: Icon(Icons.close, color: cs.onSurface),
           onPressed: _cancel,
         ),
-        title: const Text(
+        title: Text(
           'Settings',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: cs.outlineVariant),
         ),
       ),
       body: _isLoading
@@ -328,7 +330,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF4F46E5),
+                      color: cs.onSurface,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -344,28 +346,30 @@ class _ProfilePageState extends State<ProfilePage> {
                       controller: _nameController,
                       onChanged: (_) =>
                           setState(() {}), // trigger rebuild for hasChanges
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Colors.black87,
+                        color: cs.onSurface,
                       ),
+                      cursorColor: const Color(0xFF4F46E5),
                       decoration: InputDecoration(
+                        hintText: 'Nama kamu',
+                        hintStyle: TextStyle(
+                          color: cs.onSurfaceVariant,
+                          fontSize: 15,
+                        ),
                         filled: true,
-                        fillColor: const Color(0xFFF9FAFB),
+                        fillColor: cs.surfaceContainerLow,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
+                          borderSide: BorderSide(color: cs.outlineVariant),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E7EB),
-                          ),
+                          borderSide: BorderSide(color: cs.outlineVariant),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -389,15 +393,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: cs.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: cs.outlineVariant),
                       ),
                       child: Text(
                         _email,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF9CA3AF),
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -409,10 +413,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Tampilan',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: cs.onSurface,
                       ),
                     ),
                   ),
@@ -429,6 +433,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildAvatarSection() {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
         Stack(
@@ -439,7 +444,7 @@ class _ProfilePageState extends State<ProfilePage> {
               height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 3),
+                border: Border.all(color: cs.outlineVariant, width: 3),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -462,7 +467,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF4F46E5),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
+                    border: Border.all(color: cs.surface, width: 3),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
@@ -484,16 +489,16 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 16),
         Text(
           _nameController.text.isNotEmpty ? _nameController.text : 'User',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: cs.onSurface,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           _email,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+          style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
         ),
       ],
     );
@@ -543,6 +548,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildThemeToggle() {
+    final cs = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: ThemeController.instance,
       builder: (context, _) {
@@ -551,9 +557,9 @@ class _ProfilePageState extends State<ProfilePage> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
+            color: cs.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: cs.outlineVariant),
           ),
           child: Row(
             children: [
@@ -567,19 +573,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Mode Gelap',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
+                        color: cs.onSurface,
                       ),
                     ),
                     Text(
                       dark ? 'Aktif — tema gelap menyala' : 'Nonaktif — tema terang',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6B7280),
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -603,10 +609,10 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -616,22 +622,27 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildActionButtons() {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
             onPressed: _isSaving ? null : _cancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF6B7280),
-              side: const BorderSide(color: Color(0xFFD1D5DB)),
+              foregroundColor: cs.onSurfaceVariant,
+              side: BorderSide(color: cs.outline),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -641,7 +652,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: (_isSaving || !_hasChanges) ? null : _save,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF4F46E5),
-              disabledBackgroundColor: const Color(0xFFC7D2FE),
+              disabledBackgroundColor: cs.surfaceContainerHighest,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -658,7 +669,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 : const Text(
                     'Save',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
           ),
         ),

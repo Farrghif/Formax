@@ -211,6 +211,7 @@ class _FormMakerPageState extends State<FormMakerPage>
         res = await ApiService.updateForm(_draftFormId!, {
           'title': titleHtml,
           'description': descriptionHtml,
+          'banner_url': _builderState.bannerUrl,
           ...settings,
           'questions': questionsPayload,
         });
@@ -218,6 +219,7 @@ class _FormMakerPageState extends State<FormMakerPage>
         res = await ApiService.createForm({
           'title': titleHtml,
           'description': descriptionHtml,
+          'banner_url': _builderState.bannerUrl,
           'slug': ApiService.generateSlug(QuillHtml.htmlToPlainText(titleHtml)),
           'questions': questionsPayload,
           ...settings,
@@ -293,6 +295,7 @@ class _FormMakerPageState extends State<FormMakerPage>
     final payload = {
       'title': titleHtml,
       'description': descriptionHtml,
+      'banner_url': _builderState.bannerUrl,
       'questions': questionsPayload,
     };
 
@@ -363,7 +366,27 @@ class _FormMakerPageState extends State<FormMakerPage>
       return;
     }
 
-    final formId = _draftFormId!;
+    // FIX: jangan asal force-unwrap — kalau _draftFormId belum ke-set (mis. data
+    // response tak punya id), ambil dari res supaya tidak null-crash.
+    var formId = _draftFormId;
+    if (formId == null) {
+      final data = res['data'];
+      if (data is Map && data['id'] != null) {
+        _draftFormId = data['id'].toString();
+        formId = _draftFormId;
+      }
+    }
+    if (formId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal publish form: tidak ada id form'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     setState(() => _builderState.isSaving = true);
 
     final titlePlain = QuillHtml.htmlToPlainText(
@@ -452,6 +475,48 @@ class _FormMakerPageState extends State<FormMakerPage>
     }
   }
 
+  Future<void> _pickBanner() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+    final uploadResult = await ApiService.uploadFile(pickedFile);
+    if (!mounted) return;
+    if (uploadResult['success'] == true) {
+      final fileUrl = uploadResult['file_url'] as String;
+      setState(() => _builderState.bannerUrl = fileUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal unggah banner: ${uploadResult['message']}'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
+  void _applyRequiredToAll() {
+    _builderState.setAllQuestionsRequired(true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua pertanyaan dijadikan wajib diisi'),
+          backgroundColor: Color(0xFF059669),
+        ),
+      );
+    }
+  }
+
+  void _applyOptionalToAll() {
+    _builderState.setAllQuestionsRequired(false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua pertanyaan dijadikan opsional'),
+        ),
+      );
+    }
+  }
+
   void _showAddQuestionSheet() {
     showModalBottomSheet(
       context: context,
@@ -518,7 +583,16 @@ class _FormMakerPageState extends State<FormMakerPage>
     return ListenableBuilder(
       listenable: _builderState,
       builder: (context, _) {
-        return Scaffold(
+        // Editor Form Maker dirancang light-only (latar `_bgColor` terang +
+        // teks hitam yang dikunci). Bungkus dengan tema terang agar semua teks
+        // yang tidak diberi warna eksplisit tetap gelap & terbaca walau berada
+        // di mode gelap aplikasi (mencegah teks terang di atas latar terang).
+        final lightTheme = ThemeData.light().copyWith(
+          scaffoldBackgroundColor: _bgColor,
+        );
+        return Theme(
+          data: lightTheme,
+          child: Scaffold(
           backgroundColor: _bgColor,
           appBar: _buildAppBar(),
           body: _isPreviewMode
@@ -601,7 +675,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                 )
               : null,
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        );
+        ));
       },
     );
   }
@@ -674,18 +748,11 @@ class _FormMakerPageState extends State<FormMakerPage>
             tooltip: 'Simpan Draft',
           ),
         if (!_isPreviewMode)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.black54),
-            tooltip: 'Menu lain',
-            onSelected: (value) {
-              if (value == 'template') _saveAsTemplate();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'template',
-                child: Text('Simpan sebagai Template'),
-              ),
-            ],
+          IconButton(
+            // FIX UX: ganti titik-tiga (yang cuma punya 1 menu) jadi tombol langsung.
+            icon: const Icon(Icons.account_balance, color: Colors.black54),
+            tooltip: 'Simpan sebagai Template',
+            onPressed: _builderState.isSaving ? null : _saveAsTemplate,
           ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0, top: 10, bottom: 10),
@@ -723,6 +790,8 @@ class _FormMakerPageState extends State<FormMakerPage>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          _buildBannerCard(),
+          const SizedBox(height: 12),
           _buildFormAccessCard(),
           const SizedBox(height: 12),
           _buildQuizSettingsCard(),
@@ -734,6 +803,87 @@ class _FormMakerPageState extends State<FormMakerPage>
           _buildTimerSettingsCard(),
           const SizedBox(height: 80),
         ],
+      ),
+    );
+  }
+
+  // ── Banner Form: unggah / ganti / hapus ──
+  Widget _buildBannerCard() {
+    final banner = _builderState.bannerUrl;
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.image_outlined, color: Color(0xFF1E66D0)),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Banner Form',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Gambar header di atas judul form',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (banner != null && banner.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  height: 140,
+                  width: double.infinity,
+                  child: Image.network(banner, fit: BoxFit.cover, errorBuilder: (_, _, _) {
+                    return Container(
+                      color: const Color(0xFFE5E7EB),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickBanner,
+                    icon: const Icon(Icons.upload_file, size: 18),
+                    label: Text(banner != null && banner.isNotEmpty ? 'Ganti Banner' : 'Unggah Banner'),
+                  ),
+                ),
+                if (banner != null && banner.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => setState(() => _builderState.bannerUrl = null),
+                    tooltip: 'Hapus Banner',
+                    icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1217,6 +1367,42 @@ class _FormMakerPageState extends State<FormMakerPage>
               'Buat pertanyaan wajib diisi secara default',
               _requireQuestionDefault,
               (v) => setState(() => _requireQuestionDefault = v),
+            ),
+            const SizedBox(height: 16),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Terapkan ke semua pertanyaan',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _applyRequiredToAll,
+                    icon: const Icon(Icons.checklist, size: 18),
+                    label: const Text('Set Semua Wajib'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1E66D0),
+                      side: const BorderSide(color: Color(0xFF1E66D0)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _applyOptionalToAll(),
+                    icon: const Icon(Icons.event_available_outlined, size: 18),
+                    label: const Text('Set Semua Opsional'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

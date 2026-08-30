@@ -2,6 +2,7 @@ class FormTemplate {
   final String title;
   final String subtitle;
   final String? id;
+  final String? bannerUrl;
   final List<dynamic>? questionsJson;
   final bool isSystem;
 
@@ -9,6 +10,7 @@ class FormTemplate {
     required this.title,
     required this.subtitle,
     this.id,
+    this.bannerUrl,
     this.questionsJson,
     this.isSystem = false,
   });
@@ -36,12 +38,13 @@ class FormTemplate {
     List<dynamic>? qs;
     if (rawQuestions is List) {
       // Pastikan tiap question juga jadi Map<String,dynamic> agar q['type'] aman
-      qs = rawQuestions.map((e) => e is Map ? Map<String, dynamic>.from(e as Map) : e).toList();
+      qs = rawQuestions.map((e) => e is Map ? <String, dynamic>{for (final en in e.entries) en.key.toString(): en.value} : e).toList();
     }
     return FormTemplate(
       id: map['id']?.toString(),
       title: (map['title'] as String?)?.trim().isEmpty == true ? 'Tanpa Judul' : (map['title'] ?? 'Tanpa Judul'),
       subtitle: map['description'] ?? '',
+      bannerUrl: map['banner_url']?.toString(),
       questionsJson: qs,
       isSystem: map['is_system'] ?? false,
     );

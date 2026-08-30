@@ -14,7 +14,9 @@ import '../widgets/search_results_view.dart';
 import 'login_page.dart';
 import 'formmakerpage.dart';
 import 'historypage.dart';
+import 'draft_page.dart';
 import 'join_link_page.dart';
+import 'activity_page.dart';
 import 'scan_qr_page.dart';
 import 'profile_page.dart';
 
@@ -120,7 +122,9 @@ class _HomePageState extends State<HomePage> {
       _isLoadingTemplates = false;
       if (res['success'] == true) {
         final rawList = res['data'] as List<dynamic>;
-        _myTemplates = rawList.map((e) => FormTemplate.fromJson(e as Map)).toList();
+        _myTemplates = rawList
+            .map((e) => FormTemplate.fromJson(e as Map))
+            .toList();
       } else {
         debugPrint('[Home] getMyTemplates gagal: ${res['message']}');
       }
@@ -164,7 +168,10 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: Color(0xFF6B7280))),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -233,7 +240,9 @@ class _HomePageState extends State<HomePage> {
           _isLoadingSearch = false;
           if (result['success'] == true) {
             final raw = result['data'];
-            _searchData = raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map);
+            _searchData = raw is Map<String, dynamic>
+                ? raw
+                : Map<String, dynamic>.from(raw as Map);
           } else {
             _searchData = {};
           }
@@ -266,7 +275,7 @@ class _HomePageState extends State<HomePage> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFB4C5D4),
+      backgroundColor: const Color(0xFF0B76D4),
       foregroundColor: Colors.white,
       centerTitle: false,
       leading: GestureDetector(
@@ -384,6 +393,14 @@ class _HomePageState extends State<HomePage> {
           icon: Icon(Icons.history_rounded),
           label: 'History',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.fact_check_outlined),
+          label: 'Aktivitas',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.drafts_outlined),
+          label: 'Draft',
+        ),
       ],
     );
   }
@@ -411,6 +428,10 @@ class _HomePageState extends State<HomePage> {
         return _buildTemplateTab();
       case 2:
         return const HistoryPage();
+      case 3:
+        return const ActivityPage();
+      case 4:
+        return const DraftPage();
       default:
         return const SizedBox.shrink();
     }
@@ -733,7 +754,9 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -871,170 +894,178 @@ class _HomePageState extends State<HomePage> {
       onRefresh: _loadMyTemplates,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Template Bawaan',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 180,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: MockData.builtInTemplates.length,
-              itemBuilder: (context, index) {
-                final t = MockData.builtInTemplates[index];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: TemplateCard(template: t, isBuiltIn: true),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  'Template Saya',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Template Bawaan',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
-              const SizedBox(width: 12),
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.push<FormMakerResult>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FormMakerPage(),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: MockData.builtInTemplates.length,
+                itemBuilder: (context, index) {
+                  final t = MockData.builtInTemplates[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: SizedBox(
+                      width: 160,
+                      child: TemplateCard(template: t, isBuiltIn: true),
                     ),
                   );
-                  if (!mounted) return;
-                  if (result != null && result.savedTemplate) {
-                    _addTemplateOptimistically(result.template!);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${result.template!.plainTitle} berhasil disimpan!'),
-                        backgroundColor: const Color(0xFF059669),
-                      ),
-                    );
-                  } else {
-                    setState(_refreshDashboard);
-                    _refreshTemplatesImmediately();
-                    if (result != null && result.savedDraft) {
-                      setState(() {
-                        _selectedIndex = 0;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Draft berhasil disimpan — lihat di Dashboard'),
-                          backgroundColor: Color(0xFF059669),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Daftar diperbarui'),
-                          backgroundColor: Color(0xFF059669),
-                        ),
-                      );
-                    }
-                  }
-                  if (result == null || !result.savedDraft) {
-                    setState(() {
-                      _selectedIndex = 1;
-                    });
-                  }
                 },
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Buat Baru'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E40AF),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Template Saya',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
-                  textStyle: const TextStyle(fontSize: 13),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_isLoadingTemplates)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (_myTemplates.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'Belum ada template yang disimpan.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _loadMyTemplates,
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Muat Ulang'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.85,
-              ),
-              itemCount: _myTemplates.length,
-              itemBuilder: (context, index) {
-                return TemplateCard(
-                  template: _myTemplates[index],
-                  isBuiltIn: false,
-                  onDelete: () => _deleteTemplate(_myTemplates[index]),
-                  onSaved: (result) async {
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push<FormMakerResult>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FormMakerPage()),
+                    );
+                    if (!mounted) return;
                     if (result != null && result.savedTemplate) {
                       _addTemplateOptimistically(result.template!);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${result.template!.plainTitle} berhasil disimpan!',
+                          ),
+                          backgroundColor: const Color(0xFF059669),
+                        ),
+                      );
                     } else {
-                      await _refreshTemplatesImmediately();
+                      setState(_refreshDashboard);
+                      _refreshTemplatesImmediately();
                       if (result != null && result.savedDraft) {
-                        setState(_refreshDashboard);
+                        setState(() {
+                          _selectedIndex = 0;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Draft berhasil disimpan — lihat di Dashboard',
+                            ),
+                            backgroundColor: Color(0xFF059669),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Daftar diperbarui'),
+                            backgroundColor: Color(0xFF059669),
+                          ),
+                        );
                       }
                     }
+                    if (result == null || !result.savedDraft) {
+                      setState(() {
+                        _selectedIndex = 1;
+                      });
+                    }
                   },
-                );
-              },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Buat Baru'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E40AF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
             ),
-        ],
+            const SizedBox(height: 12),
+            if (_isLoadingTemplates)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_myTemplates.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Belum ada template yang disimpan.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _loadMyTemplates,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Muat Ulang'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  // FIX: mainAxisExtent (tinggi pasti) bukan childAspectRatio, supaya
+                  // kartu template tidak tampak tinggi/memanjang saat sel di-stretch.
+                  mainAxisExtent: 190,
+                ),
+                itemCount: _myTemplates.length,
+                itemBuilder: (context, index) {
+                  return TemplateCard(
+                    template: _myTemplates[index],
+                    isBuiltIn: false,
+                    onDelete: () => _deleteTemplate(_myTemplates[index]),
+                    onSaved: (result) async {
+                      if (result != null && result.savedTemplate) {
+                        _addTemplateOptimistically(result.template!);
+                      } else {
+                        await _refreshTemplatesImmediately();
+                        if (result != null && result.savedDraft) {
+                          setState(_refreshDashboard);
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1074,7 +1105,9 @@ class _HomePageState extends State<HomePage> {
           const Divider(height: 1),
           const SizedBox(height: 8),
           _drawerItem(Icons.grid_view_rounded, 'Dashboard', () {
-            setState(() { _selectedIndex = 0; });
+            setState(() {
+              _selectedIndex = 0;
+            });
             Navigator.pop(context);
           }, _selectedIndex == 0),
           _drawerItem(Icons.link, 'Join with Link', () {

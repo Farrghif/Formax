@@ -37,94 +37,99 @@ class TemplateCard extends StatelessWidget {
               }
             }
           : null,
-      child: Stack(
-        children: [
-          Container(
-            width: 150,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                width: 1,
+      child: ClipRRect(
+        // FIX: clip jadikan thumbnail & tombol hapus ikut membulat, jadi tombol
+        // hapus "menyatu" dengan kartu (tidak terlihat terpisah).
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Thumbnail Area — Expanded biar memenuhi sisa tinggi kartu
+                  // (tinggi kartu diatur grid lewat mainAxisExtent, jadi tidak memanjang).
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFDCE4FB), // Light blue background
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.assignment_outlined,
+                          size: 40,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Text Area
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          template.plainTitle.isNotEmpty
+                              ? template.plainTitle
+                              : RichTextView.stripHtml(template.title),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Thumbnail Area
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDCE4FB), // Light blue background
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
-                    ),
-                    child: const Center(
+            if (showDelete)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onDelete,
+                    child: const Padding(
+                      padding: EdgeInsets.all(5),
                       child: Icon(
-                        Icons.assignment_outlined,
-                        size: 40,
-                        color: Color(0xFF2563EB),
+                        Icons.delete_outline,
+                        size: 16,
+                        color: Colors.white,
                       ),
-                    ),
-                  ),
-                ),
-                // Text Area
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        template.plainTitle.isNotEmpty
-                            ? template.plainTitle
-                            : RichTextView.stripHtml(template.title),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (showDelete)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Material(
-                color: Colors.black.withValues(alpha: 0.35),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onDelete,
-                  child: const Padding(
-                    padding: EdgeInsets.all(5),
-                    child: Icon(
-                      Icons.delete_outline,
-                      size: 16,
-                      color: Colors.white,
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

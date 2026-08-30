@@ -8,10 +8,12 @@ from passlib.context import CryptContext
 
 _env_secret = os.getenv("SECRET_KEY")
 if not _env_secret or _env_secret.strip() == "" or _env_secret == "change-this-secret-in-production":
-    # FIX Bug 28: jangan fallback ke secret default di production; beri warning dan fallback hanya untuk dev
-    import warnings
-    warnings.warn("SECRET_KEY tidak di-set via .env — memakai fallback DEV only. Set SECRET_KEY di production!")
-    _env_secret = "change-this-secret-in-production-dev-only-not-secure"
+    # FIX Bug 28: jangan pernah pakai secret default (bisa dipakai orang lain
+    # forge token JWT → auth bypass). Tolak start kalau SECRET_KEY tidak ter-set.
+    raise RuntimeError(
+        "SECRET_KEY tidak di-set via .env/environment. "
+        "Set SECRET_KEY (minimal 32 karakter acak) sebelum menjalankan server."
+    )
 SECRET_KEY = _env_secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 hari

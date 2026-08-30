@@ -122,6 +122,9 @@ class QuestionData {
   int ratingCount;
   String ratingIcon; // 'star', 'heart', dll
 
+  // Poin per soal (bobot nilai — disimpan di settings.points)
+  int points;
+
   // File Upload
   List<String> allowedFileTypes;
   int maxFileSizeMB;
@@ -142,6 +145,7 @@ class QuestionData {
     this.maxLabel = '',
     this.ratingCount = 5,
     this.ratingIcon = 'star',
+    this.points = 1,
     this.allowedFileTypes = const [],
     this.maxFileSizeMB = 10,
     this.maxFileCount = 1,
@@ -165,6 +169,7 @@ class QuestionData {
       maxLabel: maxLabel,
       ratingCount: ratingCount,
       ratingIcon: ratingIcon,
+      points: points,
       allowedFileTypes: List.from(allowedFileTypes),
       maxFileSizeMB: maxFileSizeMB,
       maxFileCount: maxFileCount,
