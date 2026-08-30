@@ -415,7 +415,10 @@ class _FormMakerPageState extends State<FormMakerPage>
     final qrRes = await ApiService.generateQrCode(formId);
 
     if (qrRes['success'] == true) {
-      final shareLink = qrRes['data']['share_link'] as String;
+      var shareLink = qrRes['data']['share_link'] as String;
+      // Paksa link publik selalu menunjuk ke frontend yang dideploy (Vercel),
+      // bukan localhost yang mungkin di-set di env backend.
+      shareLink = ApiService.publicFormLink(shareLink);
       String qrUrl = qrRes['data']['qr_code_url'] as String;
       if (qrUrl.contains('localhost')) {
         final apiHost = Uri.parse(ApiService.baseUrl).host;

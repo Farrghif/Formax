@@ -16,6 +16,25 @@ class ApiService {
     return 'http://127.0.0.1:8000';
   }
 
+  // Frontend URL tempat publik mengisi form (link & QR yang dibagikan).
+  // Default: frontend yang sudah dideploy (Vercel). Bisa di-override saat build
+  // dengan --dart-define=FRONTEND_URL=https://... (mis. preview branch).
+  static String get frontendUrl {
+    const f = String.fromEnvironment('FRONTEND_URL');
+    if (f.isNotEmpty) return f;
+    return 'https://formax-seven.vercel.app';
+  }
+
+  // Normalisasi link publik supaya menunjuk ke FRONTEND_URL (bukan localhost).
+  // Server mungkin mengembalikan localhost/127.0.0.1 bila FRONTEND_URL env di
+  // backend belum diupdate — di sini kita paksa selalu pakai frontendUrl.
+  static String publicFormLink(String slug) {
+    final s = slug.startsWith('http')
+        ? Uri.parse(slug).pathSegments.last
+        : slug;
+    return '${frontendUrl.replaceAll(RegExp(r'/+$'), '')}/f/$s';
+  }
+
   static String? _sessionToken;
 
   // Safe JSON decode — tidak throw jika body kosong / HTML error page

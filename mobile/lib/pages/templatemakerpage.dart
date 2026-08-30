@@ -328,7 +328,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       setState(() => _isSaving = false);
 
       if (qrRes['success'] == true) {
-        final shareLink = qrRes['data']['share_link'] as String;
+        // Paksa link publik selalu menunjuk ke frontend yang dideploy (Vercel),
+        // bukan localhost yang mungkin di-set di env backend.
+        final shareLink = ApiService.publicFormLink(qrRes['data']['share_link'] as String);
         String qrUrl = qrRes['data']['qr_code_url'] as String;
 
         // Ganti localhost dengan host dari baseUrl agar gambar bisa dimuat
