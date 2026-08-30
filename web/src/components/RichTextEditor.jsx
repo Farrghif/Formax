@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
+import { uploadFile } from '../api/uploads'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import hljs from 'highlight.js'
@@ -64,6 +65,37 @@ AudioBlot.tagName = 'audio'
 Quill.register(AudioBlot)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Custom Audio Upload Handler ──────────────────────────────────────────────
+const handleAudioUpload = function () {
+  const quill = this.quill
+  const input = document.createElement('input')
+  input.setAttribute('type', 'file')
+  input.setAttribute('accept', 'audio/*')
+  input.click()
+
+  input.onchange = async () => {
+    const file = input.files[0]
+    if (!file) return
+
+    const token = localStorage.getItem('token')
+    const range = quill.getSelection(true)
+
+    try {
+      const result = await uploadFile(token, file)
+      const url = result?.file_url
+      if (url) {
+        quill.insertEmbed(range.index, 'audio', url, 'user')
+        quill.setSelection(range.index + 1, 0)
+      } else {
+        alert('Gagal mengunggah audio: URL file tidak ditemukan dalam respons server.')
+      }
+    } catch (err) {
+      alert('Gagal mengunggah audio: ' + err.message)
+    }
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Full toolbar for form description
 const FULL_MODULES = {
   toolbar: {
@@ -78,14 +110,7 @@ const FULL_MODULES = {
       ['clean'],
     ],
     handlers: {
-      audio: function () {
-        const quill = this.quill
-        const url = prompt('Masukkan URL audio (mp3, ogg, wav):')
-        if (!url || !url.trim()) return
-        const range = quill.getSelection(true)
-        quill.insertEmbed(range.index, 'audio', url.trim(), 'user')
-        quill.setSelection(range.index + 1, 0)
-      },
+      audio: handleAudioUpload,
     },
   },
   syntax: { hljs },
@@ -108,14 +133,7 @@ const QUESTION_MODULES = {
       ['clean'],
     ],
     handlers: {
-      audio: function () {
-        const quill = this.quill
-        const url = prompt('Masukkan URL audio (mp3, ogg, wav):')
-        if (!url || !url.trim()) return
-        const range = quill.getSelection(true)
-        quill.insertEmbed(range.index, 'audio', url.trim(), 'user')
-        quill.setSelection(range.index + 1, 0)
-      },
+      audio: handleAudioUpload,
     },
   },
   syntax: { hljs },
