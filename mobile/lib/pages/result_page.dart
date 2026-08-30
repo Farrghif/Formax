@@ -95,6 +95,12 @@ class _ResultPageState extends State<ResultPage> {
 
   String _cleanText(String s) => s
       .replaceAll(RegExp(r'<[^>]*>'), ' ')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&quot;', '"')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 

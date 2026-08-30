@@ -138,9 +138,11 @@ class ActivityAnswerResult {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     return ActivityAnswerResult(
       label: MyActivityModel._stripHtml(map['label']?.toString()),
-      userAnswer: map['user_answer']?.toString(),
+      userAnswer: _clean(map['user_answer']?.toString()),
       isCorrect: map['is_correct'] as bool?,
-      correctAnswer: map['correct_answer']?.toString(),
+      correctAnswer: _clean(map['correct_answer']?.toString()),
     );
   }
+
+  static String _clean(String? html) => MyActivityModel._stripHtml(html);
 }

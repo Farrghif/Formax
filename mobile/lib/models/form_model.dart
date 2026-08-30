@@ -114,7 +114,7 @@ class AnswerModel {
     this.fileUrl,
   });
 
-  /// Teks jawaban untuk ditampilkan.
+  /// Teks jawaban untuk ditampilkan (HTML sudah dibersihkan).
   String get display {
     if (answerOptions != null && answerOptions!.isNotEmpty) {
       return answerOptions!.join(', ');
@@ -131,12 +131,25 @@ class AnswerModel {
     final optionsRaw = map['answer_options'];
     return AnswerModel(
       questionId: map['question_id']?.toString() ?? '',
-      questionLabel: question?['label'] ?? 'Pertanyaan',
-      answerText: map['answer_text'] as String?,
+      questionLabel: _stripHtml(question?['label']?.toString() ?? 'Pertanyaan'),
+      answerText: _stripHtml(map['answer_text']?.toString()),
       answerOptions: optionsRaw is List
-          ? optionsRaw.map((e) => e.toString()).toList()
+          ? optionsRaw.map((e) => _stripHtml(e.toString())).toList()
           : null,
       fileUrl: map['file_url'] as String?,
     );
+  }
+
+  static String _stripHtml(String? html) {
+    if (html == null || html.trim().isEmpty) return html ?? '';
+    return html
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 }
