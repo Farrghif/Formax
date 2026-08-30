@@ -1,7 +1,3 @@
-// lib/pages/draft_page.dart
-// Halaman Draft — menampilkan semua draft form yang belum dipublikasikan.
-// Draft disimpan dengan status 'draft' dan bisa dilanjutkan kapan saja.
-// Desain mengikuti identitas visual Form4x (biru utama + aksen amber untuk draft).
 
 import 'package:flutter/material.dart';
 import '../models/form_model.dart';

@@ -4,12 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // Base URL dikonfigurasi via --dart-define=API_URL=...
-  // Default = URL backend RESMI (ngrok) yang sama dengan web Vercel,
-  //   https://wriggly-diffusion-flatfoot.ngrok-free.dev
-  // Untuk development lokal, override dengan:
-  //   Android Emulator: flutter run --dart-define=API_URL=http://10.0.2.2:8000
-  //   HP fisik via USB : adb reverse tcp:8000 tcp:8000 lalu --dart-define=API_URL=http://127.0.0.1:8000
+  
   static const String _defaultApiUrl = 'https://wriggly-diffusion-flatfoot.ngrok-free.dev';
 
   static String get baseUrl {
@@ -18,19 +13,13 @@ class ApiService {
     return _defaultApiUrl;
   }
 
-  // Frontend URL tempat publik mengisi form (link & QR yang dibagikan).
-  // Default: frontend yang sudah dideploy (Vercel). Bisa di-override saat build
-  // dengan --dart-define=FRONTEND_URL=https://... (mis. preview branch).
-  static String get frontendUrl {
+    static String get frontendUrl {
     const f = String.fromEnvironment('FRONTEND_URL');
     if (f.isNotEmpty) return f;
     return 'https://formax-seven.vercel.app';
   }
 
-  // Normalisasi link publik supaya menunjuk ke FRONTEND_URL (bukan localhost).
-  // Server mungkin mengembalikan localhost/127.0.0.1 bila FRONTEND_URL env di
-  // backend belum diupdate — di sini kita paksa selalu pakai frontendUrl.
-  static String publicFormLink(String slug) {
+   static String publicFormLink(String slug) {
     final s = slug.startsWith('http')
         ? Uri.parse(slug).pathSegments.last
         : slug;
@@ -77,9 +66,6 @@ class ApiService {
     await prefs.remove('access_token');
   }
 
-  // Identitas responden anonim (Google-Forms style).
-  // Simpan satu UUID di shared_preferences per perangkat, dipakai sebagai X-Respondent-Key
-  // supaya orang yang membuka link tanpa login tetap bisa mengisi & melacak submission-nya.
   static Future<String> getRespondentKey() async {
     final prefs = await SharedPreferences.getInstance();
     String? key = prefs.getString('anonymous_respondent_key');
@@ -216,10 +202,7 @@ class ApiService {
     }
   }
 
-  // Diagnosa HTML: berapa persen label/placeholder dari questions yang masih
-  // mengandung tag HTML saat dikirim ke backend. Jika 0, mobile sudah drop —
-  // jika >0 tapi GET kembalikan plain, berarti backend yang strip.
-  static void _logHtmlDiagnostic(String label, dynamic questions) {
+    static void _logHtmlDiagnostic(String label, dynamic questions) {
     try {
       if (questions is! List || questions.isEmpty) {
         debugPrint('[ApiService] $label: no questions (${questions.runtimeType})');
@@ -357,9 +340,6 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final parsed = _safeJson(response.body);
-        // /templates/mine mengembalikan List<TemplateOut>; kumpulkan pertanyaan dari
-        // masing-masing template agar diagnostik HTML membandingkan hal yang sama
-        // dengan SEND (perbandingan apples-to-apples, bukan menghitung template).
         final questions = <dynamic>[];
         if (parsed is List) {
           for (final t in parsed) {
