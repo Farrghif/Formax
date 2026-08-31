@@ -104,35 +104,42 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 9px 20px;
+  height: 38px;
+  padding: 0 20px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  border: 1px solid transparent;
+  letter-spacing: -0.1px;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
 }
 
 .hp-btn-login {
   color: #1e3a8a;
   background: transparent;
-  border-color: #c7d6ef;
+  border: 1.5px solid #cbd5e1;
 }
 
 .hp-btn-login:hover {
   background: #f1f5fd;
   border-color: #2563eb;
+  color: #2563eb;
 }
 
 .hp-btn-register {
   color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #1e3a8a);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: 1.5px solid transparent;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.32);
 }
 
 .hp-btn-register:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
 }
 
 /* ── HERO ── */

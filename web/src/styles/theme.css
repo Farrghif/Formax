@@ -381,6 +381,9 @@ body,
 [data-theme="dark"] .hp-nav-link { color: var(--text-muted); }
 [data-theme="dark"] .hp-nav-link:hover { color: var(--text-primary); background: var(--bg-hover); }
 [data-theme="dark"] .hp-nav-link.hp-nav-active { color: var(--accent); background: var(--accent-light); }
+[data-theme="dark"] .hp-btn-login { color: var(--text-primary); border-color: var(--border); background: transparent; }
+[data-theme="dark"] .hp-btn-login:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+[data-theme="dark"] .hp-btn-register { color: #ffffff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
 [data-theme="dark"] .hp-hero { background: radial-gradient(1100px 480px at 50% -10%, #1e1e3a 0%, var(--bg-landing) 60%); }
 [data-theme="dark"] .hp-hero-title,
 [data-theme="dark"] .hp-section-title,
