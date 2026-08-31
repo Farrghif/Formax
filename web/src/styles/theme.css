@@ -345,8 +345,34 @@ body,
 [data-theme="dark"] .db-modal-text { color: var(--text-muted); }
 [data-theme="dark"] .db-btn-cancel { background: var(--bg-hover); color: var(--text-secondary); }
 [data-theme="dark"] .db-empty-state { color: var(--text-faint); }
-[data-theme="dark"] .db-toast { background: var(--toast-bg); color: var(--toast-text); }
-[data-theme="dark"] .activity-mobile-card { background: var(--bg-card); border-color: var(--border); }
+[data-theme="dark"] .activity-mobile-card,
+[data-theme="dark"] .activity-card-item {
+  background: var(--bg-card);
+  border-color: var(--border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] .activity-card-item:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .activity-card-title {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .activity-card-footer {
+  background: rgba(30, 30, 58, 0.6);
+  border-top-color: var(--border-light);
+}
+[data-theme="dark"] .activity-owner-pill .owner-name-text,
+[data-theme="dark"] .activity-card-progress-section .progress-info-row,
+[data-theme="dark"] .activity-card-meta-list .meta-item {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .activity-card-progress-section .progress-info-row strong {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .activity-card-progress-section .card-progress-track {
+  background: var(--bg-hover);
+}
 
 /* Landing */
 [data-theme="dark"] .hp-root { background: var(--bg-landing); color: var(--text-body); }

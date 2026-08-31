@@ -38,12 +38,13 @@ function plainLabel(html, fallback = 'Pertanyaan tanpa judul') {
 
 function getCardGradient(str = '') {
   const gradients = [
-    'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-    'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-    'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-    'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
-    'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-    'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
+    'linear-gradient(135deg, #0f766e 0%, #115e59 100%)',
+    'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)',
+    'linear-gradient(135deg, #065f46 0%, #047857 100%)',
+    'linear-gradient(135deg, #581c87 0%, #6d28d9 100%)',
+    'linear-gradient(135deg, #78350f 0%, #b45309 100%)',
+    'linear-gradient(135deg, #881337 0%, #be185d 100%)',
+    'linear-gradient(135deg, #0e7490 0%, #0369a1 100%)',
   ];
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -2105,12 +2106,22 @@ export default function DashboardPage() {
                                       : getCardGradient(slug || title),
                                   }}
                                 >
-                                  {sub.form?.banner_url && (
+                                  {sub.form?.banner_url ? (
                                     <NgrokImage
                                       src={sub.form.banner_url}
                                       alt={title}
                                       className="activity-card-cover-img"
                                     />
+                                  ) : (
+                                    <>
+                                      <div className="activity-card-cover-pattern" />
+                                      <div className="activity-card-no-banner-preview">
+                                        <div className="activity-preview-doc-box">
+                                          <div className="activity-preview-doc-line wide" />
+                                          <div className="activity-preview-doc-line short" />
+                                        </div>
+                                      </div>
+                                    </>
                                   )}
 
                                   {/* Floating Status Pill */}
@@ -2154,7 +2165,7 @@ export default function DashboardPage() {
                                   {/* Progress bar */}
                                   <div className="activity-card-progress-section">
                                     <div className="progress-info-row">
-                                      <span>Progres Jawaban</span>
+                                      <span>Status Pengerjaan</span>
                                       <strong>
                                         {answered}/{totalQ} ({percentAns}%)
                                       </strong>
@@ -2171,26 +2182,15 @@ export default function DashboardPage() {
                                   <div className="activity-card-meta-list">
                                     <div className="meta-item">
                                       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        <circle cx="12" cy="12" r="9" />
+                                        <polyline points="12 6 12 12 15 15" />
                                       </svg>
-                                      <span>Mulai: {formatDateString(sub.started_at)}</span>
+                                      <span>
+                                        {isCompleted
+                                          ? `Diperbarui ${formatTimeAgo(sub.submitted_at || sub.started_at)}`
+                                          : `Diperbarui ${formatTimeAgo(sub.started_at)}`}
+                                      </span>
                                     </div>
-                                    {isCompleted ? (
-                                      <div className="meta-item">
-                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <span>Durasi: {durationStr}</span>
-                                      </div>
-                                    ) : (
-                                      <div className="meta-item amber">
-                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                          <circle cx="12" cy="12" r="9" />
-                                          <polyline points="12 6 12 12 15 15" />
-                                        </svg>
-                                        <span>Draf tersimpan di browser</span>
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
 
