@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import '../styles/landing.css'
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
+import InteractiveCubeBackground from '../components/InteractiveCubeBackground';
 
 /* ─── Shared Navbar Component ─── */
 function LandingNav({ active = 'cara-pakai' }) {
@@ -100,7 +101,8 @@ const CaraPakaiPage = () => {
   }, [])
 
   return (
-    <div className="hp-root">
+    <div className="hp-root" style={{ position: 'relative' }}>
+      <InteractiveCubeBackground />
       {/* ── NAVBAR ── */}
       <LandingNav active="cara-pakai" />
 

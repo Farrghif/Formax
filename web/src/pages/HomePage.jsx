@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
+import InteractiveCubeBackground from '../components/InteractiveCubeBackground';
 import '../styles/landing.css';
 
 /* ─── Feature Card Component ─── */
@@ -81,7 +82,8 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="hp-root">
+    <div className="hp-root" style={{ position: 'relative' }}>
+      <InteractiveCubeBackground />
       {/* ── NAVBAR ── */}
       <header className="hp-header">
         <div className="hp-header-inner">
