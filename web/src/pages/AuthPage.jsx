@@ -143,10 +143,26 @@ export default function AuthPage() {
     }
   };
 
+  const handleOtpPaste = (e) => {
+    const text = (e.clipboardData?.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    if (!text) return;
+    e.preventDefault();
+    const next = Array.from({ length: 6 }, (_, i) => text[i] || '');
+    setOtpInputs(next);
+    const last = Math.min(text.length, 6) - 1;
+    if (last >= 0) inputRefs.current[last]?.focus();
+    // auto submit when 6 digits pasted
+    if (text.length === 6) {
+      setTimeout(() => handleConfirmOtp(), 120);
+    }
+  };
+
   const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otpInputs[index] && index > 0) {
       inputRefs.current[index - 1].focus();
     }
+    if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1].focus();
+    if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1].focus();
   };
 
   const switchTab = (t) => {
@@ -359,76 +375,102 @@ export default function AuthPage() {
           </>
         )}
 
-        {/* OTP Verification View */}
+        {/* OTP Verification View — redesigned Gen Z, gradasi, no emoji */}
         {otpStep && (
           <div className="otp-container">
-            <button className="back-btn" onClick={() => setOtpStep(false)}>
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            
+            <div className="otp-back-row">
+              <button className="back-btn" onClick={() => setOtpStep(false)} aria-label="Kembali">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="back-label">Kembali</span>
+              <div className="otp-stepper" style={{ marginLeft: 'auto' }}>
+                <span className="otp-stepper-dot done">1</span>
+                <span className="otp-stepper-line filled" />
+                <span className="otp-stepper-dot active">2</span>
+                <span className="otp-stepper-text">Verifikasi</span>
+              </div>
+            </div>
+
             <div className="otp-header">
-              <h2>OTP Verification</h2>
-              <p>Enter the 6-digit code we sent to your email.</p>
-              <span className="recipient-email">{registerData.email}</span>
+              <h2>Verifikasi OTP</h2>
+              <p>Kode 6 digit telah dikirim ke email kamu. Masukkan di bawah untuk lanjut.</p>
+              <span className="recipient-email" title={registerData.email}>{registerData.email}</span>
             </div>
 
             <div className="otp-content">
-              <div className="otp-illustration">
-                {/* SVG Illustration based on screenshot */}
-                <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="20" y="30" width="60" height="40" rx="4" fill="#E0F2FE" />
-                  <path d="M20 34L50 54L80 34" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="50" cy="40" r="8" fill="#3B82F6" opacity="0.2" />
-                  <path d="M46 40C46 37.7909 47.7909 36 50 36C52.2091 36 54 37.7909 54 40" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
-                  <circle cx="50" cy="42" r="3" fill="#3B82F6" />
-                  <circle cx="75" cy="65" r="12" fill="white" stroke="#3B82F6" strokeWidth="2" />
-                  <path d="M70 65L73.5 68.5L80 62" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <div className="otp-illustration" aria-hidden="true">
+                {/* Modern envelope + shield — gradasi dominan biru, tanpa emoji */}
+                <svg width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="14" y="22" width="58" height="40" rx="12" fill="url(#otpGrad)" stroke="#BFDBFE" strokeWidth="1.2"/>
+                  <path d="M14 26L43 44L72 26" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95"/>
+                  <circle cx="43" cy="39" r="10" fill="white" stroke="#2563EB" strokeWidth="1.6"/>
+                  <path d="M38.5 39.5L41.2 42.2L47.8 36.6" stroke="#2563EB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <defs>
+                    <linearGradient id="otpGrad" x1="14" y1="22" x2="72" y2="62" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#EFF6FF"/><stop offset="1" stopColor="#DBEAFE"/>
+                    </linearGradient>
+                  </defs>
                 </svg>
               </div>
 
-              <div className="otp-inputs">
+              <div className="otp-progress-dots" aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <span key={i} className={`otp-progress-dot ${otpInputs[i] ? 'filled' : ''}`} />
+                ))}
+              </div>
+
+              <div className={`otp-inputs ${error ? 'shake' : ''}`} onPaste={handleOtpPaste}>
                 {otpInputs.map((digit, idx) => (
                   <input
                     key={idx}
                     ref={(el) => (inputRefs.current[idx] = el)}
                     type="text"
                     inputMode="numeric"
+                    autoComplete={idx===0 ? "one-time-code" : "off"}
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="otp-input-box"
+                    onPaste={idx===0 ? handleOtpPaste : undefined}
+                    className={`otp-input-box ${digit ? 'filled' : ''}`}
+                    aria-label={`Digit ${idx+1}`}
                   />
                 ))}
               </div>
+              <p className="otp-help">Tempel kode dari email — otomatis terisi</p>
 
               <div className="otp-timer-row">
                 <div className="resend-text">
-                  Don't have a code?{' '}
+                  Belum dapat kode?
                   <button 
                     className={`resend-btn ${timer > 0 ? 'disabled' : ''}`} 
                     onClick={handleResendOtp}
                     disabled={timer > 0 || loading}
                   >
-                    Re-Send
+                    Kirim ulang
                   </button>
                 </div>
-                <div className={`timer-display ${timer < 60 ? 'warning' : ''}`}>
+                <div className={`timer-display ${timer < 60 ? 'warning' : ''}`} aria-live="polite">
                   {formatTime(timer)}
                 </div>
               </div>
 
               {error && (
-                <div className="auth-error otp-error">
-                  {error}
+                <div className="auth-error otp-error" role="alert">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{flexShrink:0}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>{error}</span>
                 </div>
               )}
 
               <button className="auth-btn confirm-btn" onClick={handleConfirmOtp} disabled={loading || otpInputs.join('').length < 6}>
-                {loading ? <span className="spinner" /> : 'Confirm'}
+                {loading ? <span className="spinner" /> : 'Konfirmasi & Buat Akun'}
               </button>
+              <div className="otp-security-note">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M12 2l7 4v5c0 5-3.5 8.5-7 9.5C9.5 19.5 6 16 6 11V6l6-4z"/><path d="M9 12l2 2 4-4"/></svg>
+                Kode berlaku 5 menit · jaga kerahasiaan kode
+              </div>
             </div>
           </div>
         )}
