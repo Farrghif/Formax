@@ -1755,15 +1755,15 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="results-header-row">
-                    <div className="results-header-titles">
+                <div className="activity-page">
+                  <div className="activity-hero">
+                    <div className="activity-hero-titles">
                       <h2>Aktivitas Saya</h2>
                       <p>Daftar form yang pernah / sedang kamu isi sebagai responden — bukti kapan submit dan statusnya</p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <div className="activity-hero-actions">
                       <ThemeToggle />
-                      <button className="btn-export-excel" style={{ background: '#2563eb' }} onClick={fetchMyActivity} disabled={activityLoading}>
+                      <button className="btn-export-excel" style={{ background: '#ffffff', color: '#0B76D4' }} onClick={fetchMyActivity} disabled={activityLoading}>
                         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
@@ -1772,36 +1772,47 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Stats */}
+                  {/* Stats — biru khas + animasi */}
                   {(() => {
                     const total = mySubmissions.length;
                     const completed = mySubmissions.filter(s => !!s.submitted_at).length;
                     const inProgress = mySubmissions.filter(s => !s.submitted_at).length;
                     const cheated = mySubmissions.filter(s => !!s.is_cheated).length;
+                    if (activityLoading) {
+                      return (
+                        <div className="activity-skeleton">
+                          <div className="activity-skeleton-card" />
+                          <div className="activity-skeleton-card" />
+                          <div className="activity-skeleton-card" />
+                        </div>
+                      );
+                    }
                     return (
-                      <div className="stats-cards-grid">
-                        <div className="stat-card">
-                          <div className="stat-icon-box"><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div>
-                          <div className="stat-info-wrap"><span className="stat-label">TOTAL AKTIVITAS</span><span className="stat-value">{total}</span></div>
+                      <div className="activity-stats">
+                        <div className="activity-stat-card">
+                          <div className="activity-stat-icon total"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div>
+                          <div><div className="activity-stat-label">TOTAL AKTIVITAS</div><div className="activity-stat-value">{total}</div></div>
                         </div>
-                        <div className="stat-card">
-                          <div className="stat-icon-box" style={{ background: '#dcfce7', color: '#15803d' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                          <div className="stat-info-wrap"><span className="stat-label">SELESAI</span><span className="stat-value">{completed}</span></div>
+                        <div className="activity-stat-card">
+                          <div className="activity-stat-icon done"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                          <div><div className="activity-stat-label">SELESAI</div><div className="activity-stat-value">{completed}</div></div>
                         </div>
-                        <div className="stat-card">
-                          <div className="stat-icon-box" style={{ background: '#fef3c7', color: '#b45309' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                          <div className="stat-info-wrap"><span className="stat-label">SEDANG DIISI</span><span className="stat-value">{inProgress}</span></div>
+                        <div className="activity-stat-card">
+                          <div className="activity-stat-icon progress"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                          <div><div className="activity-stat-label">SEDANG DIISI</div><div className="activity-stat-value">{inProgress}</div></div>
                         </div>
-                        <div className="stat-card" style={{ display: cheated > 0 ? 'flex' : 'none' }}>
-                          <div className="stat-icon-box" style={{ background: '#fee2e2', color: '#b91c1c' }}><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" /></svg></div>
-                          <div className="stat-info-wrap"><span className="stat-label">CURANG</span><span className="stat-value">{cheated}</span></div>
-                        </div>
+                        {cheated > 0 && (
+                          <div className="activity-stat-card">
+                            <div className="activity-stat-icon cheated"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
+                            <div><div className="activity-stat-label">CURANG</div><div className="activity-stat-value">{cheated}</div></div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
 
                   {/* Filters */}
-                  <div className="table-card-container">
+                  <div className="activity-table-card table-card-container">
                     <div className="table-card-header">
                       <h3 className="table-card-title">Riwayat Pengisian</h3>
                       <div className="table-header-filters">
@@ -1815,9 +1826,11 @@ export default function DashboardPage() {
                     </div>
 
                     {activityLoading ? (
-                      <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
-                        <div className="db-spinner" style={{ margin: '0 auto 12px' }} />
-                        <p>Memuat aktivitas...</p>
+                      <div className="activity-skeleton-table">
+                        <div className="activity-skeleton-row" />
+                        <div className="activity-skeleton-row" />
+                        <div className="activity-skeleton-row" />
+                        <div style={{ textAlign: 'center', padding: '10px', color: '#64748b', fontSize: '13px' }}>Memuat aktivitas...</div>
                       </div>
                     ) : (() => {
                       const filtered = mySubmissions.filter((sub) => {
@@ -1940,6 +1953,7 @@ export default function DashboardPage() {
                         </>
                       );
                     })()}
+                  </div>
                   </div>
                 </>
               )}
