@@ -634,7 +634,7 @@ export default function DashboardPage() {
           <button className="db-hamburger" onClick={() => setDrawerOpen((v) => !v)} aria-label="Toggle menu">
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
           </button>
-          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && (
+          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && activeNav !== 'activity' && (
             <div className="db-search-wrap">
               <svg className="db-search-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="11" cy="11" r="8" />
@@ -650,7 +650,7 @@ export default function DashboardPage() {
               />
             </div>
           )}
-          <ThemeToggle />
+          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && <ThemeToggle />}
         </header>
 
         {/* Content Area */}
@@ -1802,7 +1802,6 @@ export default function DashboardPage() {
                     <div className="table-card-header">
                       <h3 className="table-card-title">Riwayat Pengisian</h3>
                       <div className="table-header-filters">
-                        <input type="text" className="db-search" placeholder="Cari judul form..." value={activitySearch} onChange={(e) => setActivitySearch(e.target.value)} style={{ width: '220px', padding: '6px 12px', fontSize: '13px' }} />
                         <select className="filter-select" value={activityFilter} onChange={(e) => setActivityFilter(e.target.value)}>
                           <option value="all">Semua Status</option>
                           <option value="completed">Selesai</option>
