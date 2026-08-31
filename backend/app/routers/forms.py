@@ -82,6 +82,10 @@ def create_form(
         max_submissions=payload.max_submissions,
         require_fullscreen=payload.require_fullscreen,
         reveal_answers=payload.reveal_answers,
+        # FIX publish bug: persist status & accept_responses dari payload (web publish new form)
+        # Default tetap draft/True agar kompatibel dengan mobile yang tidak kirim status.
+        status=payload.status if payload.status is not None else models.FormStatus.draft,
+        accept_responses=payload.accept_responses if payload.accept_responses is not None else True,
     )
     db.add(form)
     db.flush()
@@ -195,22 +199,31 @@ def update_form(
     data = payload.model_dump(exclude_unset=True)
     questions_data = data.pop("questions", None)
 
+    # Terapkan perubahan non-pertanyaan dulu (status, accept_responses, dll)
+    # agar publish tetap tersimpan meski pertanyaan terkunci.
+    for key, value in data.items():
+        setattr(form, key, value)
+
     # FIX data-loss: mengganti semua question dengan delete-orphan akan menghapus
     # seluruh jawaban responden (Answer.question_id ON DELETE CASCADE). Kalau form
     # sudah punya submission/jawaban, tolak pergantian pertanyaan supaya data
-    # responden tidak musnah diam-diam.
+    # responden tidak musnah diam-diam. Tapi JANGAN block perubahan status/settings —
+    # publish harus tetap bisa tanpa ubah soal.
     if questions_data is not None:
         has_answers = db.query(models.Submission.id).filter(
             models.Submission.form_id == form.id
         ).first() is not None
         if has_answers:
+            # Simpan perubahan status/settings dulu sebelum menolak ganti soal
+            try:
+                db.commit()
+                db.refresh(form)
+            except Exception:
+                db.rollback()
             raise HTTPException(
                 status_code=409,
                 detail="Form sudah punya jawaban; mengubah pertanyaan akan menghapus jawaban responden. Duplikasi form dulu (atau cadangkan jawaban) sebelum mengganti pertanyaan.",
             )
-
-    for key, value in data.items():
-        setattr(form, key, value)
 
     # Jika questions ikut dikirim (draft save), replace semua questions lama.
     # Sama seperti update template — dipakai agar draft form dari mobile bisa

@@ -184,6 +184,11 @@ class FormCreate(BaseModel):
     max_submissions: int = 1
     require_fullscreen: bool = False
     reveal_answers: bool = False
+    # FIX publish bug: web kirim status=published saat klik Publish pada form baru,
+    # tapi field ini tidak ada di FormCreate sehingga di-ignore Pydantic → selalu draft (403).
+    # Tambahkan status & accept_responses agar create bisa langsung published.
+    status: Optional[FormStatus] = FormStatus.draft
+    accept_responses: Optional[bool] = True
 
     @field_validator("title", "description")
     @classmethod

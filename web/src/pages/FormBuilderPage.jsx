@@ -270,8 +270,35 @@ export default function FormBuilderPage() {
             questions: questionsPayload,
           });
         } catch (err) {
-          // Rekomendasi 2: jika form sudah ada jawaban, backend 409 — jangan hilangkan data
+          // Rekomendasi 2: jika form sudah ada jawaban, backend 409 — jangan hilangkan data.
+          // Tapi JANGAN block publish: status sudah di-commit backend sebelum 409 (fix forms.py),
+          // jadi coba publish tanpa ubah soal agar link tetap bisa dibagikan.
           if (err.message && err.message.toLowerCase().includes('sudah punya jawaban')) {
+            if (publish) {
+              try {
+                // coba publish via status-only PATCH (tanpa questions) atau dedicated endpoint
+                let publishOk = false;
+                try {
+                  const patched = await updateForm(token, formData.id, { status: 'published' });
+                  if (patched && patched.status === 'published') publishOk = true;
+                } catch {}
+                if (!publishOk) {
+                  try {
+                    await apiFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/forms/${formData.id}/publish`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    publishOk = true;
+                  } catch {}
+                }
+                if (publishOk) {
+                  setFormData((prev) => ({ ...prev, status: 'published' }));
+                  showToast('Form berhasil dipublikasikan! (Soal tidak diubah karena sudah ada jawaban)', 'success');
+                  try { const qr = await generateQR(token, formData.id); setFormData((prev) => ({ ...prev, qr_code_url: qr.qr_code_url })); } catch {}
+                  return;
+                }
+              } catch {}
+            }
             showToast('Form sudah ada jawaban responden — hapus soal akan menghapus jawaban. Duplikasi form dulu jika perlu.', 'error');
             throw err;
           }
@@ -339,13 +366,31 @@ export default function FormBuilderPage() {
               })),
         };
 
-        const created = await createForm(token, payload);
+        let created = await createForm(token, payload);
+        // FIX publish new form: defense-in-depth seperti mobile (create → PATCH status).
+        // Backend sekarang sudah simpan status via FormCreate, tapi tetap patch jika
+        // respons masih draft (mis. backend lama / cache / race) agar tidak 403.
+        if (publish && created.status !== 'published') {
+          try {
+            const patched = await updateForm(token, created.id, { status: 'published' });
+            created = { ...created, status: patched.status || 'published', slug: patched.slug || created.slug };
+          } catch {
+            try {
+              await apiFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/forms/${created.id}/publish`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              created.status = 'published';
+            } catch {}
+          }
+        }
         setFormData((prev) => ({
           ...prev,
           id: created.id,
           slug: created.slug,
           join_token: created.join_token,
           banner_url: created.banner_url || prev.banner_url,
+          status: created.status || (publish ? 'published' : prev.status),
         }));
 
         let savedQuestions = (created.questions || []).sort((a, b) => a.order_index - b.order_index);
