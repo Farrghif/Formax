@@ -1261,7 +1261,7 @@ export default function DashboardPage() {
                           <div className="score-donut-body">
                             <div className="score-donut-ring-wrap">
                               <svg viewBox="0 0 120 120" className="score-donut-svg">
-                                <circle cx="60" cy="60" r="48" fill="none" stroke="#e2e8f0" strokeWidth="18" />
+                                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--border-medium, #e2e8f0)" strokeWidth="18" />
                                 <circle
                                   cx="60" cy="60" r="48"
                                   fill="none"
