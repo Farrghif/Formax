@@ -160,6 +160,9 @@ export default function FormFillPage() {
   const [showFullscreenIntro, setShowFullscreenIntro] = useState(false);
   const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
 
+  // Validasi wajib diisi
+  const [validationErrors, setValidationErrors] = useState(() => new Set());
+
   // Lihat hasil
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
@@ -258,21 +261,59 @@ export default function FormFillPage() {
     }
   };
 
-  // Handle Final Submit
+  // Validasi wajib diisi — dipakai sebelum submit (disable + scroll)
+  const getMissingRequired = useCallback(() => {
+    if (!form || !form.questions) return [];
+    return form.questions.filter((q) => q.is_required && !isQuestionAnswered(q.id));
+  }, [form, answers]);
+
+  // Handle Final Submit (dengan validasi wajib)
   const handleFinalSubmit = async () => {
     if (!submissionId) return;
+    const missing = getMissingRequired();
+    if (missing.length > 0) {
+      setValidationErrors(new Set(missing.map((q) => q.id)));
+      // pindah ke halaman yang berisi soal wajib pertama
+      const idx = (form?.questions || []).findIndex((q) => q.id === missing[0].id);
+      if (idx >= 0) {
+        const page = Math.floor(idx / QUESTIONS_PER_PAGE);
+        setCurrentPage(page);
+        // close modal dulu biar scroll terlihat
+        setShowSubmitModal(false);
+        setTimeout(() => {
+          document.getElementById(`q-${missing[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
+      }
+      return;
+    }
     try {
       setIsSubmitting(true);
       await submitFinal(getToken(), submissionId);
       setIsSubmitted(true);
       doneRef.current = true;
       setShowSubmitModal(false);
+      setValidationErrors(new Set());
       try { localStorage.removeItem(`bm:${slug}`); } catch {}
       setBookmarked(new Set());
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     } catch (err) {
+      // Jika backend 422 karena wajib, sync highlight + scroll
+      const msg = err.message || '';
+      // coba parse missing dari detail backend jika ada (sudah di-join di readJsonResponse)
+      if (msg.toLowerCase().includes('wajib')) {
+        const miss = getMissingRequired();
+        if (miss.length > 0) {
+          setValidationErrors(new Set(miss.map((q) => q.id)));
+          const idx2 = (form?.questions || []).findIndex((q) => q.id === miss[0].id);
+          if (idx2 >= 0) {
+            setCurrentPage(Math.floor(idx2 / QUESTIONS_PER_PAGE));
+            setShowSubmitModal(false);
+            setTimeout(() => document.getElementById(`q-${miss[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+          }
+        }
+      }
       alert(err.message || 'Gagal mengirimkan form');
     } finally {
       setIsSubmitting(false);
@@ -445,7 +486,7 @@ export default function FormFillPage() {
     });
   }, [slug]);
 
-  // Answer handler & Autosave
+  // Answer handler & Autosave (clear validasi wajib jika sudah terisi)
   const handleAnswerChange = (questionId, newAnswerData) => {
     const updated = {
       ...answers,
@@ -455,6 +496,18 @@ export default function FormFillPage() {
       },
     };
     setAnswers(updated);
+    // jika soal wajib sudah terisi, hapus highlight error
+    const cur = updated[questionId];
+    const filled = (cur?.answer_text && String(cur.answer_text).trim().length > 0)
+      || (Array.isArray(cur?.answer_options) && cur.answer_options.length > 0)
+      || !!cur?.file_url;
+    if (filled && validationErrors.has(questionId)) {
+      setValidationErrors((prev) => {
+        const next = new Set(prev);
+        next.delete(questionId);
+        return next;
+      });
+    }
 
     // Trigger autosave to backend if submission exists
     if (submissionId) {
@@ -1073,13 +1126,14 @@ export default function FormFillPage() {
             const points = q.settings?.points || null;
             const contextText = q.settings?.context || q.settings?.reading_text || null;
 
+            const isReqError = q.is_required && validationErrors.has(q.id);
             return (
-              <div key={q.id} className="question-card" id={`q-${q.id}`}>
+              <div key={q.id} className={`question-card ${isReqError ? 'required-error' : ''}`} id={`q-${q.id}`}>
                 <div className="question-card-header">
                   <div className="question-label">
                     <span className="question-number">{globalNumber}.</span>
                     <QuestionLabelWithAudio html={q.label} />
-                    {q.is_required && <span className="required-star">*</span>}
+                    {q.is_required && <span className="required-star" title="Wajib diisi">*</span>}
                   </div>
                   <div className="question-header-right">
                     <button
@@ -1103,6 +1157,9 @@ export default function FormFillPage() {
 
                 {/* Render question input based on type */}
                 {renderQuestionInput(q, currentAnswer)}
+                {q.is_required && validationErrors.has(q.id) && (
+                  <p className="required-error-msg">* Pertanyaan wajib diisi</p>
+                )}
               </div>
             );
           })}
@@ -1136,7 +1193,19 @@ export default function FormFillPage() {
               </button>
             </div>
 
-            <button className="btn-submit-final" onClick={() => setShowSubmitModal(true)}>
+            <button className="btn-submit-final" onClick={() => {
+              const miss = getMissingRequired();
+              if (miss.length > 0) {
+                setValidationErrors(new Set(miss.map((q) => q.id)));
+                const idx = (form?.questions || []).findIndex((q) => q.id === miss[0].id);
+                if (idx >= 0) {
+                  const page = Math.floor(idx / QUESTIONS_PER_PAGE);
+                  setCurrentPage(page);
+                  setTimeout(() => document.getElementById(`q-${miss[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                }
+              }
+              setShowSubmitModal(true);
+            }}>
               <span>Kirim Jawaban</span>
               <span>»</span>
             </button>
@@ -1145,24 +1214,34 @@ export default function FormFillPage() {
       </main>
 
       {/* Confirmation Submit Modal */}
-      {showSubmitModal && (
+      {showSubmitModal && (() => {
+        const missingInModal = getMissingRequired();
+        const canSubmit = missingInModal.length === 0;
+        return (
         <div className="modal-overlay">
           <div className="modal-card">
             <h2 className="modal-title">Kirim Jawaban Form?</h2>
             <p className="modal-desc">
               Anda telah menjawab {answeredCount} dari {totalQuestions} pertanyaan. Setelah dikirim, jawaban tidak dapat diubah lagi.
             </p>
+            {missingInModal.length > 0 && (
+              <div className="required-modal-warn">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                <span>Masih ada {missingInModal.length} pertanyaan wajib yang belum dijawab. Lengkapi dulu sebelum mengirim.</span>
+              </div>
+            )}
             <div className="modal-actions">
               <button className="modal-btn-secondary" onClick={() => setShowSubmitModal(false)} disabled={isSubmitting}>
                 Periksa Kembali
               </button>
-              <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting}>
+              <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting || !canSubmit} title={!canSubmit ? `Lengkapi ${missingInModal.length} soal wajib dulu` : ''}>
                 {isSubmitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Fullscreen Intro Overlay (wajib fullscreen) */}
       {form?.require_fullscreen && !isSubmitted && showFullscreenIntro && !fullscreenStarted && (

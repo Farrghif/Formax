@@ -599,8 +599,45 @@
 
 .required-star {
   color: #ef4444;
-  margin-left: 4px;
+  margin-left: 6px;
   flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.question-card.required-error {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+}
+
+.required-error-msg {
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 0 0;
+}
+
+.required-modal-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.required-modal-warn svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #ef4444;
 }
 
 .question-header-right {

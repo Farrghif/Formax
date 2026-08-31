@@ -249,6 +249,47 @@ def submit_final(
     if form.end_date and _window_now() > _window_dt(form.end_date):
         submission.is_auto_submitted = True
 
+    # FIX validasi wajib diisi: jangan izinkan submit jika ada soal required kosong
+    required_qs = db.query(models.Question).filter(
+        models.Question.form_id == submission.form_id,
+        models.Question.is_required == True,  # noqa: E712
+    ).all()
+    if required_qs:
+        answers_map = {a.question_id: a for a in (submission.answers or [])}
+
+        def _is_empty(ans):
+            if ans is None:
+                return True
+            if ans.file_url and str(ans.file_url).strip():
+                return False
+            if ans.answer_options and isinstance(ans.answer_options, list) and len([x for x in ans.answer_options if str(x).strip()]) > 0:
+                return False
+            if ans.answer_text and str(ans.answer_text).strip():
+                return False
+            return True
+
+        missing = []
+        for q in required_qs:
+            ans = answers_map.get(str(q.id)) or answers_map.get(q.id)
+            if _is_empty(ans):
+                # strip HTML untuk pesan lebih bersih
+                import re as _re, html as _html
+                _plain = _re.sub(r'<[^>]+>', ' ', str(q.label or ''))
+                _plain = _html.unescape(_plain)
+                _plain = _re.sub(r'\s+', ' ', _plain).strip()
+                if len(_plain) > 60:
+                    _plain = _plain[:60] + '…'
+                missing.append({"question_id": str(q.id), "label": _plain or "Pertanyaan wajib"})
+
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": f"Ada {len(missing)} pertanyaan wajib yang belum dijawab",
+                    "missing": missing,
+                },
+            )
+
     submission.submitted_at = datetime.utcnow()
     db.commit()
     db.refresh(submission)
