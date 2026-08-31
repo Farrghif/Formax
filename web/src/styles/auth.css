@@ -302,11 +302,16 @@
   cursor: not-allowed;
 }
 
-/* OTP Specific Styles — Gen Z modern, gradasi, no emoji */
+/* OTP Specific Styles — Gen Z modern, gradasi, no emoji — slim & simetris */
 .otp-card {
   max-width: 520px;
   padding: 0 0 28px;
   overflow: hidden;
+}
+.otp-card.otp-slim {
+  max-width: 420px;        /* lebih kecil, pas mobile */
+  padding: 22px 22px 20px; /* simetris atas-bawah-kiri-kanan, tanpa header logo */
+  border-radius: 20px;
 }
 .otp-card .auth-header {
   background: linear-gradient(135deg, #eef6ff 0%, #e0efff 55%, #f1f5ff 100%);
@@ -320,13 +325,17 @@
   animation: fadeIn 0.4s ease;
   padding: 0 32px;
 }
+.otp-slim .otp-container {
+  padding: 0; /* sudah ditangani card padding, jadi simetris */
+}
 
 .otp-back-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 2px 0 14px;
+  margin: 0 0 12px;
 }
+.otp-slim .otp-back-row { margin-bottom: 10px; }
 .back-btn {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -366,17 +375,19 @@
 
 .otp-header {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
+.otp-slim .otp-header { margin-bottom: 12px; }
 .otp-header h2 {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.3px;
   color: #0f172a;
   margin-bottom: 6px;
 }
+.otp-slim .otp-header h2 { font-size: 19px; }
 .otp-header p {
-  font-size: 13.5px;
+  font-size: 13px;
   color: #64748b;
   line-height: 1.5;
   margin-bottom: 10px;
@@ -413,15 +424,16 @@
 
 .otp-illustration {
   position: relative;
-  width: 112px; height: 112px;
-  margin: 6px auto 18px;
+  width: 88px; height: 88px;
+  margin: 4px auto 14px;
   display: grid; place-items: center;
   background: radial-gradient(circle at 30% 20%, #ffffff 0%, #f1f7ff 62%);
   border: 1px solid #dbeafe;
-  border-radius: 24px;
-  box-shadow: 0 12px 28px rgba(37,99,235,0.08);
+  border-radius: 20px;
+  box-shadow: 0 10px 22px rgba(37,99,235,0.08);
   overflow: hidden;
 }
+.otp-slim .otp-illustration { width: 80px; height: 80px; margin-bottom: 12px; border-radius: 18px; }
 .otp-illustration::after {
   content: '';
   position: absolute; inset: auto -18px -18px auto;
@@ -446,12 +458,12 @@
   justify-content: center;
 }
 .otp-input-box {
-  width: 52px;
-  height: 62px;
+  width: 46px;
+  height: 54px;
   border: 1.5px solid #d6e6fb;
-  border-radius: 14px;
+  border-radius: 12px;
   text-align: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 0.2px;
   color: #0f172a;
@@ -613,7 +625,7 @@
 
 .auth-link:hover { color: #115cc7; }
 
-/* Responsive */
+/* Responsive — OTP slim pas mobile */
 @media (max-width: 480px) {
   .auth-card {
     padding: 0 22px 24px;
@@ -625,9 +637,18 @@
   }
   .wave-top, .wave-bottom { height: 120px; }
   .otp-card { padding: 0 0 22px; }
-  .otp-container { padding: 0 18px; }
-  .otp-inputs { gap: 8px; }
-  .otp-input-box { width: 44px; height: 56px; font-size: 20px; }
-  .otp-timer-row { flex-direction: column; align-items: stretch; }
+  .otp-card.otp-slim {
+    max-width: 92vw;
+    margin: 12px;
+    padding: 18px 16px 16px;
+    border-radius: 18px;
+  }
+  .otp-card.otp-slim .otp-container { padding: 0; }
+  .otp-inputs { gap: 7px; }
+  .otp-input-box { width: 42px; height: 50px; font-size: 19px; border-radius: 10px; }
+  .otp-slim .otp-input-box { width: 40px; height: 48px; font-size: 18px; }
+  .otp-timer-row { flex-direction: column; align-items: stretch; padding: 10px; }
   .otp-timer-row .timer-display { align-self: center; }
+  .otp-header h2 { font-size: 18px; }
+  .recipient-email { font-size: 12.5px; padding: 6px 10px; max-width: 88vw; }
 }

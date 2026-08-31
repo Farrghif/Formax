@@ -195,11 +195,15 @@ export default function AuthPage() {
       />
 
       {/* Card */}
-      <div className={`auth-card ${otpStep ? 'otp-card' : ''}`}>
-        {/* Header */}
-        <div className="auth-header">
-          <img src={logoForm4x} alt="Form4x" className="auth-logo" draggable="false" />
-        </div>
+      <div className={`auth-card ${otpStep ? 'otp-card otp-slim' : ''}`}>
+        {!otpStep && (
+          <>
+            {/* Header — hanya di login/register, OTP tanpa logo */}
+            <div className="auth-header">
+              <img src={logoForm4x} alt="Form4x" className="auth-logo" draggable="false" />
+            </div>
+          </>
+        )}
 
         {!otpStep && (
           <>
