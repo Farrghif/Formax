@@ -36,6 +36,20 @@ function plainLabel(html, fallback = 'Pertanyaan tanpa judul') {
   return t || fallback;
 }
 
+function getCardGradient(str = '') {
+  const gradients = [
+    'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+    'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+    'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+    'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+    'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return gradients[Math.abs(hash) % gradients.length];
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,6 +86,7 @@ export default function DashboardPage() {
   const [activityResult, setActivityResult] = useState(null);
   const [activityResultLoading, setActivityResultLoading] = useState(false);
   const [activityDetailSub, setActivityDetailSub] = useState(null); // submission yang sedang dilihat detail/bukti
+  const [activityViewMode, setActivityViewMode] = useState('grid'); // 'grid' | 'table'
 
   const token = localStorage.getItem('token');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1649,33 +1664,61 @@ export default function DashboardPage() {
             </>
           )}
 
-          {/* ===== AKTIVITAS SAYA VIEW (Baru) ===== */}
+          {/* ===== AKTIVITAS SAYA VIEW ===== */}
           {activeNav === 'activity' && (
             <>
               {activityDetailSub && activityResult ? (
-                // Detail hasil / bukti submit untuk satu aktivitas
-                <div className="results-page-container">
-                  <button className="back-nav-btn" onClick={() => { setActivityResult(null); setActivityDetailSub(null); }}>
+                /* Detail hasil / bukti submit untuk satu aktivitas */
+                <div className="results-page-container activity-fade-in">
+                  <button
+                    className="back-nav-btn"
+                    onClick={() => {
+                      setActivityResult(null);
+                      setActivityDetailSub(null);
+                    }}
+                  >
                     ← Kembali ke Aktivitas Saya
                   </button>
 
                   <div className="detail-layout">
-                    {/* KIRI — Info bukti rapih ke bawah */}
-                    <aside className="detail-info-card">
+                    {/* KIRI — Info bukti pengisian (Sticky Card) */}
+                    <aside className="detail-info-card activity-proof-card">
                       <div className="detail-info-header">
-                        <span className="detail-info-kicker">Bukti Pengisian</span>
-                        <h2 className="detail-info-title" title={activityResult.form_title}>{activityResult.form_title}</h2>
+                        <span className="detail-info-kicker">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Bukti Resmi Pengisian
+                        </span>
+                        <h2 className="detail-info-title" title={stripHtml(activityResult.form_title)}>
+                          {stripHtml(activityResult.form_title)}
+                        </h2>
                       </div>
-                      <div className="detail-info-list">
-                        {activityResult.score_percent !== null && (
-                          <div className="detail-info-row" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-                            <span className="detail-info-label" style={{ color: '#0053db' }}>
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              Total Nilai
-                            </span>
-                            <strong className="detail-info-value" style={{ fontSize: '22px', color: '#0053db' }}>{activityResult.score_percent}/100 <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}>({activityResult.correct_count}/{activityResult.total_graded} benar)</span></strong>
+
+                      {/* Radial Score Gauge if quiz scored */}
+                      {activityResult.score_percent !== null && (
+                        <div className="activity-score-circle-box">
+                          <div className="activity-score-ring">
+                            <svg viewBox="0 0 100 100" className="activity-ring-svg">
+                              <circle cx="50" cy="50" r="42" className="ring-bg" />
+                              <circle
+                                cx="50" cy="50" r="42"
+                                className="ring-fill"
+                                strokeDasharray={`${activityResult.score_percent * 2.64} 264`}
+                              />
+                            </svg>
+                            <div className="activity-score-val-wrap">
+                              <span className="activity-score-number">{activityResult.score_percent}</span>
+                              <span className="activity-score-denom">/ 100</span>
+                            </div>
                           </div>
-                        )}
+                          <div className="activity-score-subtext">
+                            <strong>{activityResult.correct_count}</strong> dari {activityResult.total_graded} soal terjawab benar
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="detail-info-list">
                         <div className="detail-info-row">
                           <span className="detail-info-label">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -1693,7 +1736,7 @@ export default function DashboardPage() {
                         <div className="detail-info-row">
                           <span className="detail-info-label">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            Durasi
+                            Total Durasi
                           </span>
                           <strong className="detail-info-value">
                             {(() => {
@@ -1707,254 +1750,624 @@ export default function DashboardPage() {
                           </strong>
                         </div>
                         <div className="detail-info-row">
-                          <span className="detail-info-label">ID Submission</span>
-                          <strong className="detail-info-value" title={activityDetailSub.id} style={{ fontFamily: 'monospace', fontSize: '12px' }}>{activityDetailSub.id}</strong>
+                          <span className="detail-info-label">ID Bukti Responden</span>
+                          <strong className="detail-info-value" title={activityDetailSub.id} style={{ fontFamily: 'monospace', fontSize: '11.5px', color: '#0284c7' }}>
+                            {activityDetailSub.id?.slice(0, 18)}...
+                          </strong>
                         </div>
                         {activityDetailSub.is_auto_submitted && (
                           <div className="detail-info-row" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
-                            <span className="detail-info-label" style={{ color: '#b45309' }}>Status</span>
-                            <strong className="detail-info-value" style={{ color: '#b45309' }}>⚡ Auto-submit (waktu habis)</strong>
+                            <span className="detail-info-label" style={{ color: '#b45309' }}>Auto-Submit</span>
+                            <strong className="detail-info-value" style={{ color: '#b45309' }}>⚡ Waktu Habis</strong>
                           </div>
                         )}
                         {activityDetailSub.is_cheated && (
                           <div className="detail-info-row cheated">
-                            <span className="detail-info-label">Status</span>
-                            <strong className="detail-info-value cheated">⚠️ Curang — keluar fullscreen</strong>
+                            <span className="detail-info-label">Peringatan</span>
+                            <strong className="detail-info-value cheated">⚠️ Terdeteksi Keluar Fullscreen</strong>
                           </div>
                         )}
                       </div>
                     </aside>
 
-                    {/* KANAN — Rincian jawaban bisa digulir */}
+                    {/* KANAN — Rincian Jawaban Responden */}
                     <section className="detail-answers-pane">
                       <div className="detail-answers-list">
-                    {activityResult.answers.map((a, idx) => (
-                      <div key={a.question_id} className="detail-question-card">
-                        <div className="detail-question-header">
-                          <h3 className="detail-question-title">{idx + 1}. {plainLabel(a.label)}</h3>
-                          {a.is_correct !== null && a.is_correct !== undefined && (
-                            <span className={`correct-tag ${a.is_correct ? '' : 'incorrect-tag'}`} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px', background: a.is_correct ? '#dcfce7' : '#fee2e2', color: a.is_correct ? '#15803d' : '#b91c1c' }}>
-                              {a.is_correct ? '✓ Benar' : '✕ Salah'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="resp-answer-value">
-                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Jawaban kamu: </span>
-                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{stripHtml(a.user_answer) || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}</span>
-                        </div>
-                        {a.correct_answer && (
-                          <div className="resp-answer-value" style={{ marginTop: '8px', background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-                            <span style={{ fontSize: '12px', color: '#15803d', fontWeight: 600 }}>Kunci: </span>
-                            <span style={{ color: '#15803d' }}>{stripHtml(a.correct_answer)}</span>
+                        {activityResult.answers.map((a, idx) => (
+                          <div key={a.question_id} className="detail-question-card activity-q-card">
+                            <div className="detail-question-header">
+                              <h3 className="detail-question-title">
+                                {idx + 1}. {plainLabel(a.label)}
+                              </h3>
+                              {a.is_correct !== null && a.is_correct !== undefined && (
+                                <span className={`correct-tag ${a.is_correct ? '' : 'incorrect-tag'}`}>
+                                  {a.is_correct ? '✓ Benar' : '✕ Salah'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="resp-answer-value">
+                              <span className="ans-label-tag">Jawaban kamu:</span>
+                              <span className="ans-text-content">
+                                {stripHtml(a.user_answer) || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}
+                              </span>
+                            </div>
+                            {a.correct_answer && (
+                              <div className="resp-answer-value key-answer-box">
+                                <span className="key-label-tag">Kunci Jawaban:</span>
+                                <span className="key-text-content">{stripHtml(a.correct_answer)}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        ))}
                       </div>
                     </section>
                   </div>
                 </div>
               ) : (
                 <div className="activity-page">
+                  {/* Hero Header */}
                   <div className="activity-hero">
                     <div className="activity-hero-titles">
+                      <div className="activity-hero-badge">
+                        <span className="activity-pulse-dot" />
+                        <span>Aktivitas Responden</span>
+                      </div>
                       <h2>Aktivitas Saya</h2>
-                      <p>Daftar form yang pernah / sedang kamu isi sebagai responden — bukti kapan submit dan statusnya</p>
+                      <p>Daftar formulir yang pernah atau sedang kamu isi. Pantau progres, lanjutkan draf, dan akses bukti submit resmi.</p>
                     </div>
                     <div className="activity-hero-actions">
-                      <ThemeToggle />
-                      <button className="btn-export-excel" style={{ background: '#ffffff', color: '#0B76D4' }} onClick={fetchMyActivity} disabled={activityLoading}>
-                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <ThemeToggle title="Ganti Tema Tampilan" />
+                      <button
+                        className="activity-refresh-btn"
+                        onClick={fetchMyActivity}
+                        disabled={activityLoading}
+                        title="Segarkan data aktivitas"
+                      >
+                        <svg className={activityLoading ? 'spin' : ''} width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        <span>{activityLoading ? 'Memuat...' : 'Muat Ulang'}</span>
+                        <span>{activityLoading ? 'Memuat...' : 'Segarkan'}</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Stats — biru khas + animasi */}
+                  {/* Summary Metric Stats & Global Progress Bar */}
                   {(() => {
                     const total = mySubmissions.length;
-                    const completed = mySubmissions.filter(s => !!s.submitted_at).length;
-                    const inProgress = mySubmissions.filter(s => !s.submitted_at).length;
-                    const cheated = mySubmissions.filter(s => !!s.is_cheated).length;
+                    const completed = mySubmissions.filter((s) => !!s.submitted_at).length;
+                    const inProgress = mySubmissions.filter((s) => !s.submitted_at).length;
+                    const cheated = mySubmissions.filter((s) => !!s.is_cheated).length;
+                    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
                     if (activityLoading) {
                       return (
-                        <div className="activity-skeleton">
+                        <div className="activity-skeleton-row-wrap">
+                          <div className="activity-skeleton-card" />
                           <div className="activity-skeleton-card" />
                           <div className="activity-skeleton-card" />
                           <div className="activity-skeleton-card" />
                         </div>
                       );
                     }
+
                     return (
-                      <div className="activity-stats">
-                        <div className="activity-stat-card">
-                          <div className="activity-stat-icon total"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div>
-                          <div><div className="activity-stat-label">TOTAL AKTIVITAS</div><div className="activity-stat-value">{total}</div></div>
-                        </div>
-                        <div className="activity-stat-card">
-                          <div className="activity-stat-icon done"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                          <div><div className="activity-stat-label">SELESAI</div><div className="activity-stat-value">{completed}</div></div>
-                        </div>
-                        <div className="activity-stat-card">
-                          <div className="activity-stat-icon progress"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                          <div><div className="activity-stat-label">SEDANG DIISI</div><div className="activity-stat-value">{inProgress}</div></div>
-                        </div>
-                        {cheated > 0 && (
-                          <div className="activity-stat-card">
-                            <div className="activity-stat-icon cheated"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
-                            <div><div className="activity-stat-label">CURANG</div><div className="activity-stat-value">{cheated}</div></div>
+                      <div className="activity-stats-container">
+                        <div className="activity-stats-grid">
+                          {/* Stat 1 */}
+                          <div className="activity-stat-card card-total">
+                            <div className="activity-stat-header">
+                              <span className="stat-pill-label">TOTAL FORM</span>
+                              <div className="activity-stat-icon icon-blue">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="activity-stat-body">
+                              <span className="activity-stat-val">{total}</span>
+                              <span className="activity-stat-desc">Formulir pernah dibuka</span>
+                            </div>
                           </div>
-                        )}
+
+                          {/* Stat 2 */}
+                          <div className="activity-stat-card card-completed">
+                            <div className="activity-stat-header">
+                              <span className="stat-pill-label green">SELESAI</span>
+                              <div className="activity-stat-icon icon-green">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="activity-stat-body">
+                              <span className="activity-stat-val text-green">{completed}</span>
+                              <span className="activity-stat-desc">Sudah dikirim & disubmit</span>
+                            </div>
+                          </div>
+
+                          {/* Stat 3 */}
+                          <div className="activity-stat-card card-progress">
+                            <div className="activity-stat-header">
+                              <span className="stat-pill-label amber">SEDANG DIISI</span>
+                              <div className="activity-stat-icon icon-amber">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="activity-stat-body">
+                              <span className="activity-stat-val text-amber">{inProgress}</span>
+                              <span className="activity-stat-desc">Draf belum disubmit</span>
+                            </div>
+                          </div>
+
+                          {/* Stat 4 */}
+                          {cheated > 0 ? (
+                            <div className="activity-stat-card card-cheated">
+                              <div className="activity-stat-header">
+                                <span className="stat-pill-label red">TERDETEKSI</span>
+                                <div className="activity-stat-icon icon-red">
+                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="activity-stat-body">
+                                <span className="activity-stat-val text-red">{cheated}</span>
+                                <span className="activity-stat-desc">Keluar mode fullscreen</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="activity-stat-card card-rate">
+                              <div className="activity-stat-header">
+                                <span className="stat-pill-label indigo">PENYELESAIAN</span>
+                                <div className="activity-stat-icon icon-indigo">
+                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="activity-stat-body">
+                                <span className="activity-stat-val text-indigo">{completionRate}%</span>
+                                <span className="activity-stat-desc">Tingkat submit form</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Overall Completion Progress Line */}
+                        <div className="activity-global-progress-card">
+                          <div className="activity-progress-text-row">
+                            <span>Tingkat Penyelesaian Aktivitas</span>
+                            <strong>{completed} dari {total} form selesai ({completionRate}%)</strong>
+                          </div>
+                          <div className="activity-progress-bar-track">
+                            <div className="activity-progress-bar-fill" style={{ width: `${completionRate}%` }} />
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
 
-                  {/* Filters */}
-                  <div className="activity-table-card table-card-container">
-                    <div className="table-card-header">
-                      <h3 className="table-card-title">Riwayat Pengisian</h3>
-                      <div className="table-header-filters">
-                        <select className="filter-select" value={activityFilter} onChange={(e) => setActivityFilter(e.target.value)}>
-                          <option value="all">Semua Status</option>
-                          <option value="completed">Selesai</option>
-                          <option value="in_progress">Sedang Diisi</option>
-                          <option value="cheated">Curang</option>
-                        </select>
-                      </div>
+                  {/* Toolbar Filter & View Mode Controls */}
+                  <div className="activity-controls-card">
+                    <div className="activity-search-wrap">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Cari berdasarkan judul form, nama pemilik, atau link slug..."
+                        value={activitySearch}
+                        onChange={(e) => setActivitySearch(e.target.value)}
+                      />
+                      {activitySearch && (
+                        <button className="search-clear-btn" onClick={() => setActivitySearch('')} title="Hapus pencarian">
+                          ✕
+                        </button>
+                      )}
                     </div>
 
-                    {activityLoading ? (
-                      <div className="activity-skeleton-table">
-                        <div className="activity-skeleton-row" />
-                        <div className="activity-skeleton-row" />
-                        <div className="activity-skeleton-row" />
-                        <div style={{ textAlign: 'center', padding: '10px', color: '#64748b', fontSize: '13px' }}>Memuat aktivitas...</div>
+                    <div className="activity-actions-right">
+                      {/* Filter Segment Tabs */}
+                      <div className="activity-filter-tabs">
+                        {[
+                          { key: 'all', label: 'Semua', count: mySubmissions.length },
+                          { key: 'completed', label: 'Selesai', count: mySubmissions.filter((s) => !!s.submitted_at && !s.is_cheated).length },
+                          { key: 'in_progress', label: 'Sedang Diisi', count: mySubmissions.filter((s) => !s.submitted_at && !s.is_cheated).length },
+                          ...(mySubmissions.some((s) => !!s.is_cheated)
+                            ? [{ key: 'cheated', label: 'Curang', count: mySubmissions.filter((s) => !!s.is_cheated).length }]
+                            : []),
+                        ].map((tab) => (
+                          <button
+                            key={tab.key}
+                            className={`filter-tab-btn ${activityFilter === tab.key ? 'active' : ''}`}
+                            onClick={() => setActivityFilter(tab.key)}
+                          >
+                            <span>{tab.label}</span>
+                            <span className="tab-count-badge">{tab.count}</span>
+                          </button>
+                        ))}
                       </div>
-                    ) : (() => {
-                      const filtered = mySubmissions.filter((sub) => {
-                        const title = sub.form?.title || '(Form terhapus)';
-                        const slug = sub.form?.slug || '';
-                        const owner = sub.form?.owner_name || '';
-                        const q = activitySearch.toLowerCase();
-                        const matchesSearch = !q || title.toLowerCase().includes(q) || slug.toLowerCase().includes(q) || owner.toLowerCase().includes(q);
-                        if (!matchesSearch) return false;
-                        if (activityFilter === 'completed') return !!sub.submitted_at && !sub.is_cheated;
-                        if (activityFilter === 'in_progress') return !sub.submitted_at && !sub.is_cheated;
-                        if (activityFilter === 'cheated') return !!sub.is_cheated;
-                        return true;
-                      });
-                      if (filtered.length === 0) {
-                        return (
-                          <div className="db-empty-state" style={{ padding: '40px 0' }}>
-                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                            <p>{mySubmissions.length === 0 ? 'Belum ada aktivitas. Coba isi form orang lain via link /f/{slug}' : 'Tidak ada aktivitas yang sesuai filter'}</p>
-                          </div>
-                        );
-                      }
-                      return (
-                        <>
-                          {/* Desktop table */}
-                          <div className="resp-table-wrap activity-table-wrap">
-                            <table className="resp-data-table">
-                              <thead>
-                                <tr>
-                                  <th>FORM</th>
-                                  <th>PEMILIK</th>
-                                  <th>MULAI</th>
-                                  <th>SUBMIT</th>
-                                  <th>PROGRES</th>
-                                  <th>STATUS</th>
-                                  <th style={{ textAlign: 'right' }}>AKSI</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {filtered.map((sub) => {
-                                  const isCompleted = !!sub.submitted_at;
-                                  const durationStr = (() => {
-                                    if (!sub.started_at || !sub.submitted_at) return '-';
-                                    const diffMs = parseServerTime(sub.submitted_at).getTime() - parseServerTime(sub.started_at).getTime();
-                                    const s = Math.max(0, Math.floor(diffMs / 1000));
-                                    const m = Math.floor(s / 60);
-                                    const sec = s % 60;
-                                    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
-                                  })();
-                                  return (
-                                    <tr key={sub.id}>
-                                      <td>
-                                        <div style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={stripHtml(sub.form?.title) || '(Form terhapus)'}>
-                                          {stripHtml(sub.form?.title) || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>(Form terhapus)</span>}
-                                        </div>
-                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                          {sub.form?.slug ? `/${sub.form.slug}` : ''} {sub.is_auto_submitted ? '• auto' : ''} {durationStr !== '-' ? `• ${durationStr}` : ''}
-                                        </div>
-                                      </td>
-                                      <td className="td-user-email">{sub.form?.owner_name || '-'}</td>
-                                      <td style={{ fontSize: '13px' }}>{formatDateString(sub.started_at)}</td>
-                                      <td style={{ fontSize: '13px' }}>{sub.submitted_at ? formatDateString(sub.submitted_at) : <span style={{ color: '#b45309' }}>Belum submit</span>}</td>
-                                      <td style={{ fontSize: '13px', fontWeight: 600 }}>{sub.answered_count}/{sub.total_questions}</td>
-                                      <td>
-                                        {sub.is_cheated ? (
-                                          <span className="status-pill cheated">• Curang</span>
-                                        ) : isCompleted ? (
-                                          <span className="status-pill completed">• Selesai</span>
-                                        ) : (
-                                          <span className="status-pill process">• Proses</span>
-                                        )}
-                                      </td>
-                                      <td style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                          {!isCompleted && sub.form?.slug && (
-                                            <button className="btn-table-view" onClick={() => navigate(`/f/${sub.form.slug}`)} title="Lanjutkan mengisi form">
-                                              Lanjutkan »
-                                            </button>
-                                          )}
-                                          {isCompleted && sub.form?.allow_see_result && (
-                                            <button className="btn-table-view" onClick={() => handleViewMyResult(sub)} disabled={activityResultLoading} style={{ background: '#eff6ff', color: '#0053db' }}>
-                                              {activityResultLoading ? '...' : 'Lihat Hasil »'}
-                                            </button>
-                                          )}
-                                          {isCompleted && !sub.form?.allow_see_result && (
-                                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>Hasil tertutup</span>
-                                          )}
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
 
-                          {/* Mobile cards fallback */}
-                          <div className="activity-cards-mobile" style={{ display: 'none' }}>
-                            {filtered.map((sub) => {
-                              const isCompleted = !!sub.submitted_at;
-                              return (
-                                <div key={sub.id} className="activity-mobile-card">
-                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{stripHtml(sub.form?.title) || '(Form terhapus)'}</div>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>{sub.form?.owner_name || '-'} • {sub.answered_count}/{sub.total_questions} terjawab</div>
-                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Mulai: {formatDateString(sub.started_at)} • Submit: {sub.submitted_at ? formatDateString(sub.submitted_at) : 'Belum'}</div>
-                                  <div style={{ marginTop: '8px' }}>
-                                    {sub.is_cheated ? <span className="status-pill cheated">Curang</span> : isCompleted ? <span className="status-pill completed">Selesai</span> : <span className="status-pill process">Proses</span>}
+                      {/* View Mode Toggle */}
+                      <div className="activity-view-toggle">
+                        <button
+                          className={`view-toggle-btn ${activityViewMode === 'grid' ? 'active' : ''}`}
+                          onClick={() => setActivityViewMode('grid')}
+                          title="Tampilan Kartu (Grid)"
+                        >
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                          </svg>
+                        </button>
+                        <button
+                          className={`view-toggle-btn ${activityViewMode === 'table' ? 'active' : ''}`}
+                          onClick={() => setActivityViewMode('table')}
+                          title="Tampilan Tabel (List)"
+                        >
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Main Activity Content Area */}
+                  {activityLoading ? (
+                    <div className="activity-loading-grid">
+                      {[1, 2, 3, 4, 5, 6].map((n) => (
+                        <div key={n} className="activity-skeleton-card-lg" />
+                      ))}
+                    </div>
+                  ) : (() => {
+                    const filtered = mySubmissions.filter((sub) => {
+                      const title = sub.form?.title || '(Form terhapus)';
+                      const slug = sub.form?.slug || '';
+                      const owner = sub.form?.owner_name || '';
+                      const q = activitySearch.toLowerCase().trim();
+                      const matchesSearch =
+                        !q ||
+                        title.toLowerCase().includes(q) ||
+                        slug.toLowerCase().includes(q) ||
+                        owner.toLowerCase().includes(q);
+
+                      if (!matchesSearch) return false;
+                      if (activityFilter === 'completed') return !!sub.submitted_at && !sub.is_cheated;
+                      if (activityFilter === 'in_progress') return !sub.submitted_at && !sub.is_cheated;
+                      if (activityFilter === 'cheated') return !!sub.is_cheated;
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="activity-empty-box">
+                          <div className="empty-icon-circle">
+                            <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                          </div>
+                          <h3>
+                            {mySubmissions.length === 0
+                              ? 'Belum ada aktivitas pengisian'
+                              : 'Tidak ada aktivitas yang sesuai'}
+                          </h3>
+                          <p>
+                            {mySubmissions.length === 0
+                              ? 'Buka link formulir Form4x dari pembuat form untuk mulai berpartisipasi sebagai responden.'
+                              : 'Coba ubah kata kunci pencarian atau ganti filter status di atas.'}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    /* ----------------------------------------------------
+                       1. GRID CARD VIEW (Visual Modern Cards)
+                       ---------------------------------------------------- */
+                    if (activityViewMode === 'grid') {
+                      return (
+                        <div className="activity-grid-container">
+                          {filtered.map((sub) => {
+                            const isCompleted = !!sub.submitted_at;
+                            const title = stripHtml(sub.form?.title) || '(Form terhapus)';
+                            const ownerName = sub.form?.owner_name || 'Pemilik Form';
+                            const ownerInitials = getInitials(ownerName);
+                            const slug = sub.form?.slug;
+
+                            const answered = sub.answered_count || 0;
+                            const totalQ = sub.total_questions || 0;
+                            const percentAns = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
+
+                            const durationStr = (() => {
+                              if (!sub.started_at || !sub.submitted_at) return '-';
+                              const diffMs = parseServerTime(sub.submitted_at).getTime() - parseServerTime(sub.started_at).getTime();
+                              const s = Math.max(0, Math.floor(diffMs / 1000));
+                              const m = Math.floor(s / 60);
+                              const sec = s % 60;
+                              return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                            })();
+
+                            return (
+                              <div key={sub.id} className="activity-card-item">
+                                {/* Card Header Cover */}
+                                <div
+                                  className="activity-card-cover"
+                                  style={{
+                                    background: sub.form?.banner_url
+                                      ? undefined
+                                      : getCardGradient(slug || title),
+                                  }}
+                                >
+                                  {sub.form?.banner_url && (
+                                    <NgrokImage
+                                      src={sub.form.banner_url}
+                                      alt={title}
+                                      className="activity-card-cover-img"
+                                    />
+                                  )}
+
+                                  {/* Floating Status Pill */}
+                                  <div className="activity-card-status-floating">
+                                    {sub.is_cheated ? (
+                                      <span className="card-badge badge-cheated">
+                                        <span className="dot" /> Curang
+                                      </span>
+                                    ) : isCompleted ? (
+                                      <span className="card-badge badge-completed">
+                                        <span className="dot" /> Selesai
+                                      </span>
+                                    ) : (
+                                      <span className="card-badge badge-process">
+                                        <span className="dot pulse" /> Sedang Diisi
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Auto submit tag */}
+                                  {sub.is_auto_submitted && (
+                                    <span className="activity-card-auto-tag">⚡ Auto-submit</span>
+                                  )}
+                                </div>
+
+                                {/* Card Body */}
+                                <div className="activity-card-body">
+                                  {/* Owner Info Pill */}
+                                  <div className="activity-owner-pill">
+                                    <div className="owner-avatar-bubble">{ownerInitials}</div>
+                                    <span className="owner-name-text" title={ownerName}>
+                                      Oleh {ownerName}
+                                    </span>
+                                  </div>
+
+                                  {/* Title */}
+                                  <h3 className="activity-card-title" title={title}>
+                                    {title}
+                                  </h3>
+
+                                  {/* Progress bar */}
+                                  <div className="activity-card-progress-section">
+                                    <div className="progress-info-row">
+                                      <span>Progres Jawaban</span>
+                                      <strong>
+                                        {answered}/{totalQ} ({percentAns}%)
+                                      </strong>
+                                    </div>
+                                    <div className="card-progress-track">
+                                      <div
+                                        className={`card-progress-fill ${isCompleted ? 'green' : 'amber'}`}
+                                        style={{ width: `${percentAns}%` }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Time Metadata */}
+                                  <div className="activity-card-meta-list">
+                                    <div className="meta-item">
+                                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      <span>Mulai: {formatDateString(sub.started_at)}</span>
+                                    </div>
+                                    {isCompleted ? (
+                                      <div className="meta-item">
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span>Durasi: {durationStr}</span>
+                                      </div>
+                                    ) : (
+                                      <div className="meta-item amber">
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <circle cx="12" cy="12" r="9" />
+                                          <polyline points="12 6 12 12 15 15" />
+                                        </svg>
+                                        <span>Draf tersimpan di browser</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
 
-                          <div className="table-card-footer">
-                            <span>Menampilkan {filtered.length} dari {mySubmissions.length} aktivitas</span>
-                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>ID bukti: potongan UUID submission</span>
-                          </div>
-                        </>
+                                {/* Card Action Footer */}
+                                <div className="activity-card-footer">
+                                  {!isCompleted && slug ? (
+                                    <button
+                                      className="activity-card-btn btn-continue"
+                                      onClick={() => navigate(`/f/${slug}`)}
+                                    >
+                                      <span>Lanjutkan Mengisi</span>
+                                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                      </svg>
+                                    </button>
+                                  ) : isCompleted && sub.form?.allow_see_result ? (
+                                    <button
+                                      className="activity-card-btn btn-view-results"
+                                      onClick={() => handleViewMyResult(sub)}
+                                      disabled={activityResultLoading}
+                                    >
+                                      <span>{activityResultLoading ? 'Memuat Hasil...' : 'Lihat Hasil & Bukti'}</span>
+                                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </button>
+                                  ) : isCompleted && !sub.form?.allow_see_result ? (
+                                    <div className="activity-card-locked-tag" title="Pembuat form mengunci akses hasil bagi responden">
+                                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                                      </svg>
+                                      <span>Hasil Ditutup Pembuat</span>
+                                    </div>
+                                  ) : (
+                                    <span className="activity-card-unavailable">Form tidak tersedia</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       );
-                    })()}
-                  </div>
-                  </div>
+                    }
+
+                    /* ----------------------------------------------------
+                       2. TABLE LIST VIEW (Clean Data Table)
+                       ---------------------------------------------------- */
+                    return (
+                      <div className="activity-table-container">
+                        <div className="resp-table-wrap">
+                          <table className="resp-data-table activity-custom-table">
+                            <thead>
+                              <tr>
+                                <th>FORMULIR</th>
+                                <th>PEMILIK FORM</th>
+                                <th>WAKTU MULAI</th>
+                                <th>SUBMITTED</th>
+                                <th>PROGRES</th>
+                                <th>STATUS</th>
+                                <th style={{ textAlign: 'right' }}>AKSI</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filtered.map((sub) => {
+                                const isCompleted = !!sub.submitted_at;
+                                const title = stripHtml(sub.form?.title) || '(Form terhapus)';
+                                const ownerName = sub.form?.owner_name || '-';
+                                const ownerInitials = getInitials(ownerName);
+                                const answered = sub.answered_count || 0;
+                                const totalQ = sub.total_questions || 0;
+
+                                const durationStr = (() => {
+                                  if (!sub.started_at || !sub.submitted_at) return '-';
+                                  const diffMs = parseServerTime(sub.submitted_at).getTime() - parseServerTime(sub.started_at).getTime();
+                                  const s = Math.max(0, Math.floor(diffMs / 1000));
+                                  const m = Math.floor(s / 60);
+                                  const sec = s % 60;
+                                  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                                })();
+
+                                return (
+                                  <tr key={sub.id} className="activity-table-row">
+                                    <td>
+                                      <div className="table-form-cell">
+                                        <div className="form-title-text" title={title}>
+                                          {title}
+                                        </div>
+                                        <div className="form-slug-meta">
+                                          {sub.form?.slug ? `/f/${sub.form.slug}` : ''}{' '}
+                                          {sub.is_auto_submitted ? '• ⚡ auto-submit' : ''}{' '}
+                                          {durationStr !== '-' ? `• durasi ${durationStr}` : ''}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <div className="table-owner-cell">
+                                        <span className="mini-owner-avatar">{ownerInitials}</span>
+                                        <span>{ownerName}</span>
+                                      </div>
+                                    </td>
+                                    <td className="table-date-cell">{formatDateString(sub.started_at)}</td>
+                                    <td className="table-date-cell">
+                                      {sub.submitted_at ? (
+                                        formatDateString(sub.submitted_at)
+                                      ) : (
+                                        <span className="badge-draft">Belum Submit</span>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <div className="table-progress-cell">
+                                        <span className="progress-num">
+                                          {answered}/{totalQ}
+                                        </span>
+                                        <div className="table-progress-track">
+                                          <div
+                                            className={`table-progress-fill ${isCompleted ? 'green' : 'amber'}`}
+                                            style={{
+                                              width: `${totalQ > 0 ? (answered / totalQ) * 100 : 0}%`,
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      {sub.is_cheated ? (
+                                        <span className="status-pill cheated">• Curang</span>
+                                      ) : isCompleted ? (
+                                        <span className="status-pill completed">• Selesai</span>
+                                      ) : (
+                                        <span className="status-pill process">• Proses</span>
+                                      )}
+                                    </td>
+                                    <td style={{ textAlign: 'right' }}>
+                                      <div className="table-action-wrap">
+                                        {!isCompleted && sub.form?.slug && (
+                                          <button
+                                            className="btn-table-action btn-primary"
+                                            onClick={() => navigate(`/f/${sub.form.slug}`)}
+                                          >
+                                            Lanjutkan »
+                                          </button>
+                                        )}
+                                        {isCompleted && sub.form?.allow_see_result && (
+                                          <button
+                                            className="btn-table-action btn-secondary"
+                                            onClick={() => handleViewMyResult(sub)}
+                                            disabled={activityResultLoading}
+                                          >
+                                            {activityResultLoading ? '...' : 'Lihat Hasil »'}
+                                          </button>
+                                        )}
+                                        {isCompleted && !sub.form?.allow_see_result && (
+                                          <span className="table-locked-text">Hasil Tertutup</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Footer Pagination / Count Info */}
+                        <div className="table-card-footer">
+                          <span>
+                            Menampilkan <strong>{filtered.length}</strong> dari {mySubmissions.length} total aktivitas pengisian
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            Data tersinkronisasi otomatis dengan server Form4x
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
             </>
           )}
