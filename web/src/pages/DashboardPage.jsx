@@ -646,11 +646,32 @@ export default function DashboardPage() {
       {/* Main Content Panel */}
       <main className="db-main">
         {/* Topbar */}
+        {/* Topbar */}
         <header className="db-topbar">
-          <button className="db-hamburger" onClick={() => setDrawerOpen((v) => !v)} aria-label="Toggle menu">
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-          </button>
-          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && activeNav !== 'activity' && (
+          <div className="db-topbar-left">
+            <button className="db-hamburger" onClick={() => setDrawerOpen((v) => !v)} aria-label="Toggle menu">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="db-topbar-brand">
+              <span className="db-topbar-title-text">
+                {activeNav === 'activity'
+                  ? (activityDetailSub ? 'Bukti Pengisian' : 'Aktivitas Saya')
+                  : activeNav === 'dashboard'
+                  ? 'Dasbor'
+                  : activeNav === 'template'
+                  ? 'Galeri Templat'
+                  : activeNav === 'history'
+                  ? (historySubView === 'results' || historySubView === 'detail' ? 'Hasil Responden' : 'Riwayat Form')
+                  : 'Form4x'}
+              </span>
+            </div>
+          </div>
+
+          {activeNav !== 'activity' && !(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && (
             <div className="db-search-wrap">
               <svg className="db-search-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="11" cy="11" r="8" />
@@ -666,7 +687,10 @@ export default function DashboardPage() {
               />
             </div>
           )}
-          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && activeNav !== 'activity' && <ThemeToggle />}
+
+          <div className="db-topbar-right">
+            <ThemeToggle />
+          </div>
         </header>
 
         {/* Content Area */}
