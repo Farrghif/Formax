@@ -7,6 +7,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import NgrokImage from '../components/NgrokImage';
 import NgrokAudio from '../components/NgrokAudio';
 import { apiFetch } from '../api/config';
+import logoForm4x from '../assets/logo_form4x.png';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 4;
@@ -763,7 +764,10 @@ export default function FormFillPage() {
     return (
       <div className="form-fill-container">
         <header className="form-fill-header">
-          <h1 className="form-fill-logo">Form4x</h1>
+          <div className="form-fill-logo-wrap" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} role="button" tabIndex={0} aria-label="Ke dashboard">
+            <img src={logoForm4x} alt="Form4x logo" className="form-fill-logo-img" />
+            <h1 className="form-fill-logo">Form4x</h1>
+          </div>
           <div className="form-fill-header-right">
             <ThemeToggle />
             <button
@@ -894,7 +898,10 @@ export default function FormFillPage() {
     return (
       <div className="form-fill-container">
         <header className="form-fill-header">
-          <h1 className="form-fill-logo">Form4x</h1>
+          <div className="form-fill-logo-wrap" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} role="button" tabIndex={0} aria-label="Ke dashboard">
+            <img src={logoForm4x} alt="Form4x logo" className="form-fill-logo-img" />
+            <h1 className="form-fill-logo">Form4x</h1>
+          </div>
           <div className="form-fill-header-right">
             <ThemeToggle />
             <div
@@ -984,7 +991,10 @@ export default function FormFillPage() {
     <div className="form-fill-container">
       {/* Header Bar */}
       <header className="form-fill-header">
-        <h1 className="form-fill-logo">Form4x</h1>
+        <div className="form-fill-logo-wrap" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} role="button" tabIndex={0} aria-label="Ke dashboard">
+          <img src={logoForm4x} alt="Form4x logo" className="form-fill-logo-img" />
+          <h1 className="form-fill-logo">Form4x</h1>
+        </div>
         <div className="form-fill-header-right">
           {/* Zoom Controls (perbesar / perkecil form) */}
           <div className="zoom-controls">

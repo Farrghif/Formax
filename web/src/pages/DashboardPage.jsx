@@ -650,7 +650,7 @@ export default function DashboardPage() {
               />
             </div>
           )}
-          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && <ThemeToggle />}
+          {!(activeNav === 'history' && (historySubView === 'results' || historySubView === 'detail')) && activeNav !== 'activity' && <ThemeToggle />}
         </header>
 
         {/* Content Area */}
@@ -1761,12 +1761,15 @@ export default function DashboardPage() {
                       <h2>Aktivitas Saya</h2>
                       <p>Daftar form yang pernah / sedang kamu isi sebagai responden — bukti kapan submit dan statusnya</p>
                     </div>
-                    <button className="btn-export-excel" style={{ background: '#2563eb' }} onClick={fetchMyActivity} disabled={activityLoading}>
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>{activityLoading ? 'Memuat...' : 'Muat Ulang'}</span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                      <ThemeToggle />
+                      <button className="btn-export-excel" style={{ background: '#2563eb' }} onClick={fetchMyActivity} disabled={activityLoading}>
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>{activityLoading ? 'Memuat...' : 'Muat Ulang'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Stats */}
