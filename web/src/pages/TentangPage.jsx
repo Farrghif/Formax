@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import '../styles/landing.css'
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
+import InteractiveCubeBackground from '../components/InteractiveCubeBackground';
 
 /* ─── Shared Navbar ─── */
 function LandingNav({ active = 'beranda' }) {
@@ -57,7 +58,8 @@ const TentangPage = () => {
   ]
 
   return (
-    <div className="hp-root">
+    <div className="hp-root" style={{ position: 'relative' }}>
+      <InteractiveCubeBackground />
       <LandingNav active="tentang" />
 
       {/* HERO — simetris, clean */}
