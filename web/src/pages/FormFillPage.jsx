@@ -1030,7 +1030,7 @@ export default function FormFillPage() {
   // Submitted Success View
   if (isSubmitted) {
     return (
-      <div className="form-fill-container">
+      <div className="form-fill-container success-page-container">
         <header className="form-fill-header">
           <div className="form-fill-logo-wrap" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} role="button" tabIndex={0} aria-label="Ke dashboard">
             <img src={logoForm4x} alt="Form4x logo" className="form-fill-logo-img" />
@@ -1041,46 +1041,59 @@ export default function FormFillPage() {
             {renderProfileMenu()}
           </div>
         </header>
-        <div className="success-card">
-          <div className="success-icon-wrap">
-            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>
-            Jawaban Berhasil Terkirim!
-          </h2>
-          <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
-            Terima kasih telah mengisi <strong dangerouslySetInnerHTML={richHtml(form?.title)} />. Jawaban Anda telah tersimpan dengan aman di sistem.
-          </p>
 
-          {cheated && (
-            <div className="cheated-banner" style={{ marginBottom: '20px' }}>
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        {/* Ambient Wave Background Effect */}
+        <div className="success-bg-waves" aria-hidden="true">
+          <div className="success-glow-orb orb-1" />
+          <div className="success-glow-orb orb-2" />
+          <svg className="wave-svg wave-1" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="currentColor" d="M0,192L48,176C96,160,192,128,288,138.7C384,149,480,203,576,213.3C672,224,768,192,864,165.3C960,139,1056,117,1152,128C1248,139,1344,181,1392,202.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
+          <svg className="wave-svg wave-2" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="currentColor" d="M0,96L48,122.7C96,149,192,203,288,208C384,213,480,171,576,144C672,117,768,107,864,128C960,149,1056,203,1152,213.3C1248,224,1344,160,1392,128L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
+        </div>
+
+        <div className="success-content-wrapper">
+          <div className="success-card">
+            <div className="success-icon-wrap">
+              <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
               </svg>
-              Submission Anda ditandai curang karena keluar dari mode full screen.
             </div>
-          )}
+            <h2 className="success-title">
+              Jawaban Berhasil Terkirim!
+            </h2>
+            <p className="success-desc">
+              Terima kasih telah mengisi <strong className="success-form-title" dangerouslySetInnerHTML={richHtml(form?.title)} />. Jawaban Anda telah tersimpan dengan aman di sistem.
+            </p>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {form?.allow_see_result && submissionId && (
-              <button
-                className="modal-btn-primary"
-                onClick={handleViewResult}
-                disabled={resultLoading}
-                style={{ background: '#2563EB', borderColor: '#2563EB' }}
-              >
-                {resultLoading ? 'Mengambil hasil...' : 'Lihat Hasil'}
-              </button>
+            {cheated && (
+              <div className="cheated-banner success-cheated-banner">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Submission Anda ditandai curang karena keluar dari mode full screen.
+              </div>
             )}
-            <button
-              className="modal-btn-primary"
-              onClick={() => navigate('/dashboard')}
-              style={{ background: '#475569', borderColor: '#475569' }}
-            >
-              Kembali ke Dashboard
-            </button>
+
+            <div className="success-actions">
+              {form?.allow_see_result && submissionId && (
+                <button
+                  className="success-btn-primary"
+                  onClick={handleViewResult}
+                  disabled={resultLoading}
+                >
+                  {resultLoading ? 'Mengambil hasil...' : 'Lihat Hasil'}
+                </button>
+              )}
+              <button
+                className="success-btn-secondary"
+                onClick={() => navigate('/dashboard')}
+              >
+                Kembali ke Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
