@@ -632,13 +632,23 @@ body,
 
 [data-theme="dark"] .hp-hero-title,
 [data-theme="dark"] .hp-section-title,
+[data-theme="dark"] .hp-feat-title,
+[data-theme="dark"] .hp-platform-name,
 [data-theme="dark"] .hp-cta-title,
 [data-theme="dark"] .tp-hero-title,
 [data-theme="dark"] .tp-section-title,
 [data-theme="dark"] .tp-howto-title,
+[data-theme="dark"] .tp-step-title,
+[data-theme="dark"] .tp-feature-title,
+[data-theme="dark"] .tp-value-title,
+[data-theme="dark"] .tp-team-name,
+[data-theme="dark"] .tp-about-card-title,
+[data-theme="dark"] .tp-about-steps li strong,
 [data-theme="dark"] .cp-hero-title,
 [data-theme="dark"] .cp-features-title,
-[data-theme="dark"] .cp-step-title {
+[data-theme="dark"] .cp-step-title,
+[data-theme="dark"] .cp-card-text h4,
+[data-theme="dark"] .cp-feature-card h3 {
   color: var(--text-primary);
 }
 
@@ -655,15 +665,17 @@ body,
 [data-theme="dark"] .cp-hero-sub,
 [data-theme="dark"] .cp-step-desc,
 [data-theme="dark"] .cp-features-sub,
-[data-theme="dark"] .cp-feature-card p {
-  color: var(--text-muted);
+[data-theme="dark"] .cp-feature-card p,
+[data-theme="dark"] .cp-card-text p {
+  color: var(--text-secondary);
 }
 
 /* Kickers & Accents */
 [data-theme="dark"] .tp-kicker,
 [data-theme="dark"] .tp-section-kicker,
 [data-theme="dark"] .cp-hero-accent,
-[data-theme="dark"] .hp-hero-accent {
+[data-theme="dark"] .hp-hero-accent,
+[data-theme="dark"] .hp-section-tag {
   color: #38bdf8;
 }
 
@@ -693,10 +705,25 @@ body,
   color: var(--accent);
 }
 
+/* Mockup Window in Hero */
+[data-theme="dark"] .hp-mockup-wrap {
+  background: var(--bg-card);
+  border-color: var(--border);
+  box-shadow: 0 25px 65px -10px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] .hp-mockup-bar {
+  background: var(--bg-hover);
+  border-bottom-color: var(--border);
+}
+[data-theme="dark"] .hp-mockup-address {
+  background: var(--bg-input);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
 /* Cards & Containers */
 [data-theme="dark"] .hp-feat-card,
 [data-theme="dark"] .hp-platform-card,
-[data-theme="dark"] .hp-mockup-wrap,
 [data-theme="dark"] .tp-step,
 [data-theme="dark"] .tp-about-card,
 [data-theme="dark"] .tp-feature-card,
@@ -712,7 +739,8 @@ body,
 [data-theme="dark"] .tp-value-card:hover,
 [data-theme="dark"] .tp-team-card:hover,
 [data-theme="dark"] .cp-feature-card:hover,
-[data-theme="dark"] .hp-feat-card:hover {
+[data-theme="dark"] .hp-feat-card:hover,
+[data-theme="dark"] .hp-platform-card:hover {
   border-color: var(--accent);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.25);
 }
@@ -723,13 +751,6 @@ body,
 [data-theme="dark"] .tp-about-steps li strong { color: var(--text-primary); }
 [data-theme="dark"] .tp-about-steps li span { color: var(--text-muted); }
 [data-theme="dark"] .tp-checklist li { color: var(--text-body); }
-[data-theme="dark"] .tp-step-title,
-[data-theme="dark"] .tp-feature-title,
-[data-theme="dark"] .tp-value-title,
-[data-theme="dark"] .tp-team-name,
-[data-theme="dark"] .cp-feature-card h3 {
-  color: var(--text-primary);
-}
 [data-theme="dark"] .tp-team-role { color: var(--text-muted); }
 
 /* Icons & Badges */
@@ -740,6 +761,16 @@ body,
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.25);
   color: #38bdf8;
+}
+[data-theme="dark"] .hp-feat-card:hover .hp-feat-icon {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+[data-theme="dark"] .hp-badge-outline-blue {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.28);
 }
 [data-theme="dark"] .tp-feature-icon svg { stroke: #38bdf8; }
 
@@ -753,8 +784,6 @@ body,
 [data-theme="dark"] .cp-step-badge { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
 
 [data-theme="dark"] .cp-subcard { background: var(--bg-hover); border-color: var(--border); }
-[data-theme="dark"] .cp-card-text h4 { color: var(--text-primary); }
-[data-theme="dark"] .cp-card-text p { color: var(--text-muted); }
 [data-theme="dark"] .cp-num-badge { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
 
 [data-theme="dark"] .cp-subcard.cp-card-success { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); }

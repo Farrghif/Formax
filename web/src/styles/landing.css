@@ -392,14 +392,14 @@
 .hp-feat-title {
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-heading, #0f172a);
   margin-bottom: 8px;
 }
 
 .hp-feat-desc {
   font-size: 14px;
   line-height: 1.6;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
 }
 
 /* ── PLATFORMS ── */
@@ -452,13 +452,13 @@
 .hp-platform-name {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-heading, #0f172a);
   margin: 0 0 6px;
 }
 
 .hp-platform-desc {
   font-size: 13.5px;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   line-height: 1.5;
   margin: 0 0 16px;
 }
