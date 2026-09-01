@@ -2130,6 +2130,35 @@
 }
 .fb-import-file-badge strong { color: #0f172a; }
 .fb-import-file-badge svg { color: #2563eb; flex-shrink: 0; }
+.fb-import-change-file-btn {
+  margin-left: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.fb-import-change-file-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.fb-import-empty-state {
+  text-align: center;
+  padding: 28px 16px;
+  color: #64748b;
+  font-size: 13px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+.fb-import-empty-state strong {
+  color: #334155;
+}
 
 /* Select all */
 .fb-import-select-all {
@@ -2242,6 +2271,7 @@
   font-weight: 600;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

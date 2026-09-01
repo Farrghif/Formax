@@ -1905,8 +1905,8 @@ export default function FormBuilderPage() {
                     </svg>
                     <span><strong>{importFile?.name}</strong> • {(importFile?.size / 1024).toFixed(0)} KB</span>
                     <button
+                      className="fb-import-change-file-btn"
                       onClick={() => { setImportPhase('upload'); setImportPreview(null); setImportFile(null); setImportError(null); }}
-                      style={{ marginLeft: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}
                     >
                       Ganti file
                     </button>
@@ -1965,9 +1965,9 @@ export default function FormBuilderPage() {
                   </div>
 
                   {importPreview.valid_count === 0 && (
-                    <div style={{ textAlign: 'center', padding: '28px 16px', color: '#64748b', fontSize: '13px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '12px', marginTop: '10px' }}>
+                    <div className="fb-import-empty-state">
                       <div style={{ fontSize: '22px', marginBottom: '6px' }}>😕</div>
-                      <strong style={{ color: '#334155' }}>Tidak ada soal valid</strong><br />
+                      <strong>Tidak ada soal valid</strong><br />
                       Periksa format penulisan — pastikan ada nomor soal &amp; opsi A/B/C/D
                     </div>
                   )}
