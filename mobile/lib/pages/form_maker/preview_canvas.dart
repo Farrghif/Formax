@@ -53,14 +53,14 @@ class PreviewCanvas extends StatelessWidget {
 // FIX Bug 9: render HTML via RichTextView, bukan raw Text
                     RichTextView(
                       html: page.title.isEmpty ? (isFirst ? state.formTitle : 'Bagian') : page.title,
-                      textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                      textStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                     if (page.description.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      RichTextView(html: page.description, textStyle: const TextStyle(fontSize: 14, color: Colors.black54)),
+                      RichTextView(html: page.description, textStyle: TextStyle(fontSize: 14, color: Colors.black54)),
                     ] else if (isFirst && state.formDescription.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      RichTextView(html: state.formDescription, textStyle: const TextStyle(fontSize: 14, color: Colors.black54)),
+                      RichTextView(html: state.formDescription, textStyle: TextStyle(fontSize: 14, color: Colors.black54)),
                     ]
                   ],
                 ),

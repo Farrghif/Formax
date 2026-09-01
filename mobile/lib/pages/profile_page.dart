@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../widgets/ngrok_image.dart';
 import '../theme/theme_controller.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -527,7 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
         final apiHost = Uri.parse(ApiService.baseUrl).host;
         url = url.replaceAll('localhost', apiHost);
       }
-      return Image.network(
+      return NgrokImage(
         url,
         width: 110,
         height: 110,

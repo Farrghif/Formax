@@ -6,7 +6,8 @@ import '../../../models/question_model.dart';
 
 class EditorCanvas extends StatefulWidget {
   final FormBuilderState state;
-  const EditorCanvas({super.key, required this.state});
+  final ValueChanged<QuestionData>? onAddImage;
+  const EditorCanvas({super.key, required this.state, this.onAddImage});
 
   @override
   State<EditorCanvas> createState() => _EditorCanvasState();
@@ -106,6 +107,9 @@ class _EditorCanvasState extends State<EditorCanvas> {
       onDelete: () {
         widget.state.deleteQuestion(page.id, q.id);
       },
+      onAddImage: widget.onAddImage == null
+          ? null
+          : () => widget.onAddImage!(q),
       onRequiredChanged: (val) {
         q.isRequired = val;
         widget.state.triggerUpdate();
@@ -182,7 +186,7 @@ class _EditorCanvasState extends State<EditorCanvas> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: QuestionType.values.where((t) => t != QuestionType.pageBreak).map((type) {
             return ListTile(
-              leading: Icon(_getIconForType(type), color: Colors.black54),
+              leading: Icon(_getIconForType(type), color: Colors.white),
               title: Text(type.label),
               onTap: () {
                 q.type = type;

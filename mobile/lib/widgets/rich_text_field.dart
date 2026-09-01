@@ -166,6 +166,14 @@ class _RichTextFieldState extends State<RichTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final editorBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FB);
+    final editorBorder = isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB);
+    final toolbarBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF0F1F4);
+    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textColor = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF1F2937);
+    final hintColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
+
     final isEmpty = _controller.document.toPlainText().trim().isEmpty;
     final minH = (widget.minLines ?? 1) * 22.0 + 16;
     final maxH = (widget.maxLines ?? 6) * 22.0 + 16;
@@ -177,12 +185,12 @@ class _RichTextFieldState extends State<RichTextField> {
         // ── Editor area ──
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FB),
+            color: editorBg,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: _focusNode.hasFocus
                   ? const Color(0xFF4F46E5)
-                  : const Color(0xFFD1D5DB),
+                  : editorBorder,
               width: _focusNode.hasFocus ? 1.5 : 1,
             ),
           ),
@@ -191,7 +199,6 @@ class _RichTextFieldState extends State<RichTextField> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // ── Toolbar (selalu terlihat, tidak perlu tombol B) ──
-              // Tap di toolbar tidak boleh menghilangkan focus/selection editor
               TapRegion(
                 onTapOutside: (_) {},
                 child: FocusScope(
@@ -202,9 +209,9 @@ class _RichTextFieldState extends State<RichTextField> {
                     },
                     behavior: HitTestBehavior.opaque,
                     child: Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF0F1F4),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
+                      decoration: BoxDecoration(
+                        color: toolbarBg,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
                       ),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -218,7 +225,7 @@ class _RichTextFieldState extends State<RichTextField> {
                   ),
                 ),
               ),
-              const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+              Divider(height: 1, thickness: 1, color: dividerColor),
 
               // ── Quill editor area ──
               GestureDetector(
@@ -238,8 +245,8 @@ class _RichTextFieldState extends State<RichTextField> {
                           child: IgnorePointer(
                             child: Text(
                               widget.hintText!,
-                              style: const TextStyle(
-                                color: Color(0xFF9CA3AF),
+                              style: TextStyle(
+                                color: hintColor,
                                 fontSize: 14,
                                 height: 1.5,
                               ),
@@ -259,10 +266,10 @@ class _RichTextFieldState extends State<RichTextField> {
                             sizeLarge: const TextStyle(fontSize: 18),
                             sizeHuge: const TextStyle(fontSize: 24),
                             paragraph: DefaultTextBlockStyle(
-                              const TextStyle(
+                              TextStyle(
                                 fontSize: 14,
                                 height: 1.5,
-                                color: Color(0xFF1F2937),
+                                color: textColor,
                               ),
                               HorizontalSpacing.zero,
                               VerticalSpacing.zero,

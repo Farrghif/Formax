@@ -133,7 +133,10 @@ if _allowed_origins:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins,
-        allow_origin_regex=r"https://formax.*\.vercel\.app",
+        # Izin origin dev (Flutter Web pakai port acak localhost, React dev 5173/3000)
+        # supaya preflight CORS tidak kena "400 Disallowed CORS origin" -> image
+        # gagal tampil "HTTP request failed, statusCode: 0" di Flutter Web.
+        allow_origin_regex=r"https://formax.*\.vercel\.app|http://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

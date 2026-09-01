@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
+import '../widgets/ngrok_image.dart';
 import '../widgets/rich_text_view.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1219,7 +1220,7 @@ class _FillFormPageState extends State<FillFormPage> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 image: DecorationImage(
-                  image: NetworkImage(_formData!.bannerUrl!),
+                  image: NgrokImage.provider(_formData!.bannerUrl!),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -2117,6 +2118,9 @@ class _FillFormPageState extends State<FillFormPage> {
         Uri.parse('${ApiService.baseUrl}/uploads'),
       )
         ..headers['X-Respondent-Key'] = respondentKey
+        // Ngrok free mewajibkan header ini (konsisten dgn ApiService._uploadOnce);
+        // tanpanya request bisa diarahkan ke halaman interstitial sehingga upload gagal.
+        ..headers['ngrok-skip-browser-warning'] = 'true'
         ..files.add(
           http.MultipartFile.fromBytes(
             'file',

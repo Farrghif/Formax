@@ -28,6 +28,11 @@ class PageHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? const Color(0xFFF8FAFC) : Colors.black87;
+    final descColor = isDark ? const Color(0xFF94A3B8) : Colors.black54;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -72,7 +77,7 @@ class PageHeaderCard extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardColor,
               borderRadius: _isFirstPage
                   ? BorderRadius.circular(8)
                   : const BorderRadius.vertical(bottom: Radius.circular(8)),
@@ -81,7 +86,7 @@ class PageHeaderCard extends StatelessWidget {
                   : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -116,7 +121,7 @@ class PageHeaderCard extends StatelessWidget {
                               minLines: 1,
                               maxLines: 3,
                             )
-                          : _buildTitleView(),
+                          : _buildTitleView(titleColor),
                       const SizedBox(height: 16),
                       // --- Description Field ---
                       isActive
@@ -131,7 +136,7 @@ class PageHeaderCard extends StatelessWidget {
                               minLines: 1,
                               maxLines: 3,
                             )
-                          : _buildDescriptionView(),
+                          : _buildDescriptionView(descColor),
                     ],
                   ),
                 ),
@@ -143,7 +148,7 @@ class PageHeaderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTitleView() {
+  Widget _buildTitleView(Color textColor) {
     final displayText = page.title.isEmpty
         ? (_isFirstPage ? 'Judul Formulir' : 'Judul Bagian')
         : page.title;
@@ -151,27 +156,27 @@ class PageHeaderCard extends StatelessWidget {
     if (_looksLikeHtml(displayText)) {
       return RichTextView(
         html: displayText,
-        textStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+        textStyle: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
       );
     }
     return Text(
       displayText,
-      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
     );
   }
 
-  Widget _buildDescriptionView() {
+  Widget _buildDescriptionView(Color textColor) {
     if (page.description.isEmpty) return const SizedBox.shrink();
 
     if (_looksLikeHtml(page.description)) {
       return RichTextView(
         html: page.description,
-        textStyle: const TextStyle(fontSize: 15, color: Colors.black54),
+        textStyle: TextStyle(fontSize: 15, color: textColor),
       );
     }
     return Text(
       page.description,
-      style: const TextStyle(fontSize: 15, color: Colors.black54),
+      style: TextStyle(fontSize: 15, color: textColor),
     );
   }
 }

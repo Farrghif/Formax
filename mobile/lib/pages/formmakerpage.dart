@@ -4,6 +4,7 @@ import '../models/form_template.dart';
 import '../services/api_service.dart';
 import '../utils/quill_html.dart';
 import '../widgets/share_form_dialog.dart';
+import '../widgets/ngrok_image.dart';
 import 'form_maker/models/form_builder_state.dart';
 import 'form_maker/editor_canvas.dart';
 import 'form_maker/preview_canvas.dart';
@@ -43,6 +44,12 @@ class _FormMakerPageState extends State<FormMakerPage>
 
   final Color _primaryColor = const Color(0xFF4F46E5);
   final Color _bgColor = const Color(0xFFE8EEF7);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _currentBgColor => _isDark ? const Color(0xFF0F172A) : _bgColor;
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? const Color(0xFFF8FAFC) : Colors.black87;
+  Color get _subTextColor => _isDark ? const Color(0xFF94A3B8) : Colors.black54;
+  Color get _appBarIconColor => _isDark ? const Color(0xFFCBD5E1) : Colors.black54;
 
   // State untuk Setelan
   bool _isQuiz = true;
@@ -460,7 +467,15 @@ class _FormMakerPageState extends State<FormMakerPage>
 
   void _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    // Kompres gambar saat diambil agar ukuran file kecil. Foto kamera full-res
+    // (bisa 4-12 MB) gagal diupload lewat tunnel ngrok HTTPS dengan error
+    // "HTTPS request failed, statusCode: 0" (koneksi putus saat tubuh request besar).
+    // Pola ini sama dengan profil (avatar) & isi form (file upload) yang sudah bekerja.
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
     if (pickedFile != null) {
       final activePageId =
           _builderState.activePageId ?? _builderState.pages.first.id;
@@ -469,11 +484,18 @@ class _FormMakerPageState extends State<FormMakerPage>
       final uploadResult = await ApiService.uploadFile(pickedFile);
       if (uploadResult['success'] == true) {
         final fileUrl = uploadResult['file_url'] as String;
-        _builderState.addQuestion(
-          activePageId,
-          QuestionType.image,
-          imageUrl: fileUrl,
-        );
+
+        // Perilaku seperti Google Form: jika ada pertanyaan yang sedang dipilih,
+        // gambar ditempel ke pertanyaan itu (bukan membuat pertanyaan baru).
+        final attached =
+            _builderState.attachImageToActiveQuestion(fileUrl);
+        if (!attached) {
+          _builderState.addQuestion(
+            activePageId,
+            QuestionType.image,
+            imageUrl: fileUrl,
+          );
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -486,9 +508,39 @@ class _FormMakerPageState extends State<FormMakerPage>
     }
   }
 
+  /// Pilih & tempelkan gambar ke pertanyaan tertentu (perilaku Google Form,
+  /// tombol gambar di toolbar pertanyaan aktif). Tidak membuat pertanyaan baru.
+  Future<void> _pickImageForQuestion(QuestionData q) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (pickedFile == null) return;
+    final uploadResult = await ApiService.uploadFile(pickedFile);
+    if (!mounted) return;
+    if (uploadResult['success'] == true) {
+      q.imageUrl = uploadResult['file_url'] as String;
+      _builderState.triggerUpdate();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal unggah gambar: ${uploadResult['message']}'),
+        ),
+      );
+    }
+  }
+
   Future<void> _pickBanner() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    // Kompres banner sama seperti _pickImage agar upload via ngrok tidak putus
+    // dengan error "HTTPS request failed, statusCode: 0".
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
     if (pickedFile == null) return;
     final uploadResult = await ApiService.uploadFile(pickedFile);
     if (!mounted) return;
@@ -531,6 +583,7 @@ class _FormMakerPageState extends State<FormMakerPage>
   void _showAddQuestionSheet() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: _cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -541,8 +594,8 @@ class _FormMakerPageState extends State<FormMakerPage>
               .where((t) => t != QuestionType.pageBreak)
               .map((type) {
                 return ListTile(
-                  leading: Icon(_getIconForType(type), color: Colors.black54),
-                  title: Text(type.label),
+                  leading: Icon(_getIconForType(type), color: _primaryColor),
+                  title: Text(type.label, style: TextStyle(color: _textColor, fontWeight: FontWeight.w500)),
                   onTap: () {
                     final activePageId =
                         _builderState.activePageId ??
@@ -598,20 +651,20 @@ class _FormMakerPageState extends State<FormMakerPage>
         // teks hitam yang dikunci). Bungkus dengan tema terang agar semua teks
         // yang tidak diberi warna eksplisit tetap gelap & terbaca walau berada
         // di mode gelap aplikasi (mencegah teks terang di atas latar terang).
-        final lightTheme = ThemeData.light().copyWith(
-          scaffoldBackgroundColor: _bgColor,
-        );
         return Theme(
-          data: lightTheme,
+          data: Theme.of(context).copyWith(scaffoldBackgroundColor: _currentBgColor),
           child: Scaffold(
-          backgroundColor: _bgColor,
+          backgroundColor: _currentBgColor,
           appBar: _buildAppBar(),
           body: _isPreviewMode
               ? PreviewCanvas(state: _builderState)
               : TabBarView(
                   controller: _tabController,
                   children: [
-                    EditorCanvas(state: _builderState),
+                    EditorCanvas(
+                      state: _builderState,
+                      onAddImage: _pickImageForQuestion,
+                    ),
                     _buildSettingsTab(),
                   ],
                 ),
@@ -622,11 +675,11 @@ class _FormMakerPageState extends State<FormMakerPage>
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: _cardColor,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withOpacity(_isDark ? 0.3 : 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -637,9 +690,9 @@ class _FormMakerPageState extends State<FormMakerPage>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.title,
-                              color: Colors.black87,
+                              color: _textColor,
                             ),
                             onPressed: () {
                               final activePageId =
@@ -653,17 +706,17 @@ class _FormMakerPageState extends State<FormMakerPage>
                             tooltip: 'Tambah Judul/Deskripsi',
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.image_outlined,
-                              color: Colors.black87,
+                              color: _textColor,
                             ),
                             onPressed: _pickImage,
                             tooltip: 'Tambah Gambar',
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.view_agenda_outlined,
-                              color: Colors.black87,
+                              color: _textColor,
                             ),
                             onPressed: () {
                               _builderState.addPage();
@@ -693,20 +746,20 @@ class _FormMakerPageState extends State<FormMakerPage>
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: _bgColor,
+      backgroundColor: _currentBgColor,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       leading: Padding(
         padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: _cardColor,
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new,
-              color: Colors.black87,
+              color: _textColor,
               size: 18,
             ),
             onPressed: () => Navigator.pop(context),
@@ -723,7 +776,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                 child: TabBar(
                   controller: _tabController,
                   labelColor: _primaryColor,
-                  unselectedLabelColor: Colors.black54,
+                  unselectedLabelColor: _subTextColor,
                   indicatorColor: _primaryColor,
                   indicatorWeight: 3,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -741,7 +794,7 @@ class _FormMakerPageState extends State<FormMakerPage>
         IconButton(
           icon: Icon(
             _isPreviewMode ? Icons.edit_outlined : Icons.visibility_outlined,
-            color: Colors.black54,
+            color: _appBarIconColor,
           ),
           onPressed: () {
             setState(() {
@@ -754,14 +807,13 @@ class _FormMakerPageState extends State<FormMakerPage>
         ),
         if (!_isPreviewMode)
           IconButton(
-            icon: const Icon(Icons.save_outlined, color: Colors.black54),
+            icon: Icon(Icons.save_outlined, color: _appBarIconColor),
             onPressed: _builderState.isSaving ? null : _saveDraft,
             tooltip: 'Simpan Draft',
           ),
         if (!_isPreviewMode)
           IconButton(
-            // FIX UX: ganti titik-tiga (yang cuma punya 1 menu) jadi tombol langsung.
-            icon: const Icon(Icons.account_balance, color: Colors.black54),
+            icon: Icon(Icons.account_balance, color: _appBarIconColor),
             tooltip: 'Simpan sebagai Template',
             onPressed: _builderState.isSaving ? null : _saveAsTemplate,
           ),
@@ -770,7 +822,7 @@ class _FormMakerPageState extends State<FormMakerPage>
           child: FilledButton.icon(
             onPressed: _builderState.isSaving ? null : _publishForm,
             icon: _builderState.isSaving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(
@@ -823,14 +875,14 @@ class _FormMakerPageState extends State<FormMakerPage>
     final banner = _builderState.bannerUrl;
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.image_outlined, color: Color(0xFF1E66D0)),
                 SizedBox(width: 10),
@@ -843,13 +895,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: _textColor,
                         ),
                       ),
                       SizedBox(height: 4),
                       Text(
                         'Gambar header di atas judul form',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                        style: TextStyle(fontSize: 13, color: _subTextColor),
                       ),
                     ],
                   ),
@@ -863,7 +915,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                 child: SizedBox(
                   height: 140,
                   width: double.infinity,
-                  child: Image.network(banner, fit: BoxFit.cover, errorBuilder: (_, _, _) {
+                  child: NgrokImage(banner, fit: BoxFit.cover, errorBuilder: (_, _, _) {
                     return Container(
                       color: const Color(0xFFE5E7EB),
                       alignment: Alignment.center,
@@ -903,14 +955,14 @@ class _FormMakerPageState extends State<FormMakerPage>
   Widget _buildFormAccessCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.lock_outline, color: Color(0xFFDC2626)),
                 SizedBox(width: 10),
@@ -923,13 +975,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: _textColor,
                         ),
                       ),
                       SizedBox(height: 4),
                       Text(
                         'Status, penerimaan respons, dan pembatasan',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                        style: TextStyle(fontSize: 13, color: _subTextColor),
                       ),
                     ],
                   ),
@@ -937,40 +989,42 @@ class _FormMakerPageState extends State<FormMakerPage>
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'STATUS FORM',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: Colors.black54,
+                color: _subTextColor,
               ),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.black12),
+                border: Border.all(color: _isDark ? const Color(0xFF334155) : Colors.black12),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _formStatus,
                   isExpanded: true,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: 'draft',
-                      child: Text('Draft', style: TextStyle(fontSize: 14)),
+                      child: Text('Draft', style: TextStyle(fontSize: 14, color: _textColor)),
                     ),
                     DropdownMenuItem(
                       value: 'published',
-                      child: Text('Dipublikasikan', style: TextStyle(fontSize: 14)),
+                      child: Text('Dipublikasikan', style: TextStyle(fontSize: 14, color: _textColor)),
                     ),
                     DropdownMenuItem(
                       value: 'closed',
-                      child: Text('Ditutup', style: TextStyle(fontSize: 14)),
+                      child: Text('Ditutup', style: TextStyle(fontSize: 14, color: _textColor)),
                     ),
                   ],
+                  dropdownColor: _isDark ? const Color(0xFF1E293B) : null,
+                  icon: Icon(Icons.arrow_drop_down, color: _textColor),
                   onChanged: (v) => setState(() => _formStatus = v!),
                 ),
               ),
@@ -983,12 +1037,12 @@ class _FormMakerPageState extends State<FormMakerPage>
               subtitle: 'Matikan untuk berhenti menerima jawaban tanpa menutup form',
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'BATAS RESPONS',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: Colors.black54,
+                color: _subTextColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -1016,20 +1070,21 @@ class _FormMakerPageState extends State<FormMakerPage>
                 width: 120,
                 child: TextField(
                   controller: _customSubLimitCtrl,
+                  style: TextStyle(color: _textColor),
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'Batas (>= 2)',
                     isDense: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Colors.black12),
+                      borderSide: BorderSide(color: _isDark ? const Color(0xFF475569) : Colors.black12),
                     ),
                   ),
                 ),
               ),
             ],
             const SizedBox(height: 12),
-            const Divider(),
+            Divider(color: _isDark ? const Color(0xFF334155) : null),
             const SizedBox(height: 12),
             _settingsSwitchRow(
               'Paksa layar penuh (anti-cheat)',
@@ -1048,22 +1103,22 @@ class _FormMakerPageState extends State<FormMakerPage>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                border: Border.all(color: const Color(0xFFFDBA74)),
+                color: _isDark ? const Color(0xFF451A03) : const Color(0xFFFFF7ED),
+                border: Border.all(color: _isDark ? const Color(0xFF9A3412) : const Color(0xFFFDBA74)),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: Color(0xFFEA580C), size: 18),
-                  SizedBox(width: 8),
+                  Icon(Icons.info_outline, color: _isDark ? const Color(0xFFFBBF24) : const Color(0xFFEA580C), size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Setelan tersimpan saat form disimpan (Simpan Draft / Publish). '
                       'Jadwal timer memakai durasi di kartu Form Timer.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF9A3412),
+                        color: _isDark ? const Color(0xFFFED7AA) : const Color(0xFF9A3412),
                         height: 1.4,
                       ),
                     ),
@@ -1080,7 +1135,7 @@ class _FormMakerPageState extends State<FormMakerPage>
   Widget _buildQuizSettingsCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1089,7 +1144,7 @@ class _FormMakerPageState extends State<FormMakerPage>
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1098,13 +1153,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: _textColor,
                         ),
                       ),
                       SizedBox(height: 4),
                       Text(
                         'Menetapkan pertanyaan dan nilai poin, serta menyediakan masukan secara otomatis',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                        style: TextStyle(fontSize: 13, color: _subTextColor),
                       ),
                     ],
                   ),
@@ -1119,12 +1174,12 @@ class _FormMakerPageState extends State<FormMakerPage>
             ),
             if (_isQuiz) ...[
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'RILIS NILAI',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+                  color: _subTextColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1141,12 +1196,12 @@ class _FormMakerPageState extends State<FormMakerPage>
                 (v) => setState(() => _releaseGrade = v.toString()),
               ),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'SETELAN RESPONDEN',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+                  color: _subTextColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1168,28 +1223,28 @@ class _FormMakerPageState extends State<FormMakerPage>
                 (v) => setState(() => _pointValues = v),
               ),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'DEFAULT KUIS GLOBAL',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+                  color: _subTextColor,
                 ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Nilai poin pertanyaan default',
-                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                      style: TextStyle(fontSize: 14, color: _textColor),
                     ),
                   ),
                   Container(
                     width: 60,
                     height: 36,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black12),
+                      border: Border.all(color: _isDark ? const Color(0xFF334155) : Colors.black12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     alignment: Alignment.center,
@@ -1202,12 +1257,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                         contentPadding: EdgeInsets.zero,
                       ),
                       controller: _pointValueCtrl,
+                      style: TextStyle(color: _textColor),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'poin',
-                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                    style: TextStyle(fontSize: 14, color: _subTextColor),
                   ),
                 ],
               ),
@@ -1245,7 +1301,7 @@ class _FormMakerPageState extends State<FormMakerPage>
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: TextStyle(fontSize: 13, color: _textColor),
               ),
             ),
           ],
@@ -1257,33 +1313,33 @@ class _FormMakerPageState extends State<FormMakerPage>
   Widget _buildResponseSettingsCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent, colorScheme: Theme.of(context).colorScheme.copyWith(onSurface: _textColor)),
         child: ExpansionTile(
-          title: const Text(
+          title: Text(
             'Jawaban',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: _textColor,
             ),
           ),
-          subtitle: const Text(
+          subtitle: Text(
             'Mengelola cara respons dikumpulkan dan dilindungi',
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+            style: TextStyle(fontSize: 13, color: _subTextColor),
           ),
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           children: [
-            const Divider(height: 1),
+            Divider(height: 1, color: _isDark ? const Color(0xFF334155) : null),
             const SizedBox(height: 16),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Mengirim salinan jawaban responden',
-                style: TextStyle(fontSize: 14, color: Colors.black87),
+                style: TextStyle(fontSize: 14, color: _textColor),
               ),
             ),
             const SizedBox(height: 8),
@@ -1292,9 +1348,9 @@ class _FormMakerPageState extends State<FormMakerPage>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.black12),
+                  border: Border.all(color: _isDark ? const Color(0xFF334155) : Colors.black12),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -1306,11 +1362,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                             value: e,
                             child: Text(
                               e,
-                              style: const TextStyle(fontSize: 14),
+                              style: TextStyle(fontSize: 14, color: _textColor),
                             ),
                           ),
                         )
                         .toList(),
+                    dropdownColor: _isDark ? const Color(0xFF1E293B) : null,
+                    icon: Icon(Icons.arrow_drop_down, color: _textColor),
                     onChanged: (v) => setState(() => _sendCopy = v!),
                   ),
                 ),
@@ -1337,40 +1395,40 @@ class _FormMakerPageState extends State<FormMakerPage>
   Widget _buildDefaultSettingsCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent, colorScheme: Theme.of(context).colorScheme.copyWith(onSurface: _textColor)),
         child: ExpansionTile(
-          title: const Text(
+          title: Text(
             'Default',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: _textColor,
             ),
           ),
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           children: [
-            const Divider(height: 1),
+            Divider(height: 1, color: _isDark ? const Color(0xFF334155) : null),
             const SizedBox(height: 16),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Pertanyaan default',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: _textColor,
                 ),
               ),
             ),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Setelan diterapkan untuk semua pertanyaan',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(fontSize: 12, color: _subTextColor),
               ),
             ),
             const SizedBox(height: 12),
@@ -1380,14 +1438,14 @@ class _FormMakerPageState extends State<FormMakerPage>
               (v) => setState(() => _requireQuestionDefault = v),
             ),
             const SizedBox(height: 16),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Terapkan ke semua pertanyaan',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black54,
+                  color: _subTextColor,
                 ),
               ),
             ),
@@ -1435,13 +1493,13 @@ class _FormMakerPageState extends State<FormMakerPage>
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                style: TextStyle(fontSize: 14, color: _textColor),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  style: TextStyle(fontSize: 11, color: _subTextColor),
                 ),
               ],
             ],
@@ -1453,7 +1511,7 @@ class _FormMakerPageState extends State<FormMakerPage>
           activeThumbColor: Colors.white,
           activeTrackColor: _primaryColor,
           inactiveThumbColor: Colors.white,
-          inactiveTrackColor: Colors.grey.shade400,
+          inactiveTrackColor: _isDark ? const Color(0xFF475569) : Colors.grey.shade400,
         ),
       ],
     );
@@ -1462,7 +1520,7 @@ class _FormMakerPageState extends State<FormMakerPage>
   Widget _buildTimerSettingsCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: _cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1474,13 +1532,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
+                    color: _isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.av_timer, color: _primaryColor),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1489,13 +1547,13 @@ class _FormMakerPageState extends State<FormMakerPage>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: _textColor,
                         ),
                       ),
                       SizedBox(height: 2),
                       Text(
                         'Manage constraints and timing for this form',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: TextStyle(fontSize: 12, color: _subTextColor),
                       ),
                     ],
                   ),
@@ -1503,11 +1561,11 @@ class _FormMakerPageState extends State<FormMakerPage>
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            Divider(color: _isDark ? const Color(0xFF334155) : null),
             const SizedBox(height: 16),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1516,12 +1574,12 @@ class _FormMakerPageState extends State<FormMakerPage>
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: _textColor,
                         ),
                       ),
                       Text(
                         'Set a time limit for form completion',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: TextStyle(fontSize: 12, color: _subTextColor),
                       ),
                     ],
                   ),
@@ -1535,19 +1593,19 @@ class _FormMakerPageState extends State<FormMakerPage>
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Select Timer Mode',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: _textColor,
               ),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.black12),
+                border: Border.all(color: _isDark ? const Color(0xFF334155) : Colors.black12),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: DropdownButtonHideUnderline(
@@ -1564,31 +1622,34 @@ class _FormMakerPageState extends State<FormMakerPage>
                               value: e,
                               child: Text(
                                 e,
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(fontSize: 14, color: _textColor),
                               ),
                             ),
                           )
                           .toList(),
+                  dropdownColor: _isDark ? const Color(0xFF1E293B) : null,
+                  icon: Icon(Icons.arrow_drop_down, color: _textColor),
                   onChanged: (v) => setState(() => _timerMode = v!),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Duration',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: _textColor,
               ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _durationCtrl,
+              style: TextStyle(color: _textColor),
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: Colors.black12),
+                  borderSide: BorderSide(color: _isDark ? const Color(0xFF475569) : Colors.black12),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -1601,8 +1662,8 @@ class _FormMakerPageState extends State<FormMakerPage>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
+                color: _isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                border: Border.all(color: _isDark ? const Color(0xFF1D4ED8) : const Color(0xFFBFDBFE)),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -1610,12 +1671,12 @@ class _FormMakerPageState extends State<FormMakerPage>
                 children: [
                   Icon(Icons.info_outline, color: _primaryColor, size: 18),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'The form will auto-submit and lock once the timer runs out. Respondents will see a countdown display at the top of the page.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF1D4ED8),
+                        color: _isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
                         height: 1.4,
                       ),
                     ),

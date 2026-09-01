@@ -2,7 +2,7 @@ import os
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from .. import models
 from ..deps import get_optional_user, get_respondent_key
@@ -10,7 +10,7 @@ from ..deps import get_optional_user, get_respondent_key
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 UPLOAD_DIR = "static/uploads"
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000").strip().rstrip("/")
+BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 
 # FIX Bug: batchasi tipe file supaya tidak bisa upload HTML/JS (stored XSS kalau
 # diserve static) atau file raksasa yang memenuhi disk.
@@ -25,6 +25,7 @@ MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 
 @router.post("")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     current_user: Optional[models.User] = Depends(get_optional_user),
     respondent_key: Optional[str] = Depends(get_respondent_key),
@@ -53,4 +54,12 @@ async def upload_file(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    return {"file_url": f"{BASE_URL}/static/uploads/{filename}"}
+    # FIX: URL file harus menggunakan host yang sama dengan request si client,
+    # supaya gambar/file selalu bisa dimuat kembali (local dev maupun ngrok).
+    # Env BASE_URL dipakai sebagai fallback/override jika diinginkan host publik tetap.
+    if not BASE_URL:
+        url_base = str(request.base_url).rstrip("/")
+    else:
+        url_base = BASE_URL
+
+    return {"file_url": f"{url_base}/static/uploads/{filename}"}

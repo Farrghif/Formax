@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
+import '../../../widgets/ngrok_image.dart';
 import '../../../widgets/rich_text_field.dart';
 
 class QuestionEditor extends StatefulWidget {
@@ -54,12 +55,18 @@ class _QuestionEditorState extends State<QuestionEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final typeBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FB);
+    final typeBorder = isDark ? const Color(0xFF334155) : Colors.black12;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : Colors.black87;
+    final iconColor = isDark ? const Color(0xFF94A3B8) : Colors.black54;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Drag Handle
-        const Center(
-          child: Icon(Icons.drag_handle, color: Colors.black26, size: 20),
+        Center(
+          child: Icon(Icons.drag_handle, color: isDark ? const Color(0xFF64748B) : Colors.black26, size: 20),
         ),
         const SizedBox(height: 8),
 
@@ -111,7 +118,8 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black12),
+                    color: typeBg,
+                    border: Border.all(color: typeBorder),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -120,11 +128,11 @@ class _QuestionEditorState extends State<QuestionEditor> {
                       Expanded(
                         child: Text(
                           widget.question.type.label, 
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), 
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textColor), 
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.arrow_drop_down, size: 20, color: Colors.black54),
+                      Icon(Icons.arrow_drop_down, size: 20, color: iconColor),
                     ],
                   ),
                 ),
@@ -137,7 +145,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
 
         // Poin per soal (bobot nilai) — hanya untuk jenis yang bisa dinilai
         if (_canGrade(widget.question)) ...[
-          _buildPointsRow(widget.question),
+          _buildPointsRow(widget.question, isDark),
           const SizedBox(height: 12),
         ],
 
@@ -154,30 +162,30 @@ class _QuestionEditorState extends State<QuestionEditor> {
         q.type != QuestionType.fileUpload;
   }
 
-  Widget _buildPointsRow(QuestionData q) {
+  Widget _buildPointsRow(QuestionData q, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F6FA),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E6F0)),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E6F0)),
       ),
       child: Row(
         children: [
           const Icon(Icons.stars_outlined, size: 18, color: Color(0xFF6B7280)),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
               'Poin soal',
-              style: TextStyle(fontSize: 14, color: Color(0xFF374151)),
+              style: TextStyle(fontSize: 14, color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF374151)),
             ),
           ),
           Container(
             width: 56,
             height: 34,
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFD1D5DB)),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB)),
               borderRadius: BorderRadius.circular(6),
             ),
             alignment: Alignment.center,
@@ -185,6 +193,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
               controller: _pointsCtrl,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
@@ -215,13 +224,72 @@ class _QuestionEditorState extends State<QuestionEditor> {
         return Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: (kIsWeb || q.imageUrl!.startsWith('http'))
-              ? Image.network(q.imageUrl!, fit: BoxFit.cover)
+              ? NgrokImage(q.imageUrl!, fit: BoxFit.cover)
               : Image.file(File(q.imageUrl!), fit: BoxFit.cover),
         );
       }
       return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
     }
 
+    // Untuk tipe lain, tampilkan gambar yang ditempel di atas konten pertanyaan
+    // (perilaku seperti Google Form) lengkap dengan tombol hapus.
+    final attachedImage = _buildAttachedImage();
+    final body = _buildTypeBody();
+    if (attachedImage == null) return body;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [attachedImage, const SizedBox(height: 12), body],
+    );
+  }
+
+  /// Gambar yang ditempel ke pertanyaan non-gambar, jika ada.
+  Widget? _buildAttachedImage() {
+    final q = widget.question;
+    if (q.type == QuestionType.image ||
+        q.imageUrl == null ||
+        q.imageUrl!.isEmpty) {
+      return null;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Stack(
+      alignment: Alignment.topRight,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: (kIsWeb || q.imageUrl!.startsWith('http'))
+              ? NgrokImage(
+                  q.imageUrl!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                )
+              : Image.file(
+                  File(q.imageUrl!),
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+        ),
+        IconButton(
+          tooltip: 'Hapus gambar',
+          style: IconButton.styleFrom(
+            backgroundColor: isDark ? Colors.black54 : Colors.white,
+            foregroundColor: isDark ? Colors.white : Colors.black54,
+            padding: const EdgeInsets.all(6),
+          ),
+          icon: const Icon(Icons.close, size: 18),
+          onPressed: () {
+            widget.question.imageUrl = null;
+            widget.onChanged();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeBody() {
+    final q = widget.question;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (q.type == QuestionType.linearScale) {
       return Column(
         children: [
@@ -339,15 +407,15 @@ class _QuestionEditorState extends State<QuestionEditor> {
                       ? Icons.radio_button_unchecked 
                       : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
                     size: 20, 
-                    color: Colors.black26,
+                    color: isDark ? const Color(0xFF64748B) : Colors.black26,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: opt.isOther
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12.0),
-                        child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: Colors.black87)),
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
                       )
                     : RichTextField(
                         key: ValueKey('opt_${opt.id}'),
@@ -366,7 +434,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: IconButton(
-                      icon: const Icon(Icons.close, size: 20, color: Colors.black38),
+                      icon: Icon(Icons.close, size: 20, color: isDark ? const Color(0xFF94A3B8) : Colors.black38),
                       onPressed: () {
                         q.options.removeAt(i);
                         widget.onChanged();
@@ -401,7 +469,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
                                 size: 22,
                                 color: opt.isCorrect
                                     ? const Color(0xFF4F46E5)
-                                    : Colors.black26,
+                                    : (isDark ? const Color(0xFF64748B) : Colors.black26),
                               ),
                               if (opt.isCorrect)
                                 const Text(
@@ -429,7 +497,7 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 ? Icons.radio_button_unchecked 
                 : (q.type == QuestionType.checkboxes ? Icons.check_box_outline_blank : Icons.circle_outlined),
               size: 20, 
-              color: Colors.black26,
+              color: isDark ? const Color(0xFF64748B) : Colors.black26,
             ),
             const SizedBox(width: 12),
             InkWell(
@@ -437,10 +505,10 @@ class _QuestionEditorState extends State<QuestionEditor> {
                 q.options.add(QuestionOptionData(label: 'Opsi ${q.options.length + 1}'));
                 widget.onChanged();
               },
-              child: const Text('Tambah opsi', style: TextStyle(color: Colors.black54, fontSize: 14)),
+              child: Text('Tambah opsi', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.black54, fontSize: 14)),
             ),
             if (!q.options.any((o) => o.isOther) && (q.type == QuestionType.multipleChoice || q.type == QuestionType.checkboxes)) ...[
-              const Text(' atau ', style: TextStyle(color: Colors.black54, fontSize: 14)),
+              Text(' atau ', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.black54, fontSize: 14)),
               InkWell(
                 onTap: () {
                   q.options.add(QuestionOptionData(label: 'Lainnya', isOther: true));

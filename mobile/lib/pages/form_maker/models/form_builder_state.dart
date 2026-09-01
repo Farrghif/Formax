@@ -185,6 +185,42 @@ class FormBuilderState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pertanyaan yang sedang dipilih/diaktifkan (field yang sedang diedit).
+  QuestionData? get activeQuestion {
+    if (activeQuestionId == null || activePageId == null) return null;
+    for (final page in pages) {
+      if (page.id != activePageId) continue;
+      for (final q in page.questions) {
+        if (q.id == activeQuestionId) return q;
+      }
+    }
+    return null;
+  }
+
+  /// Tempel gambar ke pertanyaan yang sedang aktif (perilaku seperti Google Form).
+  /// Mengembalikan true jika berhasil ditempel ke pertanyaan aktif.
+  bool attachImageToActiveQuestion(String imageUrl) {
+    final q = activeQuestion;
+    if (q == null) return false;
+    q.imageUrl = imageUrl;
+    notifyListeners();
+    return true;
+  }
+
+  /// Hapus gambar yang ditempel pada sebuah pertanyaan.
+  void removeImageFromQuestion(String questionId, String pageId) {
+    for (final page in pages) {
+      if (page.id != pageId) continue;
+      for (final q in page.questions) {
+        if (q.id == questionId) {
+          q.imageUrl = null;
+          break;
+        }
+      }
+    }
+    notifyListeners();
+  }
+
   void addQuestion(String pageId, QuestionType type, {String? imageUrl}) {
     final pageIndex = pages.indexWhere((p) => p.id == pageId);
     if (pageIndex == -1) return;

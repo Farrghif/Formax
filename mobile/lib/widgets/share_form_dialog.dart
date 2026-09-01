@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'ngrok_image.dart';
 
 class ShareFormDialog extends StatefulWidget {
   final String link;
@@ -200,7 +201,7 @@ class _ShareFormDialogState extends State<ShareFormDialog> {
               border: Border.all(color: colorScheme.outlineVariant),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.network(
+            child: NgrokImage(
               widget.qrUrl,
               height: 180,
               width: 180,

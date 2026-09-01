@@ -30,12 +30,12 @@ class BuilderToolbar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.text_fields, color: Colors.black87),
+            icon: Icon(Icons.text_fields, color: Colors.black87),
             tooltip: 'Tambah Judul/Teks',
             onPressed: onAddText,
           ),
           IconButton(
-            icon: const Icon(Icons.image_outlined, color: Colors.black87),
+            icon: Icon(Icons.image_outlined, color: Colors.black87),
             tooltip: 'Tambah Gambar',
             onPressed: onAddImage,
           ),

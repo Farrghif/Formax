@@ -36,6 +36,9 @@ class RichTextView extends StatelessWidget {
     final content = html?.trim() ?? '';
     if (content.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultColor = isDark ? const Color(0xFFF8FAFC) : Colors.black87;
+
     final ts = textStyle;
     return Padding(
       padding: padding ?? EdgeInsets.zero,
@@ -48,7 +51,7 @@ class RichTextView extends StatelessWidget {
             fontSize: ts?.fontSize != null ? FontSize(ts!.fontSize!) : FontSize.medium,
             fontWeight: ts?.fontWeight ?? FontWeight.normal,
             fontStyle: ts?.fontStyle,
-            color: ts?.color ?? Colors.black87,
+            color: ts?.color ?? defaultColor,
             lineHeight: ts?.height != null ? LineHeight(ts!.height!) : LineHeight(1.2),
             fontFamily: ts?.fontFamily,
             letterSpacing: ts?.letterSpacing,
@@ -56,7 +59,7 @@ class RichTextView extends StatelessWidget {
             textDecorationColor: ts?.decorationColor,
           ),
           'p': Style(margin: Margins.only(bottom: 4)),
-          'a': Style(color: const Color(0xFF4F46E5)),
+          'a': Style(color: const Color(0xFF818CF8)),
         },
       ),
     );
