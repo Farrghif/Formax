@@ -124,11 +124,45 @@ export default function FormFillPage() {
   // Pagination & Navigation
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Zoom controls (perbesar/perkecil tampilan form)
+  // Zoom controls (perbesar/perkecil teks pertanyaan didalam card)
   const [zoomLevel, setZoomLevel] = useState(() => {
     const saved = parseInt(localStorage.getItem('formFillZoom'), 10);
     return !isNaN(saved) && saved >= ZOOM_MIN && saved <= ZOOM_MAX ? saved : 100;
   });
+
+  // Image Modal / Lightbox preview (klik gambar di soal untuk perbesar)
+  const [modalImage, setModalImage] = useState(null);
+  const [imgModalZoom, setImgModalZoom] = useState(1);
+
+  // Esc key listener to close image preview
+  useEffect(() => {
+    if (!modalImage) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setModalImage(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalImage]);
+
+  // Delegated click handler to detect clicks on images within questions/content
+  const handleContentImageClick = (e) => {
+    const target = e.target;
+    if (target && target.tagName === 'IMG') {
+      if (
+        target.classList.contains('form-fill-logo-img') ||
+        target.classList.contains('option-check-icon')
+      ) return;
+
+      const src = target.currentSrc || target.src || target.getAttribute('src');
+      if (src) {
+        setModalImage({
+          src,
+          alt: target.alt || target.getAttribute('alt') || 'Gambar Pertanyaan',
+        });
+        setImgModalZoom(1);
+      }
+    }
+  };
 
   // Join Token modal
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -996,14 +1030,14 @@ export default function FormFillPage() {
           <h1 className="form-fill-logo">Form4x</h1>
         </div>
         <div className="form-fill-header-right">
-          {/* Zoom Controls (perbesar / perkecil form) */}
+          {/* Zoom Controls (perbesar / perkecil teks pertanyaan didalam card) */}
           <div className="zoom-controls">
             <button
               className="zoom-btn"
               onClick={handleZoomOut}
               disabled={zoomLevel <= ZOOM_MIN}
-              title="Perkecil tampilan"
-              aria-label="Perkecil tampilan"
+              title="Perkecil teks pertanyaan"
+              aria-label="Perkecil teks pertanyaan"
             >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 12H4" />
@@ -1012,7 +1046,7 @@ export default function FormFillPage() {
             <button
               className="zoom-level-label"
               onClick={handleZoomReset}
-              title="Klik untuk reset ke 100%"
+              title="Reset ukuran teks ke 100%"
             >
               {zoomLevel}%
             </button>
@@ -1020,8 +1054,8 @@ export default function FormFillPage() {
               className="zoom-btn"
               onClick={handleZoomIn}
               disabled={zoomLevel >= ZOOM_MAX}
-              title="Perbesar tampilan"
-              aria-label="Perbesar tampilan"
+              title="Perbesar teks pertanyaan"
+              aria-label="Perbesar teks pertanyaan"
             >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -1073,7 +1107,7 @@ export default function FormFillPage() {
       </header>
 
       {/* Main Grid Content */}
-      <main className="form-fill-main" style={{ zoom: zoomLevel / 100 }}>
+      <main className="form-fill-main">
         {/* Left Column: Question Navigator */}
         <aside className="question-navigator">
           <h2 className="navigator-title">Question Navigator</h2>
@@ -1108,7 +1142,11 @@ export default function FormFillPage() {
         </aside>
 
         {/* Right Column: Questions Form Content */}
-        <section className="form-content-area">
+        <section
+          className="form-content-area"
+          style={{ zoom: zoomLevel / 100, '--q-scale': zoomLevel / 100 }}
+          onClick={handleContentImageClick}
+        >
           {form?.banner_url && (
             <div className="form-fill-banner">
               <NgrokImage src={form.banner_url} alt="Banner form" className="form-fill-banner-img" />
@@ -1299,6 +1337,77 @@ export default function FormFillPage() {
                 Lanjutkan Mengisi
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Lightbox Overlay */}
+      {modalImage && (
+        <div
+          className="img-lightbox-overlay"
+          onClick={() => setModalImage(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview Gambar"
+        >
+          <div className="img-lightbox-container" onClick={(e) => e.stopPropagation()}>
+            <div className="img-lightbox-header">
+              <div className="img-lightbox-title-wrap">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+                <span className="img-lightbox-title">{modalImage.alt || 'Detail Gambar'}</span>
+              </div>
+              <div className="img-lightbox-controls">
+                <button
+                  type="button"
+                  className="lightbox-btn"
+                  onClick={() => setImgModalZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                  disabled={imgModalZoom <= 0.5}
+                  title="Perkecil Gambar"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                  </svg>
+                </button>
+                <span
+                  className="lightbox-zoom-val"
+                  onClick={() => setImgModalZoom(1)}
+                  title="Klik untuk reset ke 100%"
+                >
+                  {Math.round(imgModalZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="lightbox-btn"
+                  onClick={() => setImgModalZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
+                  disabled={imgModalZoom >= 3}
+                  title="Perbesar Gambar"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                <div className="lightbox-divider" />
+                <button
+                  type="button"
+                  className="lightbox-close-btn"
+                  onClick={() => setModalImage(null)}
+                  title="Tutup (Esc)"
+                  aria-label="Tutup"
+                >
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="img-lightbox-body">
+              <div className="img-lightbox-stage" style={{ transform: `scale(${imgModalZoom})` }}>
+                <img src={modalImage.src} alt={modalImage.alt || 'Preview Gambar'} className="img-lightbox-img" />
+              </div>
+            </div>
+            <p className="img-lightbox-hint">Klik di luar atau tekan <kbd>Esc</kbd> untuk menutup</p>
           </div>
         </div>
       )}

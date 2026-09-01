@@ -1726,3 +1726,293 @@
   .score-value { font-size: 16px; }
   .result-title { font-size: 17px; }
 }
+
+/* ============================================================
+   QUESTION CARD FONT TEXT ZOOM (Zoom Font Teks Pertanyaan dalam Card)
+   ============================================================ */
+.form-content-area {
+  zoom: var(--q-scale, 1);
+}
+
+.form-content-area,
+.question-card,
+.form-header-details {
+  --q-scale: 1;
+}
+
+.form-title {
+  font-size: calc(26px * var(--q-scale, 1));
+}
+
+.form-description,
+.form-description p,
+.form-description span {
+  font-size: calc(14px * var(--q-scale, 1));
+}
+
+.question-label {
+  font-size: calc(15px * var(--q-scale, 1));
+}
+
+.question-number {
+  font-size: calc(15px * var(--q-scale, 1));
+}
+
+.question-label-content,
+.question-label-content p,
+.question-label-content span,
+.question-label-content li,
+.question-label-content blockquote {
+  font-size: calc(15px * var(--q-scale, 1));
+}
+
+.question-context-box,
+.question-context-box p,
+.question-context-box span {
+  font-size: calc(14px * var(--q-scale, 1));
+}
+
+.option-label-text,
+.option-label-text p,
+.option-label-text span {
+  font-size: calc(14px * var(--q-scale, 1));
+}
+
+.question-input,
+.question-dropdown,
+.question-date-input {
+  font-size: calc(14px * var(--q-scale, 1));
+}
+
+/* ============================================================
+   IMAGE LIGHTBOX MODAL (Preview Gambar Zoom dengan Dim Dark Overlay)
+   ============================================================ */
+.form-content-area img,
+.question-card img,
+.question-label-content img,
+.form-description img,
+.result-main img {
+  cursor: zoom-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-content-area img:hover,
+.question-card img:hover,
+.question-label-content img:hover,
+.form-description img:hover,
+.result-main img:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.25);
+}
+
+.img-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: lightboxFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes lightboxFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.img-lightbox-container {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 92vw;
+  max-height: 90vh;
+  width: 880px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+[data-theme="dark"] .img-lightbox-container {
+  background: #1e1e3a;
+  border-color: #2d2d4a;
+}
+
+.img-lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-hover, #f8fafc);
+}
+
+[data-theme="dark"] .img-lightbox-header {
+  background: #16162c;
+  border-bottom-color: #2d2d4a;
+}
+
+.img-lightbox-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary, #0f172a);
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.img-lightbox-title-wrap svg {
+  color: var(--accent, #2563eb);
+  flex-shrink: 0;
+}
+
+.img-lightbox-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.img-lightbox-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lightbox-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .lightbox-btn {
+  background: #252545;
+  border-color: #3a3a5c;
+  color: #cbd5e1;
+}
+
+.lightbox-btn:hover:not(:disabled) {
+  background: var(--accent-soft, #dbeafe);
+  color: var(--accent, #2563eb);
+  border-color: var(--accent-border, #bfdbfe);
+}
+
+.lightbox-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lightbox-zoom-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #334155);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 44px;
+  text-align: center;
+}
+
+.lightbox-zoom-val:hover {
+  background: var(--accent-soft, #dbeafe);
+  color: var(--accent, #2563eb);
+}
+
+.lightbox-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border, #cbd5e1);
+  margin: 0 4px;
+}
+
+.lightbox-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 99px;
+  border: none;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lightbox-close-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.img-lightbox-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.03);
+  min-height: 280px;
+  max-height: calc(88vh - 120px);
+}
+
+[data-theme="dark"] .img-lightbox-body {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.img-lightbox-stage {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+}
+
+.img-lightbox-img {
+  max-width: 100%;
+  max-height: calc(78vh - 140px);
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+
+.img-lightbox-hint {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted, #64748b);
+  padding: 8px 16px;
+  margin: 0;
+  border-top: 1px solid var(--border, #f1f5f9);
+  background: var(--bg-hover, #f8fafc);
+}
+
+[data-theme="dark"] .img-lightbox-hint {
+  background: #16162c;
+  border-top-color: #2d2d4a;
+}
+
+.img-lightbox-hint kbd {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: monospace;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
