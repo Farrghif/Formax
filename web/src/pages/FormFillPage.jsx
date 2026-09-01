@@ -208,8 +208,19 @@ export default function FormFillPage() {
 
   // User Profile & Hover Popover
   const [userProfile, setUserProfile] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const hoverTimeoutRef = useRef(null);
+
+  // Load user profile automatically on mount if token exists
+  useEffect(() => {
+    const curToken = localStorage.getItem('token');
+    if (curToken && !userProfile) {
+      getMe(curToken)
+        .then((data) => setUserProfile(data))
+        .catch(() => { });
+    }
+  }, []);
 
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState(null);
@@ -523,6 +534,63 @@ export default function FormFillPage() {
     hoverTimeoutRef.current = setTimeout(() => {
       setShowProfilePopover(false);
     }, 200);
+  };
+
+  // Render Profile avatar & hover popover
+  const renderProfileMenu = () => {
+    return (
+      <div
+        className="profile-menu-wrapper"
+        onMouseEnter={handleProfileMouseEnter}
+        onMouseLeave={handleProfileMouseLeave}
+      >
+        <button className="profile-avatar-btn" aria-label="Profile User">
+          {userProfile?.avatar_url && !avatarError ? (
+            <NgrokImage
+              src={userProfile.avatar_url}
+              alt={userProfile.full_name || 'Profile'}
+              className="profile-avatar-img"
+              onError={() => setAvatarError(true)}
+            />
+          ) : userProfile?.full_name ? (
+            <span className="profile-avatar-initial">{userProfile.full_name.charAt(0).toUpperCase()}</span>
+          ) : (
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          )}
+        </button>
+        {showProfilePopover && (
+          <div className="profile-popover">
+            <div className="profile-popover-header">
+              <div className="profile-popover-avatar">
+                {userProfile?.avatar_url && !avatarError ? (
+                  <NgrokImage
+                    src={userProfile.avatar_url}
+                    alt={userProfile.full_name || 'Profile'}
+                    className="profile-popover-avatar-img"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : userProfile?.full_name ? (
+                  userProfile.full_name.charAt(0).toUpperCase()
+                ) : (
+                  'U'
+                )}
+              </div>
+              <div className="profile-popover-info">
+                <p className="profile-popover-name">{userProfile?.full_name || 'Pengguna'}</p>
+                <p className="profile-popover-email">{userProfile?.email || ''}</p>
+              </div>
+            </div>
+            <div className="profile-popover-footer">
+              <span className="profile-popover-status">
+                <span className="status-dot" /> Active Session
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Helper to check if a question is answered
@@ -970,35 +1038,7 @@ export default function FormFillPage() {
           </div>
           <div className="form-fill-header-right">
             <ThemeToggle />
-            <div
-              className="profile-menu-wrapper"
-              onMouseEnter={handleProfileMouseEnter}
-              onMouseLeave={handleProfileMouseLeave}
-            >
-              <button className="profile-avatar-btn" aria-label="Profile">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-              {showProfilePopover && (
-                <div className="profile-popover">
-                  <div className="profile-popover-header">
-                    <div className="profile-popover-avatar">
-                      {userProfile?.full_name ? userProfile.full_name.charAt(0).toUpperCase() : 'U'}
-                    </div>
-                    <div className="profile-popover-info">
-                      <p className="profile-popover-name">{userProfile?.full_name || 'Loading...'}</p>
-                      <p className="profile-popover-email">{userProfile?.email || ''}</p>
-                    </div>
-                  </div>
-                  <div className="profile-popover-footer">
-                    <span className="profile-popover-status">
-                      <span className="status-dot" /> Terhubung
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+            {renderProfileMenu()}
           </div>
         </header>
         <div className="success-card">
@@ -1105,36 +1145,7 @@ export default function FormFillPage() {
           )}
 
           <ThemeToggle />
-          {/* Profile Logo - Hover fetches GET /auth/me */}
-          <div
-            className="profile-menu-wrapper"
-            onMouseEnter={handleProfileMouseEnter}
-            onMouseLeave={handleProfileMouseLeave}
-          >
-            <button className="profile-avatar-btn" aria-label="Profile User">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
-            {showProfilePopover && (
-              <div className="profile-popover">
-                <div className="profile-popover-header">
-                  <div className="profile-popover-avatar">
-                    {userProfile?.full_name ? userProfile.full_name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div className="profile-popover-info">
-                    <p className="profile-popover-name">{userProfile?.full_name || 'Loading...'}</p>
-                    <p className="profile-popover-email">{userProfile?.email || ''}</p>
-                  </div>
-                </div>
-                <div className="profile-popover-footer">
-                  <span className="profile-popover-status">
-                    <span className="status-dot" /> Active Session
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+          {renderProfileMenu()}
         </div>
       </header>
 
