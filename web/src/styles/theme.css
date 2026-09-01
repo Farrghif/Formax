@@ -376,8 +376,12 @@ body,
 
 /* Sidebar Dark Mode */
 [data-theme="dark"] .db-sidebar {
-  background: var(--bg-sidebar);
+  background: linear-gradient(180deg, #0f172a 0%, #131326 50%, #1c1c38 100%);
   border-right: 1px solid var(--border);
+}
+[data-theme="dark"] .db-logo-icon {
+  background: transparent;
+  box-shadow: none;
 }
 [data-theme="dark"] .db-nav-item.active {
   background: var(--sidebar-bg-active);
@@ -385,11 +389,16 @@ body,
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 [data-theme="dark"] .db-sidebar-footer {
-  background: var(--bg-sidebar);
-  border-top-color: var(--sidebar-footer-border);
+  background: transparent;
+  border-top-color: var(--border);
+}
+[data-theme="dark"] .db-user {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
 }
 [data-theme="dark"] .db-user:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-medium);
   box-shadow: none;
 }
 [data-theme="dark"] .db-user-name {
