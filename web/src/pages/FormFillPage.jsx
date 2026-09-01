@@ -10,7 +10,7 @@ import { apiFetch } from '../api/config';
 import logoForm4x from '../assets/logo_form4x.png';
 import '../styles/form-fill.css';
 
-const QUESTIONS_PER_PAGE = 4;
+const QUESTIONS_PER_PAGE = 5;
 const ZOOM_MIN = 50;
 const ZOOM_MAX = 200;
 const ZOOM_STEP = 10;
@@ -123,6 +123,38 @@ export default function FormFillPage() {
 
   // Pagination & Navigation
   const [currentPage, setCurrentPage] = useState(0);
+  const [activeQuestionId, setActiveQuestionId] = useState(null);
+  const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
+  const navScrollRef = useRef(null);
+
+  const handleSelectQuestion = (q, idx) => {
+    const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
+    setCurrentPage(targetPage);
+    setActiveQuestionId(q.id);
+    setMobileNavExpanded(false);
+
+    if (navScrollRef.current) {
+      const activeBtn = navScrollRef.current.querySelector(`[data-nav-id="${q.id}"]`);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+
+    setTimeout(() => {
+      const el = document.getElementById(`q-${q.id}`);
+      if (el) {
+        const headerOffset = 90;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth',
+        });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 60);
+  };
 
   // Zoom controls (perbesar/perkecil teks pertanyaan didalam card)
   const [zoomLevel, setZoomLevel] = useState(() => {
@@ -328,10 +360,10 @@ export default function FormFillPage() {
       doneRef.current = true;
       setShowSubmitModal(false);
       setValidationErrors(new Set());
-      try { localStorage.removeItem(`bm:${slug}`); } catch {}
+      try { localStorage.removeItem(`bm:${slug}`); } catch { }
       setBookmarked(new Set());
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
     } catch (err) {
       // Jika backend 422 karena wajib, sync highlight + scroll
@@ -376,7 +408,7 @@ export default function FormFillPage() {
     setCheated(true);
     setShowFullscreenWarning(true);
     if (submissionId && form?.require_fullscreen) {
-      flagCheated(getToken(), submissionId).catch(() => {});
+      flagCheated(getToken(), submissionId).catch(() => { });
     }
   }, [submissionId, form, token]);
 
@@ -410,7 +442,7 @@ export default function FormFillPage() {
       setResult(data);
       setShowResult(true);
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
     } catch (err) {
       alert(err.message || 'Gagal mengambil hasil form');
@@ -483,7 +515,7 @@ export default function FormFillPage() {
     if (!userProfile) {
       getMe(getToken())
         .then((data) => setUserProfile(data))
-        .catch(() => {});
+        .catch(() => { });
     }
   };
 
@@ -516,7 +548,7 @@ export default function FormFillPage() {
       const next = new Set(prev);
       if (next.has(qId)) next.delete(qId);
       else next.add(qId);
-      try { localStorage.setItem(`bm:${slug}`, JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem(`bm:${slug}`, JSON.stringify([...next])); } catch { }
       return next;
     });
   }, [slug]);
@@ -1110,28 +1142,34 @@ export default function FormFillPage() {
       <main className="form-fill-main">
         {/* Left Column: Question Navigator */}
         <aside className="question-navigator">
-          <h2 className="navigator-title">Question Navigator</h2>
-          <p className="navigator-subtitle">{totalQuestions} Questions Total</p>
+          <div className="navigator-header">
+            <div>
+              <h2 className="navigator-title">Question Navigator</h2>
+              <p className="navigator-subtitle">{answeredCount} dari {totalQuestions} Soal Terisi</p>
+            </div>
+          </div>
+
           <div className="navigator-grid">
             {questions.map((q, idx) => {
               const isAns = isQuestionAnswered(q.id);
               const isBm = bookmarked.has(q.id);
               const qPage = Math.floor(idx / QUESTIONS_PER_PAGE);
               const isCurrentPage = qPage === currentPage;
+              const isActiveQ = activeQuestionId === q.id;
+
               let boxState = 'unanswered';
               if (isBm && !isAns) boxState = 'bookmarked';
               else if (isAns) boxState = 'answered';
-              const bmClass = isBm && isAns ? ' bookmarked' : isBm && !isAns ? '' : '';
-              // untuk sudah diisi+bookmark: tetap biru tapi tambah strip kuning via ::after
-              const finalClass = `navigator-box ${boxState}${bmClass} ${isCurrentPage ? 'current-page' : ''}`;
+              const bmClass = isBm && isAns ? ' bookmarked' : '';
+
+              const finalClass = `navigator-box ${boxState}${bmClass} ${isCurrentPage ? 'current-page' : ''} ${isActiveQ ? 'active-question' : ''}`;
+
               return (
                 <div
                   key={q.id}
+                  data-nav-id={q.id}
                   className={finalClass}
-                  onClick={() => {
-                    setCurrentPage(qPage);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
+                  onClick={() => handleSelectQuestion(q, idx)}
                   title={`Soal #${idx + 1} (${isAns ? 'Sudah Diisi' : 'Belum Diisi'}${isBm ? ' • Ditandai' : ''})`}
                 >
                   {idx + 1}
@@ -1266,28 +1304,28 @@ export default function FormFillPage() {
         const missingInModal = getMissingRequired();
         const canSubmit = missingInModal.length === 0;
         return (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h2 className="modal-title">Kirim Jawaban Form?</h2>
-            <p className="modal-desc">
-              Anda telah menjawab {answeredCount} dari {totalQuestions} pertanyaan. Setelah dikirim, jawaban tidak dapat diubah lagi.
-            </p>
-            {missingInModal.length > 0 && (
-              <div className="required-modal-warn">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
-                <span>Masih ada {missingInModal.length} pertanyaan wajib yang belum dijawab. Lengkapi dulu sebelum mengirim.</span>
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <h2 className="modal-title">Kirim Jawaban Form?</h2>
+              <p className="modal-desc">
+                Anda telah menjawab {answeredCount} dari {totalQuestions} pertanyaan. Setelah dikirim, jawaban tidak dapat diubah lagi.
+              </p>
+              {missingInModal.length > 0 && (
+                <div className="required-modal-warn">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                  <span>Masih ada {missingInModal.length} pertanyaan wajib yang belum dijawab. Lengkapi dulu sebelum mengirim.</span>
+                </div>
+              )}
+              <div className="modal-actions">
+                <button className="modal-btn-secondary" onClick={() => setShowSubmitModal(false)} disabled={isSubmitting}>
+                  Periksa Kembali
+                </button>
+                <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting || !canSubmit} title={!canSubmit ? `Lengkapi ${missingInModal.length} soal wajib dulu` : ''}>
+                  {isSubmitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}
+                </button>
               </div>
-            )}
-            <div className="modal-actions">
-              <button className="modal-btn-secondary" onClick={() => setShowSubmitModal(false)} disabled={isSubmitting}>
-                Periksa Kembali
-              </button>
-              <button className="modal-btn-primary" onClick={() => handleFinalSubmit()} disabled={isSubmitting || !canSubmit} title={!canSubmit ? `Lengkapi ${missingInModal.length} soal wajib dulu` : ''}>
-                {isSubmitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}
-              </button>
             </div>
           </div>
-        </div>
         );
       })()}
 
