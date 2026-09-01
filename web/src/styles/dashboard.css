@@ -100,9 +100,13 @@
 .db-logo-text {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 145px;
 }
 
 .db-logo-name {
+  display: block;
   font-size: 20px;
   font-weight: 800;
   color: var(--sidebar-logo-name);
@@ -111,10 +115,15 @@
 }
 
 .db-logo-tagline {
-  font-size: 9px;
+  display: block;
+  font-size: 8.5px;
   color: var(--sidebar-logo-tagline);
-  line-height: 1.4;
+  line-height: 1.3;
   font-weight: 500;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  margin-top: 2px;
+  max-width: 100%;
 }
 
 /* Nav — scroll internal, footer tetap nempel bawah */
@@ -947,8 +956,8 @@
     cursor: pointer;
     flex-shrink: 0;
   }
-  .db-logo { margin-bottom: 24px; justify-content: flex-start; padding-left: 4px; }
-  .db-logo-text, .db-user-info, .db-nav-item span { display: block; }
+  .db-logo-text { display: flex !important; flex-direction: column !important; align-items: flex-start !important; }
+  .db-user-info, .db-nav-item span { display: block; }
   .db-nav { gap: 4px; padding-bottom: 6px; }
   .db-nav-item { justify-content: flex-start; padding: 11px 14px; min-height: 44px; }
   .db-sidebar-footer {
