@@ -142,7 +142,10 @@ export default function DashboardPage() {
 
   // FIX: auto-load template langsung tanpa F5 — handle pending + autoOpen + back reload
   useEffect(() => {
-    if (location.state?.autoOpenTemplate || location.state?.reloadTemplates) {
+    if (location.state?.activeNav) {
+      setActiveNav(location.state.activeNav);
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.autoOpenTemplate || location.state?.reloadTemplates) {
       setActiveNav('template');
       window.history.replaceState({}, document.title);
     }

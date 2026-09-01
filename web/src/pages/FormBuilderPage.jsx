@@ -928,7 +928,7 @@ export default function FormBuilderPage() {
       {/* Sidebar (shared with dashboard) */}
       {drawerOpen && <div className="db-drawer-backdrop" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
       <aside className={`db-sidebar ${drawerOpen ? 'open' : ''}`}>
-        <div className="db-logo">
+        <div className="db-logo" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'dashboard' } }); }} style={{ cursor: 'pointer' }}>
           <div className="db-logo-icon">
             <img src={logoForm4x} alt="Form4x logo" className="db-logo-img" />
           </div>
@@ -939,29 +939,37 @@ export default function FormBuilderPage() {
         </div>
 
         <nav className="db-nav">
-          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard'); }}>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'dashboard' } }); }}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
             </svg>
             <span>Dasbor</span>
           </button>
-          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard'); }}>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'template' } }); }}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" />
             </svg>
             <span>Templat</span>
           </button>
-          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard'); }}>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'history' } }); }}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.39" />
             </svg>
             <span>Riwayat</span>
           </button>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'activity' } }); }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+              <rect x="8" y="2" width="8" height="4" rx="1" />
+              <path d="M9 14l2 2 4-4" />
+            </svg>
+            <span>Aktivitas Saya</span>
+          </button>
         </nav>
 
         <div className="db-sidebar-footer">
-          <div className="db-user">
+          <div className="db-user" onClick={() => { setDrawerOpen(false); navigate('/profile'); }} title="Lihat & Edit Profil" style={{ cursor: 'pointer' }}>
             <div className="db-avatar">
               {user?.avatar_url ? <img src={user.avatar_url} alt={user.full_name} /> : <span>{getInitials(user?.full_name)}</span>}
             </div>
@@ -970,6 +978,7 @@ export default function FormBuilderPage() {
               <span className="db-user-email">{user?.email}</span>
             </div>
           </div>
+          <ThemeToggle size="sidebar" />
           <button className="db-logout-btn" onClick={() => { logout(); navigate('/auth'); }} aria-label="Logout">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />

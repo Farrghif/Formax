@@ -22,6 +22,21 @@ export default function ProfilePage() {
     avatar_url: '',
   });
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    let startX = 0;
+    const onTouchStart = (e) => { startX = e.touches[0].clientX; };
+    const onTouchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      if (!drawerOpen && startX < 30 && dx > 80) setDrawerOpen(true);
+      if (drawerOpen && dx < -80) setDrawerOpen(false);
+    };
+    window.addEventListener('touchstart', onTouchStart);
+    window.addEventListener('touchend', onTouchEnd);
+    return () => { window.removeEventListener('touchstart', onTouchStart); window.removeEventListener('touchend', onTouchEnd); };
+  }, [drawerOpen]);
+
   useEffect(() => {
     if (!token) {
       navigate('/auth');
@@ -107,9 +122,10 @@ export default function ProfilePage() {
 
   return (
     <div className="db-root">
+      {drawerOpen && <div className="db-drawer-backdrop" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
       {/* Sidebar */}
-      <aside className="db-sidebar">
-        <div className="db-logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+      <aside className={`db-sidebar ${drawerOpen ? 'open' : ''}`}>
+        <div className="db-logo" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'dashboard' } }); }} style={{ cursor: 'pointer' }}>
           <div className="db-logo-icon">
             <img src={logoForm4x} alt="Form4x logo" className="db-logo-img" />
           </div>
@@ -120,14 +136,36 @@ export default function ProfilePage() {
         </div>
 
         <nav className="db-nav">
-          <button className="db-nav-item" onClick={() => navigate('/dashboard')}>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'dashboard' } }); }}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" />
               <rect x="14" y="14" width="7" height="7" rx="1" />
             </svg>
-            <span>Dashboard</span>
+            <span>Dasbor</span>
+          </button>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'template' } }); }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M9 21V9" />
+            </svg>
+            <span>Templat</span>
+          </button>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'history' } }); }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-4.39" />
+            </svg>
+            <span>Riwayat</span>
+          </button>
+          <button className="db-nav-item" onClick={() => { setDrawerOpen(false); navigate('/dashboard', { state: { activeNav: 'activity' } }); }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+              <rect x="8" y="2" width="8" height="4" rx="1" />
+              <path d="M9 14l2 2 4-4" />
+            </svg>
+            <span>Aktivitas Saya</span>
           </button>
         </nav>
 
@@ -159,12 +197,21 @@ export default function ProfilePage() {
       {/* Main Content Area */}
       <main className="db-main">
         <header className="db-topbar" style={{ justifyContent: 'space-between' }}>
-          <button className="back-nav-btn" onClick={() => navigate('/dashboard')}>
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Kembali ke Dashboard</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="db-hamburger" onClick={() => setDrawerOpen((v) => !v)} aria-label="Toggle menu">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <button className="back-nav-btn" onClick={() => navigate('/dashboard')}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Kembali ke Dashboard</span>
+            </button>
+          </div>
           <ThemeToggle />
         </header>
 
