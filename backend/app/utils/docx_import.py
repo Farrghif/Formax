@@ -7,7 +7,9 @@ Aturan format yang didukung:
 - Kunci  : tanda * di depan opsi ATAU baris "Jawaban: B" / "Kunci: B"
 """
 import io
+import os
 import re
+import uuid
 from typing import BinaryIO
 
 from docx import Document
@@ -18,6 +20,64 @@ ANSWER_RE = re.compile(
     r"^\s*(?:(?:kunci\s+)?jawaban|kunci|answer)\s*[:=\-]\s*\(?([A-Ha-h])\)?\s*$",
     re.IGNORECASE,
 )
+
+
+def _extract_images_from_paragraph(para, base_url: str = "") -> list[str]:
+    """Ekstrak gambar yang tertanam pada paragraph Word (.docx), simpan ke static/uploads, return daftar URL gambar."""
+    img_urls = []
+    if not hasattr(para, "_element") or not hasattr(para, "part"):
+        return img_urls
+
+    part = para.part
+    if not hasattr(part, "related_parts"):
+        return img_urls
+
+    r_ids = []
+    element = para._element
+
+    for node in element.iter():
+        for k, v in node.attrib.items():
+            if v and isinstance(v, str) and (k.endswith("embed") or k.endswith("id") or k.endswith("link")):
+                if v in part.related_parts and v not in r_ids:
+                    r_ids.append(v)
+
+    if not r_ids:
+        return img_urls
+
+    os.makedirs("static/uploads", exist_ok=True)
+
+    for r_id in r_ids:
+        try:
+            rel_part = part.related_parts[r_id]
+            blob = getattr(rel_part, "blob", None)
+            if blob:
+                c_type = str(getattr(rel_part, "content_type", "")).lower()
+                ext = ".png"
+                if "jpeg" in c_type or "jpg" in c_type:
+                    ext = ".jpg"
+                elif "gif" in c_type:
+                    ext = ".gif"
+                elif "webp" in c_type:
+                    ext = ".webp"
+                elif "bmp" in c_type:
+                    ext = ".bmp"
+
+                filename = f"docx_{uuid.uuid4().hex[:12]}{ext}"
+                filepath = os.path.join("static/uploads", filename)
+
+                with open(filepath, "wb") as f:
+                    f.write(blob)
+
+                if base_url:
+                    img_url = f"{base_url.rstrip('/')}/static/uploads/{filename}"
+                else:
+                    img_url = f"/static/uploads/{filename}"
+
+                img_urls.append(img_url)
+        except Exception as e:
+            print(f"[docx_import] Error extracting image rId={r_id}: {e}")
+
+    return img_urls
 
 
 def _iter_block_paragraphs(document):
@@ -68,8 +128,8 @@ def _normalize_line(text: str) -> str:
     text = text.replace('\t', ' ')
     return text.strip()
 
-def parse_docx_questions(file: BinaryIO) -> dict:
-    """Parse file .docx menjadi daftar soal pilihan ganda.
+def parse_docx_questions(file: BinaryIO, base_url: str = "") -> dict:
+    """Parse file .docx menjadi daftar soal pilihan ganda, termasuk mendeteksi & mengekstrak gambar dalam soal.
 
     Return:
         {
@@ -103,13 +163,30 @@ def parse_docx_questions(file: BinaryIO) -> dict:
         paragraphs = document.paragraphs
 
     for para in paragraphs:
+        # Ekstrak gambar yang ada pada paragraf ini (jika ada)
+        extracted_imgs = _extract_images_from_paragraph(para, base_url=base_url)
+        img_html = ""
+        if extracted_imgs:
+            img_html = "".join([
+                f'<p><img src="{url}" alt="Gambar Soal" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px;" /></p>'
+                for url in extracted_imgs
+            ])
+
         raw = para.text or ""
-        # Word soft break (Shift+Enter) menyimpan \n di dalam satu paragraph — split jadi baris terpisah
-        # juga handle jika satu paragraph mengandung beberapa opsi dipisah newline
         lines = raw.splitlines() if '\n' in raw or '\r' in raw else [raw]
+
+        # Jika paragraf hanya berisi gambar tanpa teks, tetap proses paragraf ini
+        if not any(_normalize_line(l) for l in lines) and img_html:
+            lines = [""]
+
         for raw_line in lines:
             line = _normalize_line(raw_line)
+
+            # Jika baris kosong tetapi ada gambar yang harus dimasukkan ke soal aktif (sebelum opsi)
             if not line:
+                if img_html and current is not None and not current["options"]:
+                    current["label"] = f"{current['label']} {img_html}".strip()
+                    img_html = ""
                 continue
 
             answer_match = ANSWER_RE.match(line)
@@ -130,9 +207,14 @@ def parse_docx_questions(file: BinaryIO) -> dict:
 
             if question_match:
                 number = int(question_match.group(1))
+                q_text = question_match.group(2).strip()
+                if img_html:
+                    q_text = f"{q_text} {img_html}".strip()
+                    img_html = ""
+
                 current = {
                     "number": number,
-                    "label": question_match.group(2).strip(),
+                    "label": q_text,
                     "options": [],
                     "errors": [],
                 }
@@ -144,6 +226,11 @@ def parse_docx_questions(file: BinaryIO) -> dict:
                 continue
 
             if option_match and current is not None:
+                # Jika ada gambar di nomor soal yang belum dipasang sebelum opsi A/B/C
+                if img_html:
+                    current["label"] = f"{current['label']} {img_html}".strip()
+                    img_html = ""
+
                 letter = option_match.group(1).upper()
                 text = option_match.group(2).strip()
                 is_correct = line.lstrip().startswith("*")
@@ -169,17 +256,16 @@ def parse_docx_questions(file: BinaryIO) -> dict:
 
             # Fallback: opsi tanpa huruf karena Word auto-numbering (list A. tidak ada di text)
             if current is not None and _is_list_paragraph(para) and line and not question_match and not answer_match:
-                # hanya anggap sebagai opsi jika belum banyak opsi dan teks tidak terlalu panjang untuk soal
-                # dan kita sedang dalam blok opsi (sudah ada opsi sebelumnya atau baris terlihat seperti jawaban pendek)
+                if img_html:
+                    current["label"] = f"{current['label']} {img_html}".strip()
+                    img_html = ""
+
                 is_correct_fallback = line.lstrip().startswith("*")
                 clean_text = line.lstrip().lstrip("*").strip()
-                # hindari mengubah lanjutan soal yang panjang (>120 char) menjadi opsi
                 if clean_text and len(clean_text) < 180:
-                    # tentukan huruf auto
                     if next_auto_letter_ord is None:
                         next_auto_letter_ord = ord('A') + len(current["options"])
                     letter = chr(next_auto_letter_ord)
-                    # jangan duplikat huruf yang sudah ada
                     if not any(o["letter"] == letter for o in current["options"]):
                         current["options"].append({
                             "letter": letter,
@@ -193,7 +279,11 @@ def parse_docx_questions(file: BinaryIO) -> dict:
 
             # Baris lain: anggap lanjutan teks soal
             if current is not None and not current["options"]:
-                current["label"] = f"{current['label']} {line}".strip()
+                label_part = line
+                if img_html:
+                    label_part = f"{line} {img_html}"
+                    img_html = ""
+                current["label"] = f"{current['label']} {label_part}".strip()
 
     result = []
     for q in questions:

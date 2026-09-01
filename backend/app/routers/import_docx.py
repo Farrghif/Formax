@@ -1,7 +1,7 @@
 import io
 
 from docx import Document
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -39,6 +39,7 @@ def download_template_docx(current_user: models.User = Depends(get_current_user)
 def preview_import_docx(
     form_id: str,
     file: UploadFile,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -51,8 +52,9 @@ def preview_import_docx(
     if len(data) > MAX_DOCX_SIZE:
         raise HTTPException(status_code=400, detail="Ukuran file maksimal 5 MB")
 
+    base_url = str(request.base_url)
     try:
-        parsed = parse_docx_questions(io.BytesIO(data))
+        parsed = parse_docx_questions(io.BytesIO(data), base_url=base_url)
     except Exception:
         raise HTTPException(
             status_code=400,
