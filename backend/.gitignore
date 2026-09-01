@@ -3,11 +3,20 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+.env.bak
 
-# Node.js dependencies & builds
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node (jika ada tooling)
 node_modules/
 dist/
 build/
 
-backend/*.db
-*.db
+# Generated static — keep folder tapi ignore isinya
+static/qrcodes/*
+!static/qrcodes/.gitkeep
+static/uploads/*
+!static/uploads/.gitkeep

@@ -1,10 +1,45 @@
+# Virtual env & Python
 venv/
-formmaker.db
-.env
 *.pyc
 __pycache__/
 *.egg-info/
+*.py[cod]
+*$py.class
 
-# JVM crash logs
+# Env & secrets — jangan push
+.env
+.env.bak
+backend/.env.bak
+
+# Database lokal
+*.db
+*.sqlite
+*.sqlite3
+formmaker.db
+test_dates.db
+
+# Debug / test script lokal (check_*, test_*)
+check_*.py
+test_*.py
+check_*.db
+test_*.db
+simulasi_database_formmaker.xlsx
+
+# Logs & crash
+*.log
 hs_err_pid*.log
 replay_pid*.log
+logs/
+
+# Backend generated files — jangan push (output runtime, bukan source)
+backend/static/qrcodes/*
+!backend/static/qrcodes/.gitkeep
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep
+backend/static/uploads/docx_*.jpg
+
+# OS & editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
