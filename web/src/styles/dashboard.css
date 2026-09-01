@@ -4226,3 +4226,766 @@
 }
 
 
+/* ================================================================
+   ✨ PREMIUM HOVER EFFECTS — DASHBOARD, TEMPLAT, RIWAYAT, AKTIVITAS
+   ================================================================ */
+
+/* ---------------------------------------------------------------
+   1. SIDEBAR NAV — Glowing Active Indicator + Shimmer on Hover
+   --------------------------------------------------------------- */
+.db-nav-item {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.db-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent, #3b82f6);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.db-nav-item.active::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+.db-nav-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.db-nav-item:hover::after {
+  transform: translateX(100%);
+}
+
+.db-nav-item:hover {
+  transform: translateX(3px);
+  background: var(--sidebar-bg-hover);
+  color: var(--sidebar-logo-name);
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.12);
+}
+
+.db-nav-item:active {
+  transform: translateX(1px) scale(0.98);
+}
+
+.db-nav-item svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
+}
+
+.db-nav-item:hover svg {
+  transform: scale(1.18) rotate(-3deg);
+}
+
+.db-nav-item.active svg {
+  color: var(--accent, #3b82f6);
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+/* ---------------------------------------------------------------
+   2. DASHBOARD — Create Card Premium Glow
+   --------------------------------------------------------------- */
+.db-card-create {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.db-card-create::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(37, 99, 235, 0.08) 60deg, transparent 120deg);
+  animation: rotateGlow 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.db-card-create:hover::before {
+  opacity: 1;
+}
+
+@keyframes rotateGlow {
+  to { transform: rotate(360deg); }
+}
+
+.db-card-create:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.06);
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 16px 40px -8px rgba(37, 99, 235, 0.22),
+              0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+.db-card-create:active {
+  transform: translateY(-2px) scale(0.99);
+  box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.15);
+}
+
+.db-create-icon {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.db-card-create:hover .db-create-icon {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  transform: scale(1.15) rotate(90deg);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+/* ---------------------------------------------------------------
+   3. TEMPLATE & DASHBOARD CARDS — Lift + Shimmer + Glow
+   --------------------------------------------------------------- */
+.db-card-system,
+.db-recent-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.db-card-system::after,
+.db-recent-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.db-card-system:hover::after,
+.db-recent-card:hover::after {
+  left: 140%;
+}
+
+.db-card-system:hover,
+.db-recent-card:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 20px 48px -8px rgba(15, 23, 42, 0.14),
+              0 8px 16px -4px rgba(15, 23, 42, 0.06),
+              0 0 0 1px rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.db-card-system:active,
+.db-recent-card:active {
+  transform: translateY(-2px) scale(1.005);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.1);
+}
+
+/* Card preview doc float up on hover */
+.db-card-system:hover .db-preview-doc,
+.db-recent-card:hover .db-preview-doc {
+  transform: scale(1.06) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+/* Blank template card accent */
+.db-card-system:hover .db-card-preview.blank-bg {
+  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  transition: background 0.4s ease;
+}
+
+.db-card-system:hover .db-card-preview.attendance-bg {
+  background: linear-gradient(135deg, #99f6e4 0%, #5eead4 100%);
+  transition: background 0.4s ease;
+}
+
+.db-card-system:hover .db-card-preview.exam-bg {
+  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+  transition: background 0.4s ease;
+}
+
+/* ---------------------------------------------------------------
+   4. HISTORY CARDS — Enhanced Glow + Color Accent Border
+   --------------------------------------------------------------- */
+.history-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.history-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(139, 92, 246, 0.04));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.history-card:hover::before {
+  opacity: 1;
+}
+
+.history-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.history-card:hover::after {
+  left: 140%;
+}
+
+.history-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 48px -8px rgba(15, 23, 42, 0.12),
+              0 8px 16px -4px rgba(15, 23, 42, 0.06);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.history-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+
+/* ---------------------------------------------------------------
+   5. "LIHAT HASIL" BUTTON — Premium Gradient Shift
+   --------------------------------------------------------------- */
+.history-btn-result {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.history-btn-result::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.history-btn-result:hover::before {
+  opacity: 1;
+}
+
+.history-btn-result span,
+.history-btn-result svg {
+  position: relative;
+  z-index: 1;
+}
+
+.history-btn-result:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45),
+              0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.history-btn-result:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* ---------------------------------------------------------------
+   6. ACTIVITY CARDS — Glow + Progress Bar Animate
+   --------------------------------------------------------------- */
+.activity-card-item {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease !important;
+}
+
+.activity-card-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.16) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.activity-card-item:hover::after {
+  left: 140%;
+}
+
+.activity-card-item:hover {
+  transform: translateY(-5px) scale(1.01) !important;
+  box-shadow: 0 18px 44px -8px rgba(15, 23, 42, 0.12),
+              0 6px 14px -4px rgba(15, 23, 42, 0.06) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+.activity-card-item:active {
+  transform: translateY(-2px) scale(1.003) !important;
+}
+
+/* Progress bar animated stripe on activity cards */
+.activity-progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.activity-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: progressShimmer 2s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+  0% { left: -100%; }
+  100% { left: 150%; }
+}
+
+/* ---------------------------------------------------------------
+   7. ACTIVITY STAT CARDS — Gradient Hover
+   --------------------------------------------------------------- */
+.activity-stat-card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.activity-stat-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 14px 36px -8px rgba(15, 23, 42, 0.12),
+              0 4px 10px -2px rgba(15, 23, 42, 0.06);
+}
+
+/* ---------------------------------------------------------------
+   8. FILTER TABS — Bouncy Active + Hover
+   --------------------------------------------------------------- */
+.filter-tab-btn {
+  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-tab-btn:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #2563eb !important;
+  transform: translateY(-1px);
+}
+
+.filter-tab-btn.active {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.filter-tab-btn:active {
+  transform: scale(0.97);
+}
+
+/* ---------------------------------------------------------------
+   9. VIEW TOGGLE BUTTONS — Pill Active Transition
+   --------------------------------------------------------------- */
+.view-toggle-btn {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.view-toggle-btn:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #2563eb !important;
+}
+
+.view-toggle-btn.active {
+  transform: scale(1.05);
+}
+
+/* ---------------------------------------------------------------
+   10. LIHAT HASIL / VIEW RESULT Button in Activity Cards
+   --------------------------------------------------------------- */
+.activity-btn-result,
+.activity-view-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.activity-btn-result::before,
+.activity-view-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.activity-btn-result:hover::before,
+.activity-view-btn:hover::before {
+  opacity: 1;
+}
+
+.activity-btn-result:hover,
+.activity-view-btn:hover {
+  transform: translateY(-2px) scale(1.04) !important;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35) !important;
+}
+
+.activity-btn-result:active,
+.activity-view-btn:active {
+  transform: scale(0.97) !important;
+}
+
+/* ---------------------------------------------------------------
+   11. EXPORT EXCEL BUTTON — Business Premium Effect
+   --------------------------------------------------------------- */
+.btn-export-excel {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-export-excel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1a7a3a 0%, #15803d 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-export-excel:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.btn-export-excel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-export-excel:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(21, 128, 61, 0.3),
+              0 4px 8px rgba(21, 128, 61, 0.15) !important;
+  background: #1d813e !important;
+}
+
+.btn-export-excel:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------
+   12. BACK NAV BUTTON — Slide Arrow Effect
+   --------------------------------------------------------------- */
+.back-nav-btn {
+  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 8px;
+}
+
+.back-nav-btn svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.back-nav-btn:hover {
+  color: #2563eb;
+  transform: translateX(-2px);
+}
+
+.back-nav-btn:hover svg {
+  transform: translateX(-4px);
+}
+
+/* ---------------------------------------------------------------
+   13. STAT CARDS (Riwayat Results) — Hover Lift
+   --------------------------------------------------------------- */
+.stat-card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover::before {
+  transform: scaleX(1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 36px -6px rgba(15, 23, 42, 0.1),
+              0 4px 10px -2px rgba(59, 130, 246, 0.06);
+}
+
+.stat-icon-box {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s ease;
+}
+
+.stat-card:hover .stat-icon-box {
+  transform: scale(1.12) rotate(-5deg);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* ---------------------------------------------------------------
+   14. CONTEXT MENU ITEMS — Smooth Elevated Items
+   --------------------------------------------------------------- */
+.db-context-item {
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.db-context-item:hover {
+  background: #f1f5f9;
+  transform: translateX(3px);
+}
+
+.db-context-item.danger:hover {
+  background: #fef2f2;
+  transform: translateX(3px);
+}
+
+/* ---------------------------------------------------------------
+   15. TABLE ROW HOVER  — Smooth Left Accent
+   --------------------------------------------------------------- */
+.resp-data-table tr {
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.resp-data-table tr:hover td {
+  background-color: #f0f6ff !important;
+}
+
+.activity-table-row {
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.activity-table-row:hover {
+  background: #f0f6ff !important;
+}
+
+/* ---------------------------------------------------------------
+   16. DARK MODE OVERRIDES — Premium Hover in Dark
+   --------------------------------------------------------------- */
+[data-theme='dark'] .db-card-system,
+[data-theme='dark'] .db-recent-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .db-card-system:hover,
+[data-theme='dark'] .db-recent-card:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(96, 165, 250, 0.08);
+}
+
+[data-theme='dark'] .history-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .history-card:hover {
+  border-color: rgba(96, 165, 250, 0.25);
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .db-card-title,
+[data-theme='dark'] .history-card-title {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .db-card-subtitle,
+[data-theme='dark'] .history-card-responses-text {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .db-card-create {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #475569;
+  color: #60a5fa;
+}
+
+[data-theme='dark'] .db-card-create:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme='dark'] .stat-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .stat-card:hover {
+  box-shadow: 0 14px 36px -6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .stat-value {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .stat-label {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .resp-data-table tr:hover td {
+  background-color: #1e3a5f !important;
+}
+
+[data-theme='dark'] .db-context-item:hover {
+  background: #334155;
+}
+
+[data-theme='dark'] .db-context-item.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+[data-theme='dark'] .filter-tab-btn:hover:not(.active) {
+  background: rgba(96, 165, 250, 0.12) !important;
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] .db-card-system::after,
+[data-theme='dark'] .db-recent-card::after,
+[data-theme='dark'] .history-card::after,
+[data-theme='dark'] .activity-card-item::after {
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+}
+
+/* ---------------------------------------------------------------
+   17. SECTION TITLE — Subtle Gradient Underline
+   --------------------------------------------------------------- */
+.db-section-title {
+  position: relative;
+  display: inline-block;
+  color: var(--text-primary, #1e293b);
+}
+
+.db-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.db-section-title:hover::after {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------
+   18. LOGOUT BUTTON — Danger Pulse on Hover
+   --------------------------------------------------------------- */
+.db-logout-btn {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.db-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  transform: rotate(10deg) scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.db-logout-btn:active {
+  transform: rotate(5deg) scale(0.95);
+}
+
+/* ---------------------------------------------------------------
+   19. CARD MENU (3-dot) BUTTON — Pop on Hover
+   --------------------------------------------------------------- */
+.db-card-menu,
+.history-card-menu {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.db-card-menu:hover,
+.history-card-menu:hover {
+  background: #e0e7ff !important;
+  color: #4338ca !important;
+  transform: scale(1.15);
+}
+
+[data-theme='dark'] .db-card-menu:hover,
+[data-theme='dark'] .history-card-menu:hover {
+  background: rgba(99, 102, 241, 0.18) !important;
+  color: #818cf8 !important;
+}
+
+/* ---------------------------------------------------------------
+   20. GLOBAL FOCUS-VISIBLE — Accessibility Ring
+   --------------------------------------------------------------- */
+.db-nav-item:focus-visible,
+.db-card-create:focus-visible,
+.history-btn-result:focus-visible,
+.activity-btn-result:focus-visible,
+.btn-export-excel:focus-visible,
+.filter-tab-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+
+
