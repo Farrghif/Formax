@@ -398,7 +398,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000
 
 ## Tipe Pertanyaan
 
-Didiefinisikan di `backend/app/models.py:21` sebagai `QuestionType`:
+Dididefinisikan di `backend/app/models.py:21` sebagai `QuestionType`:
 
 | Tipe | Nilai Enum | Deskripsi |
 |---|---|---|
