@@ -202,7 +202,11 @@ class FormBuilderState extends ChangeNotifier {
   bool attachImageToActiveQuestion(String imageUrl) {
     final q = activeQuestion;
     if (q == null) return false;
-    q.imageUrl = imageUrl;
+    if (q.imageUrl == null || q.imageUrl!.isEmpty) {
+      q.imageUrl = imageUrl;
+    } else {
+      q.label = '${q.label}<p><img src="$imageUrl" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;" /></p>';
+    }
     notifyListeners();
     return true;
   }

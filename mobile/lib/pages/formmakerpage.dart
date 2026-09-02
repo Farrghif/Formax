@@ -521,7 +521,12 @@ class _FormMakerPageState extends State<FormMakerPage>
     final uploadResult = await ApiService.uploadFile(pickedFile);
     if (!mounted) return;
     if (uploadResult['success'] == true) {
-      q.imageUrl = uploadResult['file_url'] as String;
+      final fileUrl = uploadResult['file_url'] as String;
+      if (q.imageUrl == null || q.imageUrl!.isEmpty) {
+        q.imageUrl = fileUrl;
+      } else {
+        q.label = '${q.label}<p><img src="$fileUrl" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;" /></p>';
+      }
       _builderState.triggerUpdate();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

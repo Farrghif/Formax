@@ -60,6 +60,11 @@ class RichTextView extends StatelessWidget {
           ),
           'p': Style(margin: Margins.only(bottom: 4)),
           'a': Style(color: const Color(0xFF818CF8)),
+          'img': Style(
+            width: Width(100, Unit.percent),
+            height: Height.auto(),
+            margin: Margins.symmetric(vertical: 4),
+          ),
         },
       ),
     );

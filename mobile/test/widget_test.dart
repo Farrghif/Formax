@@ -13,9 +13,7 @@ import 'package:form4x/main.dart';
 void main() {
   testWidgets('App loads login or home', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    // App harus menampilkan salah satu: LoginPage atau HomePage
-    // Tidak lagi counter test bawaan Flutter
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

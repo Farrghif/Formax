@@ -84,6 +84,8 @@ class Question {
           [],
     );
   }
+
+  String? get imageUrl => settings['image_url'] as String?;
 }
 
 class FormData {
@@ -1388,6 +1390,19 @@ class _FillFormPageState extends State<FillFormPage> {
               ),
             ],
           ),
+          if (question.type != 'image' &&
+              question.imageUrl != null &&
+              question.imageUrl!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: NgrokImage(
+                question.imageUrl!,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // Answer input based on question type
@@ -1422,6 +1437,17 @@ class _FillFormPageState extends State<FillFormPage> {
       case 'file_upload':
         return _buildFileUploadInput(question);
       case 'image':
+        if (question.imageUrl != null && question.imageUrl!.isNotEmpty) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: NgrokImage(
+              question.imageUrl!,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          );
+        }
+        return const SizedBox.shrink();
       case 'text_block':
         return const SizedBox.shrink();
       default:

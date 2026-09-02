@@ -128,10 +128,23 @@ class QuillHtml {
         continue;
       }
 
+      String escAttr(String s) => s.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+      if (data is Map && data.containsKey('image')) {
+        final imgSrc = data['image']?.toString() ?? '';
+        if (imgSrc.isNotEmpty) {
+          final safeSrc = escAttr(imgSrc);
+          final style = inlineStyle(attrs);
+          final styleAttr = style.isNotEmpty
+              ? ' style="${escAttr(style)}"'
+              : ' style="max-width: 100%; height: auto; border-radius: 8px; margin: 4px 0;"';
+          inline.write('<img src="$safeSrc"$styleAttr />');
+        }
+        continue;
+      }
+
       final text = _escape(data.toString());
       final link = attrs['link'] as String?;
-      // Escape style values juga agar tidak inject CSS
-      String escAttr(String s) => s.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
       final style = inlineStyle(attrs);
 
       // List-item markers (e.g. "1." from ordered lists) come through as

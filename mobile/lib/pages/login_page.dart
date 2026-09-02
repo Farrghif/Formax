@@ -158,6 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                       if (!isLogin) ...[
                         _buildLabel('Full Name*'),
                         _buildTextField(
+                          key: const ValueKey('register_fullname'),
                           controller: registerFullNameController,
                           hint: 'Enter your full name',
                         ),
@@ -166,16 +167,24 @@ class _LoginPageState extends State<LoginPage> {
 
                       _buildLabel('Email Address*'),
                       _buildTextField(
+                        key: isLogin
+                            ? const ValueKey('login_email')
+                            : const ValueKey('register_email'),
                         controller: isLogin
                             ? loginEmailController
                             : registerEmailController,
                         hint: 'Enter your email address',
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
                       ),
 
                       const SizedBox(height: 14),
 
                       _buildLabel('Password*'),
                       _buildTextField(
+                        key: isLogin
+                            ? const ValueKey('login_password')
+                            : const ValueKey('register_password'),
                         controller: isLogin
                             ? loginPasswordController
                             : registerPasswordController,
@@ -222,9 +231,10 @@ class _LoginPageState extends State<LoginPage> {
                                     _isLoading = true;
                                   });
 
-                                  final email = isLogin
+                                  final rawEmail = isLogin
                                       ? loginEmailController.text.trim()
                                       : registerEmailController.text.trim();
+                                  final email = rawEmail.toLowerCase();
                                   final password = isLogin
                                       ? loginPasswordController.text.trim()
                                       : registerPasswordController.text.trim();
@@ -395,7 +405,16 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => setState(() => isLogin = !isLogin),
+                            onTap: () {
+                              setState(() {
+                                if (isLogin && loginEmailController.text.isNotEmpty && registerEmailController.text.isEmpty) {
+                                  registerEmailController.text = loginEmailController.text.trim();
+                                } else if (!isLogin && registerEmailController.text.isNotEmpty && loginEmailController.text.isEmpty) {
+                                  loginEmailController.text = registerEmailController.text.trim();
+                                }
+                                isLogin = !isLogin;
+                              });
+                            },
                             child: Text(
                               isLogin ? 'Register' : 'Login',
                               style: const TextStyle(
@@ -460,13 +479,19 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildTextField({
+    Key? key,
     required TextEditingController controller,
     required String hint,
     bool obscureText = false,
     bool isPassword = false,
+    TextInputType? keyboardType,
+    bool autocorrect = true,
   }) {
     return TextField(
+      key: key,
       controller: controller,
+      keyboardType: keyboardType,
+      autocorrect: autocorrect,
       obscureText: isPassword ? !_showPassword : obscureText,
       style: const TextStyle(color: _inputTextColor, fontSize: 14),
       cursorColor: const Color(0xFF1E66D0),
