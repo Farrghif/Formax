@@ -45,6 +45,17 @@ Quill.register(Size, true)
 // Register image resize module
 Quill.register('modules/imageResize', ImageResize)
 
+// ── Custom Image Blot ────────────────────────────────────────────────────────
+const ImageBlot = Quill.import('formats/image')
+class CustomImageBlot extends ImageBlot {
+  static value(node) {
+    // Preserve originalSrc if ngrok blob patch was applied
+    return node.dataset?.originalSrc || node.getAttribute('src')
+  }
+}
+Quill.register(CustomImageBlot, true)
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Custom Audio Blot ────────────────────────────────────────────────────────
 const BlockEmbed = Quill.import('blots/block/embed')
 
@@ -59,13 +70,45 @@ class AudioBlot extends BlockEmbed {
 
   static value(node) {
     // Fix hilang setelah Simpan: jika src sudah jadi blob:URL karena ngrok patch,
-    // kembalikan originalSrc agar yang tersimpan di DB tetap ngrok URL (bukan blob yang akan di-strip sanitize)
+    // kembalikan originalSrc agar yang tersimpan di DB tetap ngrok URL
     return node.dataset?.originalSrc || node.getAttribute('src')
   }
 }
 AudioBlot.blotName = 'audio'
 AudioBlot.tagName = 'audio'
 Quill.register(AudioBlot)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Custom Image Upload Handler ──────────────────────────────────────────────
+const handleImageUpload = function () {
+  const quill = this.quill
+  const input = document.createElement('input')
+  input.setAttribute('type', 'file')
+  input.setAttribute('accept', 'image/*')
+  input.click()
+
+  input.onchange = async () => {
+    const file = input.files[0]
+    if (!file) return
+
+    const token = localStorage.getItem('token')
+    const range = quill.getSelection(true)
+    const index = range ? range.index : (quill.getLength() || 0)
+
+    try {
+      const result = await uploadFile(token, file)
+      const url = result?.file_url
+      if (url) {
+        quill.insertEmbed(index, 'image', url, 'user')
+        quill.setSelection(index + 1, 0)
+      } else {
+        alert('Gagal mengunggah gambar: URL file tidak ditemukan dalam respons server.')
+      }
+    } catch (err) {
+      alert('Gagal mengunggah gambar: ' + err.message)
+    }
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Custom Audio Upload Handler ──────────────────────────────────────────────
@@ -82,13 +125,14 @@ const handleAudioUpload = function () {
 
     const token = localStorage.getItem('token')
     const range = quill.getSelection(true)
+    const index = range ? range.index : (quill.getLength() || 0)
 
     try {
       const result = await uploadFile(token, file)
       const url = result?.file_url
       if (url) {
-        quill.insertEmbed(range.index, 'audio', url, 'user')
-        quill.setSelection(range.index + 1, 0)
+        quill.insertEmbed(index, 'audio', url, 'user')
+        quill.setSelection(index + 1, 0)
       } else {
         alert('Gagal mengunggah audio: URL file tidak ditemukan dalam respons server.')
       }
@@ -113,6 +157,7 @@ const FULL_MODULES = {
       ['clean'],
     ],
     handlers: {
+      image: handleImageUpload,
       audio: handleAudioUpload,
     },
   },
@@ -136,6 +181,7 @@ const QUESTION_MODULES = {
       ['clean'],
     ],
     handlers: {
+      image: handleImageUpload,
       audio: handleAudioUpload,
     },
   },
@@ -170,7 +216,7 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
   const quillRef = useRef(null)
   const modules = variant === 'compact' ? QUESTION_MODULES : FULL_MODULES
 
-  // Inject audio button icon into toolbar after mount
+  // Inject audio & image button title/icon into toolbar after mount
   useEffect(() => {
     const editor = quillRef.current
     if (!editor) return
@@ -179,28 +225,32 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
     audioBtns.forEach((btn) => {
       if (!btn.innerHTML.trim()) {
         btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`
-        btn.title = 'Sisipkan Audio'
       }
+      btn.title = 'Sisipkan Audio'
+    })
+    const imageBtns = toolbarEl.querySelectorAll('.ql-image')
+    imageBtns.forEach((btn) => {
+      btn.title = 'Sisipkan Gambar'
     })
   }, [])
 
-  // Fix audio ngrok di dalam editor preview (builder) — sama seperti FormFillPage
-  // hemat preload metadata, data:audio langsung
+  // Fix media (audio & image) ngrok di dalam editor preview (builder)
   useEffect(() => {
     const editor = quillRef.current?.getEditor()
     if (!editor || !value || !value.includes('ngrok-free')) return
     const root = editor.root
-    const audios = root.querySelectorAll('audio[src*="ngrok-free"]')
-    if (audios.length === 0) return
+    const mediaElements = root.querySelectorAll('audio[src*="ngrok-free"], img[src*="ngrok-free"]')
+    if (mediaElements.length === 0) return
     const controllers = []
-    audios.forEach((audio) => {
-      const src = audio.getAttribute('src')
-      if (!src || src.startsWith('data:audio/') || src.startsWith('blob:') || audio.dataset.ngrokFixed) return
-      audio.dataset.ngrokFixed = '1'
-      audio.dataset.originalSrc = src
+
+    mediaElements.forEach((el) => {
+      const src = el.getAttribute('src')
+      if (!src || src.startsWith('data:') || src.startsWith('blob:') || el.dataset.ngrokFixed) return
+      el.dataset.ngrokFixed = '1'
+      el.dataset.originalSrc = src
       const controller = new AbortController()
       controllers.push(controller)
-      audio.style.opacity = '0.6'
+      el.style.opacity = '0.6'
       apiFetch(src, { signal: controller.signal })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -209,17 +259,18 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
         .then((blob) => {
           if (blob.type && blob.type.startsWith('text/html')) throw new Error('Ngrok HTML')
           const blobUrl = URL.createObjectURL(blob)
-          audio.src = blobUrl
-          audio.load()
-          audio.style.opacity = '1'
-          audio.dataset.blobUrl = blobUrl
+          el.src = blobUrl
+          if (el.tagName === 'AUDIO') el.load()
+          el.style.opacity = '1'
+          el.dataset.blobUrl = blobUrl
         })
         .catch((err) => {
           if (err.name === 'AbortError') return
-          console.error('[RichTextEditor NgrokAudio] gagal:', src, err)
-          audio.style.opacity = '1'
+          console.error('[RichTextEditor NgrokMedia] gagal:', src, err)
+          el.style.opacity = '1'
         })
     })
+
     return () => {
       controllers.forEach((c) => c.abort())
     }

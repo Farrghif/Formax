@@ -217,10 +217,11 @@ def update_form(
     # responden tidak musnah diam-diam. Tapi JANGAN block perubahan status/settings —
     # publish harus tetap bisa tanpa ubah soal.
     if questions_data is not None:
-        has_answers = db.query(models.Submission.id).filter(
-            models.Submission.form_id == form.id
+        has_submitted = db.query(models.Submission.id).filter(
+            models.Submission.form_id == form.id,
+            models.Submission.submitted_at.isnot(None)
         ).first() is not None
-        if has_answers:
+        if has_submitted:
             # Simpan perubahan status/settings dulu sebelum menolak ganti soal
             try:
                 db.commit()
@@ -229,8 +230,15 @@ def update_form(
                 db.rollback()
             raise HTTPException(
                 status_code=409,
-                detail="Form sudah punya jawaban; mengubah pertanyaan akan menghapus jawaban responden. Duplikasi form dulu (atau cadangkan jawaban) sebelum mengganti pertanyaan.",
+                detail="Form sudah punya jawaban responden yang terkirim; mengubah pertanyaan akan menghapus jawaban responden. Duplikasi form dulu (atau cadangkan jawaban) sebelum mengganti pertanyaan.",
             )
+        else:
+            # Hapus draft test/unsubmitted submissions agar tidak terkunci & ganti soal berjalan mulus
+            db.query(models.Submission).filter(
+                models.Submission.form_id == form.id,
+                models.Submission.submitted_at.is_(None)
+            ).delete(synchronize_session=False)
+            db.flush()
 
     # Jika questions ikut dikirim (draft save), replace semua questions lama.
     # Sama seperti update template — dipakai agar draft form dari mobile bisa
