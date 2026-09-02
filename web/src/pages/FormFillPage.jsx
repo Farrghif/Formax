@@ -249,10 +249,13 @@ export default function FormFillPage() {
   // Helper untuk ambil token fresh (biar tidak stale closure)
   const getToken = () => localStorage.getItem('token');
 
-  // 1. Initial Load (allow anonymous via respondent_key)
+  // 1. Initial Load — wajib login (PrivateRoute sudah handle di App.jsx,
+  //    ini defense-in-depth agar tidak ada celah akses anonim)
   useEffect(() => {
-    // Jangan redirect paksa ke login — biarkan anonim isi via X-Respondent-Key
-    // Jika token ada, akan dipakai; jika tidak, akan pakai respondent_key otomatis
+    if (!token) {
+      navigate(`/auth?redirect=${encodeURIComponent(`/f/${slug}`)}`);
+      return;
+    }
 
     const loadForm = async () => {
       try {
