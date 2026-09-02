@@ -190,8 +190,12 @@ def export_submissions_to_excel(
         .order_by(models.Question.order_index)
         .all()
     )
-    submissions = db.query(models.Submission).filter(models.Submission.form_id == form_id).all()
-    submissions.sort(key=lambda s: (s.submitted_at is None, s.submitted_at or s.started_at))
+    submissions = (
+        db.query(models.Submission)
+        .filter(models.Submission.form_id == form_id, models.Submission.submitted_at.isnot(None))
+        .order_by(models.Submission.submitted_at.asc())
+        .all()
+    )
 
     question_map = {q.id: q for q in questions}
     has_graded = any(_is_graded(q) for q in questions)
@@ -241,7 +245,7 @@ def export_submissions_to_excel(
     # --------------------------------------------------------
     ws = wb.create_sheet("Detail Jawaban")
 
-    detail_headers = ["No", "Nama Pengisi", "Email", "Waktu Submit"] + [
+    detail_headers = ["No", "Nama Pengisi", "Email", "Waktu Submit", "Skor /100"] + [
         f"{i + 1}. {q.label}" for i, q in enumerate(questions)
     ]
     ws.append(detail_headers)
@@ -250,8 +254,9 @@ def export_submissions_to_excel(
         answers = {a.question_id: a for a in sub.answers}
         name = sub.user.full_name if sub.user else "Responden (User)"
         email = sub.user.email if sub.user else ""
+        score = _score_percent(question_map, sub)
 
-        row = [idx, name, email, _fmt_datetime(sub.submitted_at)]
+        row = [idx, name, email, _fmt_datetime(sub.submitted_at), f"{score}/100" if score is not None else "-"]
         for q in questions:
             ans = answers.get(q.id)
             value = _answer_value(ans)
