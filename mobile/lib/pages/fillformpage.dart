@@ -68,7 +68,12 @@ class Question {
   factory Question.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     final settingsRaw = map['settings'];
-    final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
+    final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw) : <String, dynamic>{};
+    final optionsRaw = map['options'];
+    final options = optionsRaw is List
+        ? optionsRaw.map((o) => QuestionOption.fromJson(o)).toList()
+        : <QuestionOption>[];
+
     return Question(
       id: map['id'] ?? '',
       type: map['type'] ?? 'text',
@@ -77,11 +82,7 @@ class Question {
       isRequired: map['is_required'] ?? false,
       orderIndex: map['order_index'] ?? 0,
       settings: settings,
-      options:
-          (map['options'] as List<dynamic>?)
-              ?.map((o) => QuestionOption.fromJson(o as Map))
-              .toList() ??
-          [],
+      options: options,
     );
   }
 
@@ -193,6 +194,7 @@ class _FillFormPageState extends State<FillFormPage> {
   Timer? _countdownTimer;
   DateTime? _countdownEnd;
   Duration _timeLeft = Duration.zero;
+  bool _hasAttemptedAutoSubmit = false;
 
   // Pagination
   static const int _questionsPerPage = 4;
@@ -233,8 +235,12 @@ class _FillFormPageState extends State<FillFormPage> {
 
   void _startCountdown() {
     _countdownTimer?.cancel();
+    _hasAttemptedAutoSubmit = false;
     final end = _parseEndDate(_formData?.endDate);
-    if (end == null || !end.isAfter(DateTime.now())) return;
+    if (end == null || !end.isAfter(DateTime.now())) {
+      _timeLeft = Duration.zero;
+      return;
+    }
     _countdownEnd = end;
     _timeLeft = end.difference(DateTime.now());
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -251,7 +257,22 @@ class _FillFormPageState extends State<FillFormPage> {
   }
 
   Future<void> _autoSubmitOnTimeout() async {
-    if (_isSubmitted || _isSubmitting || _submissionId == null) return;
+    if (_hasAttemptedAutoSubmit || _isSubmitted || _isSubmitting) return;
+    _hasAttemptedAutoSubmit = true;
+
+    if (_submissionId == null) {
+      if (mounted) {
+        setState(() => _isSubmitted = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Waktu habis — form ditutup otomatis.'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -453,7 +474,10 @@ class _FillFormPageState extends State<FillFormPage> {
   }
 
   Future<void> _submitForm() async {
-    if (_submissionId == null) return;
+    if (_submissionId == null) {
+      if (mounted) setState(() => _isSubmitted = true);
+      return;
+    }
 
     if (mounted) setState(() => _isSubmitting = true);
 
@@ -2133,7 +2157,7 @@ class _FillFormPageState extends State<FillFormPage> {
         bytes = await picked.readAsBytes();
         fileName = picked.name;
       }
-      if (bytes == null || bytes.isEmpty) return;
+      if (bytes.isEmpty) return;
       final upload = _performUpload(question, bytes, fileName);
       _pendingUploads[question.id] = upload;
       try {
