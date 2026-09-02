@@ -20,7 +20,7 @@
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
-  font-synthesis: none;
+  font-synthesis: weight style;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -102,3 +102,46 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ---- Quill Global Size Rules ---- */
+.ql-size-10px { font-size: 10px !important; }
+.ql-size-12px { font-size: 12px !important; }
+.ql-size-14px { font-size: 14px !important; }
+.ql-size-16px { font-size: 16px !important; }
+.ql-size-18px { font-size: 18px !important; }
+.ql-size-20px { font-size: 20px !important; }
+.ql-size-24px { font-size: 24px !important; }
+.ql-size-28px { font-size: 28px !important; }
+.ql-size-32px { font-size: 32px !important; }
+.ql-size-36px { font-size: 36px !important; }
+.ql-size-48px { font-size: 48px !important; }
+
+/* ---- Quill Global Font Rules ---- */
+.ql-font-inter { font-family: 'Inter', sans-serif !important; }
+.ql-font-roboto { font-family: 'Roboto', sans-serif !important; }
+.ql-font-poppins { font-family: 'Poppins', sans-serif !important; }
+.ql-font-montserrat { font-family: 'Montserrat', sans-serif !important; }
+.ql-font-open-sans { font-family: 'Open Sans', sans-serif !important; }
+.ql-font-lato { font-family: 'Lato', sans-serif !important; }
+.ql-font-nunito { font-family: 'Nunito', sans-serif !important; }
+.ql-font-raleway { font-family: 'Raleway', sans-serif !important; }
+.ql-font-source-code-pro { font-family: 'Source Code Pro', monospace !important; }
+.ql-font-fira-code { font-family: 'Fira Code', monospace !important; }
+.ql-font-jetbrains-mono { font-family: 'JetBrains Mono', monospace !important; }
+.ql-font-arial { font-family: Arial, Helvetica, sans-serif !important; }
+.ql-font-georgia { font-family: Georgia, 'Times New Roman', serif !important; }
+.ql-font-times-new-roman { font-family: 'Times New Roman', Times, serif !important; }
+.ql-font-courier-new { font-family: 'Courier New', Courier, monospace !important; }
+.ql-font-comic-sans { font-family: 'Comic Sans MS', 'Comic Sans', cursive !important; }
+
+/* ---- Italic & Formatting Support ---- */
+em, i,
+.ql-editor em,
+.ql-editor i,
+.ql-editor span[style*="italic"],
+.rich-text em,
+.rich-text i {
+  font-style: italic !important;
+}
+
+

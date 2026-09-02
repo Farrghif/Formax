@@ -2724,3 +2724,34 @@
   background: #38386a;
   color: #ffffff;
 }
+
+/* ---- WYSIWYG Rich Text Display in FormFillPage ---- */
+.form-description.ql-editor,
+.question-label-content.ql-editor,
+.result-q-label.ql-editor {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-family: inherit;
+  color: inherit;
+  min-height: auto !important;
+}
+
+.form-description.ql-editor p,
+.question-label-content.ql-editor p,
+.result-q-label.ql-editor p {
+  margin-bottom: 0.35em;
+}
+
+.form-description.ql-editor p:last-child,
+.question-label-content.ql-editor p:last-child,
+.result-q-label.ql-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.form-description.ql-editor img,
+.question-label-content.ql-editor img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+}
