@@ -749,12 +749,21 @@ export default function FormFillPage() {
                 <div
                   key={opt.id}
                   className={`option-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() =>
-                    handleAnswerChange(q.id, {
-                      answer_text: opt.label,
-                      answer_options: [opt.label],
-                    })
-                  }
+                  title={isSelected ? 'Klik lagi untuk membatalkan pilihan ini' : 'Pilih opsi ini'}
+                  onClick={() => {
+                    if (isSelected) {
+                      // Klik 2x / klik opsi yang sudah terpilih -> batalkan pilihan
+                      handleAnswerChange(q.id, {
+                        answer_text: '',
+                        answer_options: [],
+                      });
+                    } else {
+                      handleAnswerChange(q.id, {
+                        answer_text: opt.label,
+                        answer_options: [opt.label],
+                      });
+                    }
+                  }}
                 >
                   <div className="option-radio">{isSelected && <div className="option-radio-dot" />}</div>
                   <span className="option-label-text" dangerouslySetInnerHTML={richHtml(opt.label)} />
