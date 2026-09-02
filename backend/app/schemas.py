@@ -209,6 +209,7 @@ class FormUpdate(BaseModel):
     max_submissions: Optional[int] = None
     require_fullscreen: Optional[bool] = None
     reveal_answers: Optional[bool] = None
+    use_join_token: Optional[bool] = None
     questions: Optional[List[QuestionCreate]] = None  # draft/update: replace semua questions
 
     @field_validator("title", "description")
