@@ -14,7 +14,7 @@ import {
   deleteOption,
 } from '../api/questions';
 import { downloadTemplateDocx, previewDocxImport, confirmDocxImport } from '../api/docx';
-import { apiFetch } from '../api/config';
+import { apiFetch, API_BASE_URL } from '../api/config';
 import '../styles/form-builder.css';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
@@ -284,7 +284,7 @@ export default function FormBuilderPage() {
                 } catch {}
                 if (!publishOk) {
                   try {
-                    await apiFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/forms/${formData.id}/publish`, {
+                    await apiFetch(`${API_BASE_URL}/forms/${formData.id}/publish`, {
                       method: 'POST',
                       headers: { Authorization: `Bearer ${token}` },
                     });
@@ -376,7 +376,7 @@ export default function FormBuilderPage() {
             created = { ...created, status: patched.status || 'published', slug: patched.slug || created.slug };
           } catch {
             try {
-              await apiFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/forms/${created.id}/publish`, {
+              await apiFetch(`${API_BASE_URL}/forms/${created.id}/publish`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
               });

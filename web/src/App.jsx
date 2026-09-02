@@ -60,9 +60,23 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* Public Form Filler Routes */}
-        <Route path="/f/:slug" element={<FormFillPage />} />
-        <Route path="/forms/public/:slug" element={<FormFillPage />} />
+        {/* Form Filler Routes — wajib login */}
+        <Route
+          path="/f/:slug"
+          element={
+            <PrivateRoute>
+              <FormFillPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/forms/public/:slug"
+          element={
+            <PrivateRoute>
+              <FormFillPage />
+            </PrivateRoute>
+          }
+        />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
