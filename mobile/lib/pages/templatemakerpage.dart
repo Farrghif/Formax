@@ -87,6 +87,11 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               isRequired: q['is_required'] ?? false,
               options: options,
               imageUrl: settings['image_url'] as String?,
+              extraImageUrls: (settings['image_urls'] as List<dynamic>?)
+                  ?.whereType<String>()
+                  .where((u) => u.isNotEmpty)
+                  .toList() ??
+                  <String>[],
               rowLabels: (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[],
               scaleMin: (settings['scale_min'] as int?) ?? 1,
               scaleMax: (settings['scale_max'] as int?) ?? 5,
@@ -192,6 +197,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
       final settings = <String, dynamic>{};
       if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
         settings['image_url'] = q.imageUrl;
+      }
+      if (q.extraImageUrls.isNotEmpty) {
+        settings['image_urls'] = q.extraImageUrls;
       }
       if (q.scaleMin != 1) settings['scale_min'] = q.scaleMin;
       if (q.scaleMax != 5) settings['scale_max'] = q.scaleMax;

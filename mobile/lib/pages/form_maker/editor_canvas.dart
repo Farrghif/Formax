@@ -184,7 +184,9 @@ class _EditorCanvasState extends State<EditorCanvas> {
       builder: (context) {
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          children: QuestionType.values.where((t) => t != QuestionType.pageBreak).map((type) {
+          children: QuestionType.values
+              .where((t) => t != QuestionType.pageBreak && t != QuestionType.text)
+              .map((type) {
             return ListTile(
               leading: Icon(_getIconForType(type), color: Colors.white),
               title: Text(type.label),

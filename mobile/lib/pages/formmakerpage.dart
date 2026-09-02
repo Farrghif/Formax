@@ -510,6 +510,8 @@ class _FormMakerPageState extends State<FormMakerPage>
 
   /// Pilih & tempelkan gambar ke pertanyaan tertentu (perilaku Google Form,
   /// tombol gambar di toolbar pertanyaan aktif). Tidak membuat pertanyaan baru.
+  /// Gambar kedua dst. menumpuk di bawah gambar pertama — teks pertanyaan
+  /// (label) tidak pernah diubah.
   Future<void> _pickImageForQuestion(QuestionData q) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
@@ -522,11 +524,7 @@ class _FormMakerPageState extends State<FormMakerPage>
     if (!mounted) return;
     if (uploadResult['success'] == true) {
       final fileUrl = uploadResult['file_url'] as String;
-      if (q.imageUrl == null || q.imageUrl!.isEmpty) {
-        q.imageUrl = fileUrl;
-      } else {
-        q.label = '${q.label}<p><img src="$fileUrl" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;" /></p>';
-      }
+      q.addAttachedImage(fileUrl);
       _builderState.triggerUpdate();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -596,7 +594,8 @@ class _FormMakerPageState extends State<FormMakerPage>
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: QuestionType.values
-              .where((t) => t != QuestionType.pageBreak)
+              .where((t) =>
+                  t != QuestionType.pageBreak && t != QuestionType.text)
               .map((type) {
                 return ListTile(
                   leading: Icon(_getIconForType(type), color: _primaryColor),
@@ -640,8 +639,6 @@ class _FormMakerPageState extends State<FormMakerPage>
         return Icons.access_time;
       case QuestionType.image:
         return Icons.image_outlined;
-      case QuestionType.text:
-        return Icons.title;
       default:
         return Icons.widgets;
     }
@@ -694,22 +691,6 @@ class _FormMakerPageState extends State<FormMakerPage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.title,
-                              color: _textColor,
-                            ),
-                            onPressed: () {
-                              final activePageId =
-                                  _builderState.activePageId ??
-                                  _builderState.pages.first.id;
-                              _builderState.addQuestion(
-                                activePageId,
-                                QuestionType.text,
-                              );
-                            },
-                            tooltip: 'Tambah Judul/Deskripsi',
-                          ),
                           IconButton(
                             icon: Icon(
                               Icons.image_outlined,

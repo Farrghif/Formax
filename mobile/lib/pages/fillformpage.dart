@@ -86,6 +86,21 @@ class Question {
   }
 
   String? get imageUrl => settings['image_url'] as String?;
+
+  /// Semua URL gambar yang ditempel ke pertanyaan (urut: utama lalu tambahan),
+  /// tanpa duplikat dan tanpa nilai kosong.
+  List<String> get allImageUrls {
+    final list = <String>[];
+    final primary = settings['image_url'];
+    if (primary is String && primary.isNotEmpty) list.add(primary);
+    final extras = settings['image_urls'];
+    if (extras is List) {
+      for (final e in extras) {
+        if (e is String && e.isNotEmpty && !list.contains(e)) list.add(e);
+      }
+    }
+    return list;
+  }
 }
 
 class FormData {
@@ -1391,17 +1406,20 @@ class _FillFormPageState extends State<FillFormPage> {
             ],
           ),
           if (question.type != 'image' &&
-              question.imageUrl != null &&
-              question.imageUrl!.isNotEmpty) ...[
+              question.allImageUrls.isNotEmpty) ...[
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: NgrokImage(
-                question.imageUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
+            for (final url in question.allImageUrls)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: NgrokImage(
+                    url,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-            ),
           ],
           const SizedBox(height: 16),
 
@@ -1437,17 +1455,25 @@ class _FillFormPageState extends State<FillFormPage> {
       case 'file_upload':
         return _buildFileUploadInput(question);
       case 'image':
-        if (question.imageUrl != null && question.imageUrl!.isNotEmpty) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: NgrokImage(
-              question.imageUrl!,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-        return const SizedBox.shrink();
+        final urls = question.allImageUrls;
+        if (urls.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final url in urls)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: NgrokImage(
+                    url,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+          ],
+        );
       case 'text_block':
         return const SizedBox.shrink();
       default:

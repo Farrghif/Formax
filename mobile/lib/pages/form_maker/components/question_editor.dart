@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../models/question_model.dart';
 import '../../../widgets/ngrok_image.dart';
 import '../../../widgets/rich_text_field.dart';
+import '../../../widgets/rich_text_view.dart';
 
 class QuestionEditor extends StatefulWidget {
   final QuestionData question;
@@ -90,18 +91,6 @@ class _QuestionEditorState extends State<QuestionEditor> {
                         : (widget.question.type == QuestionType.image
                             ? 'Caption (opsional)'
                             : 'Pertanyaan'),
-                    minLines: 1,
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  RichTextField(
-                    key: ValueKey('q_desc_${widget.question.id}'),
-                    initialHtml: widget.question.description,
-                    onChanged: (html) {
-                      widget.question.description = html;
-                      widget.onChanged();
-                    },
-                    hintText: 'Deskripsi tambahan (opsional)',
                     minLines: 1,
                     maxLines: 3,
                   ),
@@ -220,15 +209,24 @@ class _QuestionEditorState extends State<QuestionEditor> {
     final q = widget.question;
 
     if (q.type == QuestionType.image) {
-      if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: (kIsWeb || q.imageUrl!.startsWith('http'))
-              ? NgrokImage(q.imageUrl!, fit: BoxFit.cover)
-              : Image.file(File(q.imageUrl!), fit: BoxFit.cover),
-        );
+      final urls = q.allImageUrls;
+      if (urls.isEmpty) {
+        return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
       }
-      return const SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: Colors.black26, size: 40)));
+      return Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: Column(
+          children: [
+            for (final url in urls)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: (kIsWeb || url.startsWith('http'))
+                    ? NgrokImage(url, fit: BoxFit.cover)
+                    : Image.file(File(url), fit: BoxFit.cover),
+              ),
+          ],
+        ),
+      );
     }
 
     // Untuk tipe lain, tampilkan gambar yang ditempel di atas konten pertanyaan
@@ -242,47 +240,55 @@ class _QuestionEditorState extends State<QuestionEditor> {
     );
   }
 
-  /// Gambar yang ditempel ke pertanyaan non-gambar, jika ada.
+  /// Gambar-gambar yang ditempel ke pertanyaan non-gambar, ditumpuk vertikal
+  /// dengan tombol hapus pada masing-masing gambar.
   Widget? _buildAttachedImage() {
     final q = widget.question;
-    if (q.type == QuestionType.image ||
-        q.imageUrl == null ||
-        q.imageUrl!.isEmpty) {
-      return null;
-    }
+    if (q.type == QuestionType.image) return null;
+    final urls = q.allImageUrls;
+    if (urls.isEmpty) return null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Stack(
-      alignment: Alignment.topRight,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: (kIsWeb || q.imageUrl!.startsWith('http'))
-              ? NgrokImage(
-                  q.imageUrl!,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
-              : Image.file(
-                  File(q.imageUrl!),
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+        for (var i = 0; i < urls.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: (kIsWeb || urls[i].startsWith('http'))
+                      ? NgrokImage(
+                          urls[i],
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.file(
+                          File(urls[i]),
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                 ),
-        ),
-        IconButton(
-          tooltip: 'Hapus gambar',
-          style: IconButton.styleFrom(
-            backgroundColor: isDark ? Colors.black54 : Colors.white,
-            foregroundColor: isDark ? Colors.white : Colors.black54,
-            padding: const EdgeInsets.all(6),
+                IconButton(
+                  tooltip: 'Hapus gambar',
+                  style: IconButton.styleFrom(
+                    backgroundColor: isDark ? Colors.black54 : Colors.white,
+                    foregroundColor: isDark ? Colors.white : Colors.black54,
+                    padding: const EdgeInsets.all(6),
+                  ),
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () {
+                    widget.question.removeAttachedImageAt(i);
+                    widget.onChanged();
+                  },
+                ),
+              ],
+            ),
           ),
-          icon: const Icon(Icons.close, size: 18),
-          onPressed: () {
-            widget.question.imageUrl = null;
-            widget.onChanged();
-          },
-        ),
       ],
     );
   }
@@ -417,17 +423,29 @@ class _QuestionEditorState extends State<QuestionEditor> {
                         padding: const EdgeInsets.symmetric(vertical: 12.0),
                         child: Text('Lainnya...', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
                       )
-                    : RichTextField(
+                    : TextFormField(
                         key: ValueKey('opt_${opt.id}'),
-                        initialHtml: opt.label,
-                        onChanged: (html) {
-                          opt.label = html;
+                        initialValue: RichTextView.stripHtml(opt.label),
+                        onChanged: (value) {
+                          opt.label = value;
                           widget.onChanged();
                         },
-                        hintText: 'Opsi ${i + 1}',
-                        compact: true,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                         minLines: 1,
                         maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Opsi ${i + 1}',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? const Color(0xFF94A3B8) : Colors.black38,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
                       ),
                 ),
                 if (q.options.length > 1)

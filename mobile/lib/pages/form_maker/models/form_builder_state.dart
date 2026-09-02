@@ -105,6 +105,11 @@ class FormBuilderState extends ChangeNotifier {
           ? <String, dynamic>{for (final e in settingsRaw.entries) e.key.toString(): e.value}
           : <String, dynamic>{};
       final imageUrl = settings['image_url'] as String?;
+      final extraImageUrls = (settings['image_urls'] as List<dynamic>?)
+              ?.whereType<String>()
+              .where((u) => u.isNotEmpty)
+              .toList() ??
+          <String>[];
       final rowLabels = (settings['row_labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? <String>[];
       final scaleMin = (settings['scale_min'] as int?) ?? 1;
       final scaleMax = (settings['scale_max'] as int?) ?? 5;
@@ -125,6 +130,7 @@ class FormBuilderState extends ChangeNotifier {
           isRequired: q['is_required'] ?? false,
           options: options,
           imageUrl: imageUrl,
+          extraImageUrls: extraImageUrls,
           rowLabels: rowLabels,
           scaleMin: scaleMin,
           scaleMax: scaleMax,
@@ -198,15 +204,13 @@ class FormBuilderState extends ChangeNotifier {
   }
 
   /// Tempel gambar ke pertanyaan yang sedang aktif (perilaku seperti Google Form).
+  /// Gambar pertama menjadi gambar utama; gambar berikutnya menumpuk di bawahnya
+  /// (tidak pernah mengubah teks pertanyaan).
   /// Mengembalikan true jika berhasil ditempel ke pertanyaan aktif.
   bool attachImageToActiveQuestion(String imageUrl) {
     final q = activeQuestion;
     if (q == null) return false;
-    if (q.imageUrl == null || q.imageUrl!.isEmpty) {
-      q.imageUrl = imageUrl;
-    } else {
-      q.label = '${q.label}<p><img src="$imageUrl" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;" /></p>';
-    }
+    q.addAttachedImage(imageUrl);
     notifyListeners();
     return true;
   }
@@ -218,6 +222,7 @@ class FormBuilderState extends ChangeNotifier {
       for (final q in page.questions) {
         if (q.id == questionId) {
           q.imageUrl = null;
+          q.extraImageUrls.clear();
           break;
         }
       }
@@ -404,6 +409,9 @@ class FormBuilderState extends ChangeNotifier {
         final settings = <String, dynamic>{};
         if (q.imageUrl != null && q.imageUrl!.isNotEmpty) {
           settings['image_url'] = q.imageUrl;
+        }
+        if (q.extraImageUrls.isNotEmpty) {
+          settings['image_urls'] = q.extraImageUrls;
         }
         if (q.scaleMin != 1) {
           settings['scale_min'] = q.scaleMin;

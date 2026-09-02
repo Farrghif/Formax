@@ -73,32 +73,34 @@ class QuestionViewer extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, bool isDark) {
-    // Untuk tipe non-gambar: tampilkan gambar yang ditempel di atas konten
-    // pertanyaan (perilaku seperti Google Form).
-    if (question.type != QuestionType.image &&
-        question.imageUrl != null &&
-        question.imageUrl!.isNotEmpty) {
-      final attached = Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: (kIsWeb || question.imageUrl!.startsWith('http'))
-              ? NgrokImage(
-                  question.imageUrl!,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
-              : Image.file(
-                  File(question.imageUrl!),
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-        ),
-      );
+    // Untuk tipe non-gambar: tampilkan semua gambar yang ditempel, ditumpuk
+    // di atas konten pertanyaan (perilaku seperti Google Form).
+    if (question.type != QuestionType.image) {
+      final urls = question.allImageUrls;
+      if (urls.isEmpty) {
+        return _buildBodyByType(context, isDark);
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          attached,
+          for (final url in urls)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: (kIsWeb || url.startsWith('http'))
+                    ? NgrokImage(
+                        url,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.file(
+                        File(url),
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+              ),
+            ),
           _buildBodyByType(context, isDark),
         ],
       );
@@ -281,15 +283,24 @@ class QuestionViewer extends StatelessWidget {
           ),
         );
       case QuestionType.image:
-        if (question.imageUrl != null && question.imageUrl!.isNotEmpty) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: (kIsWeb || question.imageUrl!.startsWith('http'))
-                ? NgrokImage(question.imageUrl!, fit: BoxFit.cover)
-                : Image.file(File(question.imageUrl!), fit: BoxFit.cover),
-          );
+        final urls = question.allImageUrls;
+        if (urls.isEmpty) {
+          return SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: subColor, size: 40)));
         }
-        return SizedBox(height: 100, child: Center(child: Icon(Icons.image, color: subColor, size: 40)));
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Column(
+            children: [
+              for (final url in urls)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: (kIsWeb || url.startsWith('http'))
+                      ? NgrokImage(url, fit: BoxFit.cover)
+                      : Image.file(File(url), fit: BoxFit.cover),
+                ),
+            ],
+          ),
+        );
       case QuestionType.text:
       case QuestionType.pageBreak:
         return const SizedBox.shrink();

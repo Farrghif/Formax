@@ -111,6 +111,7 @@ class QuestionData {
   List<QuestionOptionData> options;
   List<String> rowLabels;
   String? imageUrl; // For storing local path or base64
+  List<String> extraImageUrls; // Gambar tambahan yang ditempel, menumpuk di bawah imageUrl
   
   // Linear scale & Rating
   int scaleMin;
@@ -137,6 +138,7 @@ class QuestionData {
     this.description = '',
     this.isRequired = false,
     this.imageUrl,
+    List<String>? extraImageUrls,
     List<QuestionOptionData>? options,
     List<String>? rowLabels,
     this.scaleMin = 1,
@@ -151,7 +153,48 @@ class QuestionData {
     this.maxFileCount = 1,
   })  : id = id ?? UniqueKey().toString(),
         options = options ?? [],
-        rowLabels = rowLabels ?? [];
+        rowLabels = rowLabels ?? [],
+        extraImageUrls = extraImageUrls == null ? <String>[] : List<String>.from(extraImageUrls);
+
+  /// Semua URL gambar yang ditempel ke pertanyaan ini (utama + tambahan),
+  /// tanpa duplikat dan tanpa nilai kosong.
+  List<String> get allImageUrls {
+    final list = <String>[];
+    if (imageUrl != null && imageUrl!.isNotEmpty) list.add(imageUrl!);
+    for (final url in extraImageUrls) {
+      if (url.isNotEmpty && !list.contains(url)) list.add(url);
+    }
+    return list;
+  }
+
+  /// Tempel gambar lain ke pertanyaan. Gambar pertama menjadi `imageUrl`;
+  /// gambar berikutnya ditumpuk di `extraImageUrls` (bukan ke label).
+  void addAttachedImage(String url) {
+    if (url.isEmpty) return;
+    if (imageUrl == null || imageUrl!.isEmpty) {
+      imageUrl = url;
+    } else {
+      extraImageUrls.add(url);
+    }
+  }
+
+  /// Hapus gambar pada indeks `allImageUrls`. Jika gambar utama dihapus,
+  /// gambar tambahan pertama naik menjadi gambar utama.
+  void removeAttachedImageAt(int index) {
+    final hasPrimary = imageUrl != null && imageUrl!.isNotEmpty;
+    if (index == 0 && hasPrimary) {
+      if (extraImageUrls.isNotEmpty) {
+        imageUrl = extraImageUrls.removeAt(0);
+      } else {
+        imageUrl = null;
+      }
+      return;
+    }
+    final extraIndex = index - (hasPrimary ? 1 : 0);
+    if (extraIndex >= 0 && extraIndex < extraImageUrls.length) {
+      extraImageUrls.removeAt(extraIndex);
+    }
+  }
 
   QuestionData clone() {
     return QuestionData(
@@ -160,6 +203,7 @@ class QuestionData {
       label: label,
       description: description,
       imageUrl: imageUrl,
+      extraImageUrls: List<String>.from(extraImageUrls),
       isRequired: isRequired,
       options: options.map((e) => e.clone()).toList(),
       rowLabels: List.from(rowLabels),

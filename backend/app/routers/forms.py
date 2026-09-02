@@ -5,7 +5,7 @@ import secrets
 from typing import List
 
 import qrcode
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -313,7 +313,7 @@ def delete_form(form_id: str, db: Session = Depends(get_db), current_user: model
 
 
 @router.post("/{form_id}/generate-qr")
-def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def generate_qr(request: Request, form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Generate QR code dari link publik form, simpan sebagai file static, update qr_code_url."""
     form = db.query(models.Form).filter(models.Form.id == form_id).first()
     if not form:
@@ -329,7 +329,16 @@ def generate_qr(form_id: str, db: Session = Depends(get_db), current_user: model
     filepath = f"{QR_DIR}/{form.slug}.png"
     img.save(filepath)
 
-    form.qr_code_url = f"{BASE_URL}/static/qrcodes/{form.slug}.png"
+    # FIX base_url sama: kalau enkripnya belongs BASE_URL dikosongkan (kosong),
+    # gm pasti dapat fallback yang basis-nya malah relatif (/static/...), jadi
+    # QR tidak bisa dimuat kembali di web maupun Android (gambar rusak/hilang).
+    # Pakai host dari request (seperti uploads.py) agar URL selalu absolut, cocok
+    # dengan local dev maupun tunnel ngrok — kedua client memakai URL yang sama.
+    if not BASE_URL:
+        qr_base = str(request.base_url).rstrip("/")
+    else:
+        qr_base = BASE_URL
+    form.qr_code_url = f"{qr_base}/static/qrcodes/{form.slug}.png"
     db.commit()
     return {"qr_code_url": form.qr_code_url, "share_link": public_url}
 

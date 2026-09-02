@@ -108,18 +108,33 @@ class PageHeaderCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- Title Field ---
+                      // --- Title Field (field biasa, tanpa rich text editor) ---
                       isActive
-                          ? RichTextField(
+                          ? TextFormField(
                               key: ValueKey('page_title_${page.id}'),
-                              initialHtml: page.title,
-                              onChanged: (html) {
-                                page.title = html;
+                              initialValue: RichTextView.stripHtml(page.title),
+                              onChanged: (value) {
+                                page.title = value;
                                 onChanged();
                               },
-                              hintText: _isFirstPage ? 'Judul Formulir' : 'Judul Bagian',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: titleColor,
+                              ),
                               minLines: 1,
                               maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: _isFirstPage ? 'Judul Formulir' : 'Judul Bagian',
+                                hintStyle: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF64748B) : Colors.black26,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
                             )
                           : _buildTitleView(titleColor),
                       const SizedBox(height: 16),
