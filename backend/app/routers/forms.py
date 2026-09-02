@@ -198,6 +198,13 @@ def update_form(
 
     data = payload.model_dump(exclude_unset=True)
     questions_data = data.pop("questions", None)
+    use_join_token = data.pop("use_join_token", None)
+
+    if use_join_token is True:
+        if not form.join_token:
+            form.join_token = security.generate_join_token()
+    elif use_join_token is False:
+        form.join_token = None
 
     # Terapkan perubahan non-pertanyaan dulu (status, accept_responses, dll)
     # agar publish tetap tersimpan meski pertanyaan terkunci.

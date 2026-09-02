@@ -267,6 +267,7 @@ export default function FormBuilderPage() {
             banner_url: formData.banner_url,
             start_date: formData.start_date || null,
             end_date: formData.end_date || null,
+            use_join_token: useJoinToken,
             questions: questionsPayload,
           });
         } catch (err) {
@@ -306,20 +307,29 @@ export default function FormBuilderPage() {
         }
 
         // Sync local state dari response atomik (sudah pasti _saved)
-        if (updatedForm && updatedForm.questions) {
-          setQuestions(
-            updatedForm.questions
-              .sort((a, b) => a.order_index - b.order_index)
-              .map((q) => ({
-                ...q,
-                _saved: true,
-                options: (q.options || []).sort((a, b) => a.order_index - b.order_index).map((o) => ({ ...o, _saved: true })),
-              }))
-          );
+        if (updatedForm) {
+          if (updatedForm.questions) {
+            setQuestions(
+              updatedForm.questions
+                .sort((a, b) => a.order_index - b.order_index)
+                .map((q) => ({
+                  ...q,
+                  _saved: true,
+                  options: (q.options || []).sort((a, b) => a.order_index - b.order_index).map((o) => ({ ...o, _saved: true })),
+                }))
+            );
+          }
+          setFormData((prev) => ({
+            ...prev,
+            status: updatedForm.status || statusToSave,
+            title: updatedForm.title ?? prev.title,
+            description: updatedForm.description ?? prev.description,
+            join_token: updatedForm.join_token,
+          }));
+          setUseJoinToken(!!updatedForm.join_token);
         }
 
         if (publish) {
-          setFormData((prev) => ({ ...prev, status: 'published', title: updatedForm?.title ?? prev.title, description: updatedForm?.description ?? prev.description }));
           showToast('Form berhasil dipublikasikan! Link siap dibagikan.', 'success');
           if (formData.id) {
             try {
@@ -392,6 +402,7 @@ export default function FormBuilderPage() {
           banner_url: created.banner_url || prev.banner_url,
           status: created.status || (publish ? 'published' : prev.status),
         }));
+        setUseJoinToken(!!created.join_token);
 
         let savedQuestions = (created.questions || []).sort((a, b) => a.order_index - b.order_index);
 
@@ -1516,15 +1527,42 @@ export default function FormBuilderPage() {
                     <p className="fb-setting-row-desc">Peserta harus memasukkan token untuk mengisi form</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {formData.join_token && (
-                      <code style={{ fontSize: '12px', background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', color: '#2563eb', fontWeight: 600 }}>
-                        {formData.join_token}
-                      </code>
+                    {useJoinToken && (
+                      formData.join_token ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <code style={{ fontSize: '13px', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '6px', color: '#1d4ed8', fontWeight: 700, letterSpacing: '1px' }}>
+                            {formData.join_token}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(formData.join_token);
+                              showToast('Token disalin ke clipboard!', 'success');
+                            }}
+                            title="Salin Token"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#64748b' }}
+                          >
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                          (Di-generate saat simpan)
+                        </span>
+                      )
                     )}
                     <button
+                      type="button"
                       className={`fb-toggle ${useJoinToken ? 'on' : 'off'}`}
-                      onClick={() => setUseJoinToken(!useJoinToken)}
-                      disabled={!!formData.id}
+                      onClick={() => {
+                        const next = !useJoinToken;
+                        setUseJoinToken(next);
+                        if (!next) {
+                          setFormData((prev) => ({ ...prev, join_token: null }));
+                        }
+                      }}
                     />
                   </div>
                 </div>
