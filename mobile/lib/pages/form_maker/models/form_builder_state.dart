@@ -374,26 +374,14 @@ class FormBuilderState extends ChangeNotifier {
   }
 
   // --- API Payload Builder ---
-  // Dipakai untuk createTemplate & createForm — harus 100% kompatibel dengan backend QuestionType enum
+  // Solusi aman untuk schema DB saat ini: jangan kirim tipe page_break ke backend,
+  // karena PostgreSQL enum questiontype belum mendukung nilai tersebut.
+  // Halaman/section tetap dipelihara di UI lokal, tapi tidak disimpan ke DB agar
+  // template/form bisa tersimpan tanpa error enum.
   List<Map<String, dynamic>> buildApiPayload() {
     final List<Map<String, dynamic>> result = [];
     int orderIndex = 0;
-    for (int i = 0; i < pages.length; i++) {
-      final page = pages[i];
-
-      // Add page break if it's not the first page — backend type = page_break
-      if (i > 0) {
-        result.add({
-          'type': QuestionType.pageBreak.apiValue,
-          'label': page.title.isNotEmpty ? page.title : 'Bagian ${i + 1}',
-          'placeholder': page.description,
-          'is_required': false,
-          'order_index': orderIndex++,
-          'settings': {},
-          'options': [],
-        });
-      }
-
+    for (final page in pages) {
       for (final q in page.questions) {
         final opts = q.options.asMap().entries.map((e) {
           return {

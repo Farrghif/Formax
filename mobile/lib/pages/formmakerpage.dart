@@ -75,8 +75,9 @@ class _FormMakerPageState extends State<FormMakerPage>
   bool _enableTimer = true;
   String _timerMode = 'Start when respondent opens the form';
   final TextEditingController _durationCtrl = TextEditingController(
-    text: '1 hari',
+    text: '1',
   );
+  String _durationUnit = 'hari';
   final TextEditingController _pointValueCtrl = TextEditingController(
     text: '0',
   );
@@ -119,6 +120,36 @@ class _FormMakerPageState extends State<FormMakerPage>
     }
   }
 
+  int _getDurationValue() {
+    final raw = _durationCtrl.text.trim();
+    final parsed = int.tryParse(raw);
+    if (parsed != null) return parsed;
+    final numMatch = RegExp(r'\d+').firstMatch(raw);
+    final value = int.tryParse(numMatch?.group(0) ?? '1') ?? 1;
+    return value < 1 ? 1 : value;
+  }
+
+  Duration _getDurationValueAsDuration() {
+    final value = _getDurationValue();
+    switch (_durationUnit) {
+      case 'detik':
+        return Duration(seconds: value);
+      case 'menit':
+        return Duration(minutes: value);
+      case 'jam':
+        return Duration(hours: value);
+      case 'bulan':
+        return Duration(days: value * 30);
+      case 'tahun':
+        return Duration(days: value * 365);
+      case 'hari':
+      default:
+        return Duration(days: value);
+    }
+  }
+
+  String get _durationDisplayText => '${_durationCtrl.text.trim()} $_durationUnit';
+
   @override
   void dispose() {
     _builderState.dispose();
@@ -157,21 +188,11 @@ class _FormMakerPageState extends State<FormMakerPage>
     DateTime? endDate;
     final isPerRespondent = _timerMode == 'Start when respondent opens the form';
     if (_enableTimer && !isPerRespondent) {
-      // Start at specific date and time → window global. 
+      // Start at specific date and time → window global.
       // Backend mengharapkan format waktu LOKAL (WIB) tanpa zona (seperti datetime-local di web).
       // Kurangi 5 menit (bukan 60s) untuk mencegah error "Form belum dibuka" jika jam HP lebih cepat dari server.
       startDate = DateTime.now().subtract(const Duration(minutes: 5));
-      final durText = _durationCtrl.text.trim();
-      final num =
-          int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ??
-          1;
-      if (durText.contains('jam')) {
-        endDate = startDate.add(Duration(hours: num));
-      } else if (durText.contains('menit')) {
-        endDate = startDate.add(Duration(minutes: num));
-      } else {
-        endDate = startDate.add(Duration(days: num));
-      }
+      endDate = startDate.add(_getDurationValueAsDuration());
     }
 
     // Batas respons: 1 kali / tanpa batas / kustom (>= 2) — seperti web.
@@ -1629,20 +1650,71 @@ class _FormMakerPageState extends State<FormMakerPage>
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _durationCtrl,
-              style: TextStyle(color: _textColor),
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: _isDark ? const Color(0xFF475569) : Colors.black12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _durationCtrl,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(color: _textColor),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(6),
+                        ),
+                        borderSide: BorderSide(
+                          color: _isDark ? const Color(0xFF475569) : Colors.black12,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      isDense: true,
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
+                const SizedBox(width: 8),
+                Container(
+                  width: 120,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _isDark ? const Color(0xFF475569) : Colors.black12,
+                    ),
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(6),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _durationUnit,
+                      isExpanded: true,
+                      items: const [
+                        'detik',
+                        'menit',
+                        'jam',
+                        'hari',
+                        'bulan',
+                        'tahun',
+                      ].map((unit) {
+                        return DropdownMenuItem<String>(
+                          value: unit,
+                          child: Text(
+                            unit,
+                            style: TextStyle(fontSize: 13, color: _textColor),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _durationUnit = value);
+                        }
+                      },
+                    ),
+                  ),
                 ),
-                isDense: true,
-              ),
+              ],
             ),
             const SizedBox(height: 20),
             Container(
@@ -1677,7 +1749,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Pengaturan disimpan — akan diterapkan saat Publish (status: $_formStatus, batas respons: $_submissionLimit, timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'})',
+                      'Pengaturan disimpan — akan diterapkan saat Publish (status: $_formStatus, batas respons: $_submissionLimit, timer: ${_enableTimer ? _durationDisplayText : 'nonaktif'})',
                     ),
                   ),
                 );

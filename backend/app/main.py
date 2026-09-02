@@ -57,7 +57,23 @@ with engine.begin() as conn:
         raw = engine.raw_connection()
         try:
             raw_cursor = raw.cursor()
-            for val in ['image', 'text_block', 'paragraph', 'time', 'linear_scale', 'rating', 'multiple_choice_grid', 'tick_box_grid']:
+            for val in [
+                'text',
+                'paragraph',
+                'single_choice',
+                'checkbox',
+                'dropdown',
+                'date',
+                'time',
+                'file_upload',
+                'linear_scale',
+                'rating',
+                'multiple_choice_grid',
+                'tick_box_grid',
+                'page_break',
+                'image',
+                'text_block',
+            ]:
                 raw_cursor.execute(f"ALTER TYPE questiontype ADD VALUE IF NOT EXISTS '{val}'")
             raw.commit()
             raw_cursor.close()

@@ -151,8 +151,9 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
   bool _enableTimer = true;
   String _timerMode = 'Start when respondent opens the form';
   final TextEditingController _durationCtrl = TextEditingController(
-    text: '1 hari',
+    text: '1',
   );
+  String _durationUnit = 'hari';
 
   @override
   void dispose() {
@@ -224,6 +225,36 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     }
     return result;
   }
+
+  int _getDurationValue() {
+    final raw = _durationCtrl.text.trim();
+    final parsed = int.tryParse(raw);
+    if (parsed != null) return parsed;
+    final numMatch = RegExp(r'\d+').firstMatch(raw);
+    final value = int.tryParse(numMatch?.group(0) ?? '1') ?? 1;
+    return value < 1 ? 1 : value;
+  }
+
+  Duration _getDurationValueAsDuration() {
+    final value = _getDurationValue();
+    switch (_durationUnit) {
+      case 'detik':
+        return Duration(seconds: value);
+      case 'menit':
+        return Duration(minutes: value);
+      case 'jam':
+        return Duration(hours: value);
+      case 'bulan':
+        return Duration(days: value * 30);
+      case 'tahun':
+        return Duration(days: value * 365);
+      case 'hari':
+      default:
+        return Duration(days: value);
+    }
+  }
+
+  String get _durationDisplayText => '${_durationCtrl.text.trim()} $_durationUnit';
 
   void _saveTemplate() async {
     if (_isSaving) return;
@@ -309,11 +340,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
     final isPerRespondent = _timerMode == 'Start when respondent opens the form';
     if (_enableTimer && !isPerRespondent) {
       startDate = DateTime.now().toUtc().subtract(const Duration(seconds: 60));
-      final durText = _durationCtrl.text.trim();
-      final num = int.tryParse(RegExp(r'\d+').firstMatch(durText)?.group(0) ?? '1') ?? 1;
-      if (durText.contains('jam')) endDate = startDate.add(Duration(hours: num));
-      else if (durText.contains('menit')) endDate = startDate.add(Duration(minutes: num));
-      else endDate = startDate.add(Duration(days: num));
+      endDate = startDate.add(_getDurationValueAsDuration());
     }
 
     final payload = {
@@ -1687,19 +1714,63 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _durationCtrl,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: Colors.black12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _durationCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(6),
+                        ),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      isDense: true,
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
+                const SizedBox(width: 8),
+                Container(
+                  width: 120,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black12),
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(6),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _durationUnit,
+                      isExpanded: true,
+                      items: const [
+                        'detik',
+                        'menit',
+                        'jam',
+                        'hari',
+                        'bulan',
+                        'tahun',
+                      ].map((unit) {
+                        return DropdownMenuItem<String>(
+                          value: unit,
+                          child: Text(unit, style: const TextStyle(fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _durationUnit = value);
+                        }
+                      },
+                    ),
+                  ),
                 ),
-                isDense: true,
-              ),
+              ],
             ),
             const SizedBox(height: 20),
             Container(
@@ -1731,7 +1802,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
             ElevatedButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Pengaturan disimpan — akan diterapkan saat Publish (timer: ${_enableTimer ? _durationCtrl.text : 'nonaktif'})')),
+                  SnackBar(content: Text('Pengaturan disimpan — akan diterapkan saat Publish (timer: ${_enableTimer ? _durationDisplayText : 'nonaktif'})')),
                 );
               },
               style: ElevatedButton.styleFrom(
