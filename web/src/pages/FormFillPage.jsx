@@ -8,6 +8,7 @@ import NgrokImage from '../components/NgrokImage';
 import NgrokAudio from '../components/NgrokAudio';
 import { apiFetch } from '../api/config';
 import logoForm4x from '../assets/logo_form4x.png';
+import 'react-quill-new/dist/quill.snow.css';
 import '../styles/form-fill.css';
 
 const QUESTIONS_PER_PAGE = 5;
@@ -37,23 +38,22 @@ function normalizeColors(html) {
 const richHtml = (html) => ({ __html: normalizeColors(html ?? '') });
 
 // Hook untuk fix audio ngrok di dalam container dangerouslySetInnerHTML
-// Browser <audio> tidak bisa kirim header ngrok-skip-browser-warning -> perlu blob
-function useNgrokAudioFix(containerRef, html) {
+// Hook untuk fix media (audio & image) ngrok di dalam container dangerouslySetInnerHTML
+function useNgrokMediaFix(containerRef, html) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !html) return;
-    const audios = el.querySelectorAll('audio[src*="ngrok-free"]');
-    if (audios.length === 0) return;
+    const mediaElements = el.querySelectorAll('audio[src*="ngrok-free"], img[src*="ngrok-free"]');
+    if (mediaElements.length === 0) return;
     const controllers = [];
-    audios.forEach((audio) => {
-      const src = audio.getAttribute('src');
-      if (!src || src.startsWith('data:audio/') || src.startsWith('data:video/') || src.startsWith('blob:') || audio.dataset.ngrokFixed) return;
-      audio.dataset.ngrokFixed = '1';
-      audio.dataset.originalSrc = src;
+    mediaElements.forEach((item) => {
+      const src = item.getAttribute('src');
+      if (!src || src.startsWith('data:') || src.startsWith('blob:') || item.dataset.ngrokFixed) return;
+      item.dataset.ngrokFixed = '1';
+      item.dataset.originalSrc = src;
       const controller = new AbortController();
       controllers.push(controller);
-      // Placeholder style sambil load
-      audio.style.opacity = '0.6';
+      item.style.opacity = '0.6';
       apiFetch(src, { signal: controller.signal })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -62,23 +62,21 @@ function useNgrokAudioFix(containerRef, html) {
         .then((blob) => {
           if (blob.type && blob.type.startsWith('text/html')) throw new Error('Ngrok HTML');
           const blobUrl = URL.createObjectURL(blob);
-          audio.src = blobUrl;
-          audio.load();
-          audio.style.opacity = '1';
-          // cleanup saat unmount / html ganti
-          audio.dataset.blobUrl = blobUrl;
+          item.src = blobUrl;
+          if (item.tagName === 'AUDIO') item.load();
+          item.style.opacity = '1';
+          item.dataset.blobUrl = blobUrl;
         })
         .catch((err) => {
           if (err.name === 'AbortError') return;
-          console.error('[NgrokAudioFix] gagal:', src, err);
-          audio.style.opacity = '1';
+          console.error('[NgrokMediaFix] gagal:', src, err);
+          item.style.opacity = '1';
         });
     });
     return () => {
       controllers.forEach((c) => c.abort());
-      // revoke blob URLs
       if (el) {
-        el.querySelectorAll('audio[data-blob-url]').forEach((a) => {
+        el.querySelectorAll('[data-blob-url]').forEach((a) => {
           const u = a.dataset.blobUrl;
           if (u) URL.revokeObjectURL(u);
         });
@@ -205,6 +203,7 @@ export default function FormFillPage() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isAutoSubmitted, setIsAutoSubmitted] = useState(false);
 
   // User Profile & Hover Popover
   const [userProfile, setUserProfile] = useState(null);
@@ -264,6 +263,26 @@ export default function FormFillPage() {
         const formData = await getPublicFormBySlug(getToken(), slug);
         setForm(formData);
 
+        // Jika waktu pengisian sudah berakhir atau status form ditutup -> tampilkan layar "Form Ditutup / Waktu Habis", JANGAN buka form / tampilkan auto-submit
+        const parseDateMs = (dateStr) => {
+          if (!dateStr) return null;
+          let d = new Date(dateStr);
+          if (isNaN(d.getTime())) d = new Date(dateStr.replace(' ', 'T'));
+          return isNaN(d.getTime()) ? null : d.getTime();
+        };
+        const endMs = parseDateMs(formData.end_date);
+        const isTimeExpired = endMs && Date.now() > endMs;
+        const isClosedStatus = formData.status === 'closed' || formData.accept_responses === false;
+
+        if (isClosedStatus) {
+          setErrorMsg('Form ini telah ditutup oleh pembuat form.');
+          return;
+        }
+        if (isTimeExpired) {
+          setErrorMsg('Waktu pengisian form sudah berakhir.');
+          return;
+        }
+
         // Try auto joining form (if no join token required or user already joined)
         try {
           if (joiningRef.current) return;
@@ -272,6 +291,7 @@ export default function FormFillPage() {
           setSubmissionId(sub.id);
           if (sub.submitted_at) {
             setIsSubmitted(true);
+            if (sub.is_auto_submitted) setIsAutoSubmitted(true);
           } else if (formData.require_fullscreen) {
             setShowFullscreenIntro(true);
           }
@@ -320,6 +340,7 @@ export default function FormFillPage() {
       setShowJoinModal(false);
       if (sub.submitted_at) {
         setIsSubmitted(true);
+        if (sub.is_auto_submitted) setIsAutoSubmitted(true);
       } else if (form?.require_fullscreen) {
         setShowFullscreenIntro(true);
       }
@@ -465,6 +486,30 @@ export default function FormFillPage() {
     }
   };
 
+  // Handle Auto Submit (ketika waktu pengisian habis)
+  const handleAutoSubmit = useCallback(async () => {
+    if (!submissionId || isSubmitted || isSubmitting || doneRef.current) return;
+    doneRef.current = true;
+    try {
+      setIsSubmitting(true);
+      await submitFinal(getToken(), submissionId);
+      setIsSubmitted(true);
+      setIsAutoSubmitted(true);
+      setShowSubmitModal(false);
+      try { localStorage.removeItem(`bm:${slug}`); } catch { }
+      setBookmarked(new Set());
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => { });
+      }
+    } catch {
+      setIsSubmitted(true);
+      setIsAutoSubmitted(true);
+      setShowSubmitModal(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [submissionId, isSubmitted, isSubmitting, slug]);
+
   // Timer countdown hook
   useEffect(() => {
     if (!form || !form.end_date || isSubmitted) return;
@@ -487,8 +532,8 @@ export default function FormFillPage() {
       if (diff <= 0) {
         setTimeLeft(0);
         // Auto submit when time expires
-        if (submissionId && !isSubmitted && !isSubmitting) {
-          handleFinalSubmit();
+        if (submissionId && !isSubmitted && !isSubmitting && !doneRef.current) {
+          handleAutoSubmit();
         }
       } else {
         setTimeLeft(diff);
@@ -498,8 +543,7 @@ export default function FormFillPage() {
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, submissionId, isSubmitted, isSubmitting]);
+  }, [form, submissionId, isSubmitted, isSubmitting, handleAutoSubmit]);
 
   // Format timer
   const formatTimer = (seconds) => {
@@ -883,12 +927,77 @@ export default function FormFillPage() {
   }
 
   if (errorMsg) {
+    const isClosedOrExpired =
+      errorMsg.toLowerCase().includes('berakhir') ||
+      errorMsg.toLowerCase().includes('ditutup') ||
+      errorMsg.toLowerCase().includes('menutup') ||
+      errorMsg.toLowerCase().includes('belum dibuka') ||
+      errorMsg.toLowerCase().includes('tidak menerima');
+
     return (
-      <div className="form-fill-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="modal-card">
-          <h2 className="modal-title" style={{ color: '#EF4444' }}>Terjadi Kesalahan</h2>
-          <p className="modal-desc">{errorMsg}</p>
-          <button className="modal-btn-primary" onClick={() => navigate('/dashboard')}>
+      <div className="form-fill-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px' }}>
+        <header className="form-fill-header" style={{ position: 'fixed', top: 0, left: 0, right: 0 }}>
+          <div className="form-fill-logo-wrap" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} role="button" tabIndex={0} aria-label="Ke dashboard">
+            <img src={logoForm4x} alt="Form4x logo" className="form-fill-logo-img" />
+            <h1 className="form-fill-logo">Form4x</h1>
+          </div>
+          <div className="form-fill-header-right">
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <div className="form-closed-card" style={{
+          background: 'var(--bg-card, #ffffff)',
+          border: '1px solid var(--border-color, #e2e8f0)',
+          borderRadius: '20px',
+          padding: '40px 32px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.1)',
+          marginTop: '60px'
+        }}>
+          <div className="form-closed-icon-wrap" style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            background: isClosedOrExpired ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+            color: isClosedOrExpired ? '#ef4444' : '#f59e0b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px auto'
+          }}>
+            {isClosedOrExpired ? (
+              <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '10px', color: 'var(--text-h, #0f172a)' }}>
+            {isClosedOrExpired ? 'Form Tidak Dapat Diakses' : 'Terjadi Kesalahan'}
+          </h2>
+          <p style={{ fontSize: '15px', color: 'var(--text, #64748b)', lineHeight: '1.6', marginBottom: '24px' }}>
+            {errorMsg}
+          </p>
+          {isClosedOrExpired && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              fontSize: '13px',
+              color: '#ef4444',
+              marginBottom: '24px'
+            }}>
+              Formulir ini telah ditutup atau waktunya sudah berakhir. Respons baru tidak dapat diterima.
+            </div>
+          )}
+          <button className="modal-btn-primary" style={{ width: '100%' }} onClick={() => navigate('/dashboard')}>
             Kembali ke Dashboard
           </button>
         </div>
@@ -1070,6 +1179,15 @@ export default function FormFillPage() {
             <p className="success-desc">
               Terima kasih telah mengisi <strong className="success-form-title" dangerouslySetInnerHTML={richHtml(form?.title)} />. Jawaban Anda telah tersimpan dengan aman di sistem.
             </p>
+
+            {isAutoSubmitted && (
+              <div className="cheated-banner time-expired-banner" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444', marginBottom: '16px' }}>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Waktu pengerjaan telah habis! Jawaban Anda telah otomatis dikirimkan oleh sistem.
+              </div>
+            )}
 
             {cheated && (
               <div className="cheated-banner success-cheated-banner">
@@ -1482,12 +1600,12 @@ export default function FormFillPage() {
 
 function FormDescriptionWithAudio({ html }) {
   const ref = useRef(null);
-  useNgrokAudioFix(ref, html);
-  return <div ref={ref} className="form-description" dangerouslySetInnerHTML={richHtml(html)} />;
+  useNgrokMediaFix(ref, html);
+  return <div ref={ref} className="form-description ql-editor" dangerouslySetInnerHTML={richHtml(html)} />;
 }
 
 function QuestionLabelWithAudio({ html }) {
   const ref = useRef(null);
-  useNgrokAudioFix(ref, html);
-  return <div ref={ref} className="question-label-content" dangerouslySetInnerHTML={richHtml(html)} />;
+  useNgrokMediaFix(ref, html);
+  return <div ref={ref} className="question-label-content ql-editor" dangerouslySetInnerHTML={richHtml(html)} />;
 }
