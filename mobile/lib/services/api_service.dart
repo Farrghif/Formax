@@ -546,6 +546,28 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> regenerateJoinToken(String formId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return {'success': false, 'message': 'No token found'};
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/forms/$formId/regenerate-join-token'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map ? (data['detail'] ?? 'Failed to regenerate join token') : 'Failed to regenerate join token';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Fungsi Generate QR Code
   static Future<Map<String, dynamic>> generateQrCode(String formId) async {
     try {

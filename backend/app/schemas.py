@@ -204,6 +204,7 @@ class FormUpdate(BaseModel):
     banner_url: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    use_join_token: Optional[bool] = None
     allow_see_result: Optional[bool] = None
     max_submissions: Optional[int] = None
     require_fullscreen: Optional[bool] = None

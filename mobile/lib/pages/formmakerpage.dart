@@ -280,6 +280,17 @@ class _FormMakerPageState extends State<FormMakerPage>
         final data = res['data'];
         if (data is Map && data['id'] != null) {
           _draftFormId = data['id'].toString();
+          if (publish && _useJoinToken) {
+            final tokenRes = await ApiService.regenerateJoinToken(_draftFormId!);
+            if (tokenRes['success'] != true && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Token form gagal dibuat: ${tokenRes['message'] ?? 'terjadi kesalahan'}'),
+                  backgroundColor: Colors.orange.shade700,
+                ),
+              );
+            }
+          }
         }
       }
       return res;
