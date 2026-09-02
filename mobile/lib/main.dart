@@ -36,10 +36,7 @@ class MyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('en'),
-            Locale('id'),
-          ],
+          supportedLocales: const [Locale('en'), Locale('id')],
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFF1E66D0),

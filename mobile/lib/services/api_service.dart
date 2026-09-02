@@ -9,16 +9,10 @@ class ApiService {
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_URL');
     if (envUrl.isNotEmpty) return envUrl;
-    
-    if (kIsWeb) {
-      return 'http://localhost:8000';
-    }
-    
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
-    }
-    
-    return 'http://localhost:8000';
+
+    // Mobile harus konsumsi backend yang sama dengan web project,
+    // sehingga semua client terhubung ke backend production yang sama.
+    return 'https://wriggly-diffusion-flatfoot.ngrok-free.dev';
   }
 
     static String get frontendUrl {
