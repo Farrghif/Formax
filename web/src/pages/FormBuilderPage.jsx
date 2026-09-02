@@ -1284,13 +1284,14 @@ export default function FormBuilderPage() {
                               {q.type === 'dropdown' && (
                                 <span style={{ color: '#94a3b8', fontSize: '13px', minWidth: '20px' }}>{oIdx + 1}.</span>
                               )}
-                              <input
-                                className="fb-option-input"
-                                type="text"
-                                value={opt.label}
-                                onChange={(e) => updateOptionLocal(qIdx, oIdx, { label: e.target.value })}
-                                placeholder={`Opsi ${oIdx + 1}`}
-                              />
+                              <div className="fb-option-editor-wrap">
+                                <RichTextEditor
+                                  value={opt.label}
+                                  onChange={(val) => updateOptionLocal(qIdx, oIdx, { label: val })}
+                                  variant="option"
+                                  placeholder={`Opsi ${oIdx + 1}`}
+                                />
+                              </div>
                               {supportsCorrectAnswer(q.type) && (
                                 <button
                                   className={`fb-correct-btn ${opt.is_correct ? 'active' : ''}`}
