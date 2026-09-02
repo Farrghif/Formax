@@ -742,9 +742,12 @@ export default function FormFillPage() {
         return (
           <div className="options-list">
             {(q.options || []).map((opt) => {
+              const optClean = stripHtml(opt.label).trim();
+              const ansClean = stripHtml(currentAnswer.answer_text || '').trim();
               const isSelected =
                 currentAnswer.answer_text === opt.label ||
-                (Array.isArray(currentAnswer.answer_options) && currentAnswer.answer_options.includes(opt.label));
+                (Array.isArray(currentAnswer.answer_options) && currentAnswer.answer_options.includes(opt.label)) ||
+                (ansClean && optClean && ansClean === optClean);
               return (
                 <div
                   key={opt.id}
@@ -766,7 +769,7 @@ export default function FormFillPage() {
                   }}
                 >
                   <div className="option-radio">{isSelected && <div className="option-radio-dot" />}</div>
-                  <span className="option-label-text" dangerouslySetInnerHTML={richHtml(opt.label)} />
+                  <span className="option-label-text ql-editor" dangerouslySetInnerHTML={richHtml(opt.label)} />
                   {isSelected && (
                     <svg className="option-check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
@@ -783,7 +786,10 @@ export default function FormFillPage() {
           <div className="options-list">
             {(q.options || []).map((opt) => {
               const currentSelected = Array.isArray(currentAnswer.answer_options) ? currentAnswer.answer_options : [];
-              const isSelected = currentSelected.includes(opt.label);
+              const optClean = stripHtml(opt.label).trim();
+              const isSelected =
+                currentSelected.includes(opt.label) ||
+                currentSelected.some((item) => stripHtml(item).trim() === optClean);
               return (
                 <div
                   key={opt.id}
@@ -791,7 +797,7 @@ export default function FormFillPage() {
                   onClick={() => {
                     let nextSelected;
                     if (isSelected) {
-                      nextSelected = currentSelected.filter((item) => item !== opt.label);
+                      nextSelected = currentSelected.filter((item) => item !== opt.label && stripHtml(item).trim() !== optClean);
                     } else {
                       nextSelected = [...currentSelected, opt.label];
                     }
@@ -808,7 +814,7 @@ export default function FormFillPage() {
                       </svg>
                     )}
                   </div>
-                  <span className="option-label-text" dangerouslySetInnerHTML={richHtml(opt.label)} />
+                  <span className="option-label-text ql-editor" dangerouslySetInnerHTML={richHtml(opt.label)} />
                 </div>
               );
             })}
@@ -1089,17 +1095,19 @@ export default function FormFillPage() {
                     )}
                   </div>
                   <div className="result-answer-body">
-                    <p>
+                    <div>
                       <span className="result-label">Jawaban Anda:</span>
-                      <span className={`result-answer-text ${a.is_correct === false ? 'wrong' : ''}`}>
-                        {stripHtml(a.user_answer) || '(tidak dijawab)'}
-                      </span>
-                    </p>
+                      {a.user_answer ? (
+                        <span className={`result-answer-text ql-editor ${a.is_correct === false ? 'wrong' : ''}`} dangerouslySetInnerHTML={richHtml(a.user_answer)} />
+                      ) : (
+                        <span className="result-answer-text">(tidak dijawab)</span>
+                      )}
+                    </div>
                     {a.correct_answer && (
-                      <p>
+                      <div>
                         <span className="result-label">Jawaban Benar:</span>
-                        <span className="result-answer-text correct">{stripHtml(a.correct_answer)}</span>
-                      </p>
+                        <span className="result-answer-text correct ql-editor" dangerouslySetInnerHTML={richHtml(a.correct_answer)} />
+                      </div>
                     )}
                   </div>
                 </div>

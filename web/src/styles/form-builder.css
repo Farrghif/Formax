@@ -728,8 +728,15 @@
 
 .fb-option-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+}
+
+.fb-option-row > .fb-option-radio,
+.fb-option-row > .fb-option-checkbox,
+.fb-option-row > .fb-correct-btn,
+.fb-option-row > .fb-option-delete {
+  margin-top: 10px;
 }
 
 .fb-option-radio {
@@ -765,6 +772,60 @@
 
 .fb-option-input:focus {
   border-bottom-color: #3b82f6;
+}
+
+/* ---- Option WYSIWYG Editor Wrap ---- */
+.fb-option-editor-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.fb-option-editor-wrap .quill {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.fb-option-editor-wrap .quill:focus-within {
+  border-color: #3b82f6;
+}
+
+.fb-option-editor-wrap .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 6px;
+  background: #f8fafc;
+}
+
+.fb-option-editor-wrap .ql-container.ql-snow {
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+.fb-option-editor-wrap .ql-editor {
+  min-height: 36px;
+  padding: 6px 10px;
+  line-height: 1.5;
+}
+
+.fb-option-editor-wrap .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #94a3b8;
+  font-size: 14px;
+  left: 10px;
+}
+
+.fb-option-editor-wrap .ql-editor p {
+  margin: 0;
+}
+
+.fb-option-editor-wrap .ql-editor img {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 6px;
+  margin: 4px 0;
 }
 
 .fb-option-delete {

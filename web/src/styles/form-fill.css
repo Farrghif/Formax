@@ -889,6 +889,45 @@
   color: #0053db;
 }
 
+/* ---- WYSIWYG option label rendering ---- */
+.option-label-text.ql-editor {
+  padding: 0;
+  min-height: auto;
+  overflow: visible;
+  line-height: 1.5;
+}
+
+.option-label-text.ql-editor p {
+  margin: 0;
+}
+
+.option-label-text.ql-editor img {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 6px;
+  margin: 4px 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.option-label-text.ql-editor strong,
+.option-label-text.ql-editor b {
+  font-weight: 700;
+}
+
+.option-label-text.ql-editor em,
+.option-label-text.ql-editor i {
+  font-style: italic;
+}
+
+.option-label-text.ql-editor u {
+  text-decoration: underline;
+}
+
+.option-label-text.ql-editor s {
+  text-decoration: line-through;
+}
+
 /* ============ Dropdown ============ */
 .dropdown-wrapper {
   position: relative;

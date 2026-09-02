@@ -192,6 +192,26 @@ const QUESTION_MODULES = {
   },
 }
 
+// Option toolbar for answer choices
+const OPTION_MODULES = {
+  toolbar: {
+    container: [
+      [{ size: Size.whitelist }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ color: [] }],
+      ['image'],
+      ['clean'],
+    ],
+    handlers: {
+      image: handleImageUpload,
+    },
+  },
+  imageResize: {
+    modules: ['Resize', 'DisplaySize'],
+    minWidth: 20,
+  },
+}
+
 const FORMATS = [
   'font', 'size', 'header',
   'bold', 'italic', 'underline', 'strike',
@@ -210,11 +230,11 @@ const FORMATS = [
  * @param {function} props.onChange - Callback when value changes
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.className] - Extra CSS class
- * @param {'full'|'compact'} [props.variant] - Toolbar variant: 'full' (description) or 'compact' (question)
+ * @param {'full'|'compact'|'option'} [props.variant] - Toolbar variant: 'full', 'compact', or 'option'
  */
 const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'full' }) => {
   const quillRef = useRef(null)
-  const modules = variant === 'compact' ? QUESTION_MODULES : FULL_MODULES
+  const modules = variant === 'option' ? OPTION_MODULES : (variant === 'compact' ? QUESTION_MODULES : FULL_MODULES)
 
   // Inject audio & image button title/icon into toolbar after mount
   useEffect(() => {
