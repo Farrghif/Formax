@@ -198,6 +198,13 @@ def update_form(
 
     data = payload.model_dump(exclude_unset=True)
     questions_data = data.pop("questions", None)
+    use_join_token = data.pop("use_join_token", None)
+
+    if use_join_token is not None:
+        if use_join_token:
+            form.join_token = form.join_token or security.generate_join_token()
+        else:
+            form.join_token = None
 
     # Terapkan perubahan non-pertanyaan dulu (status, accept_responses, dll)
     # agar publish tetap tersimpan meski pertanyaan terkunci.
@@ -294,10 +301,28 @@ def publish_form(form_id: str, db: Session = Depends(get_db), current_user: mode
     if form.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bukan form milikmu")
 
+    if form.join_token is None and form.status != models.FormStatus.published:
+        form.join_token = security.generate_join_token()
+
     form.status = models.FormStatus.published
     db.commit()
     db.refresh(form)
     return form
+
+
+@router.post("/{form_id}/regenerate-join-token")
+def regenerate_join_token(form_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Buat token baru untuk form yang memerlukan token akses."""
+    form = db.query(models.Form).filter(models.Form.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form tidak ditemukan")
+    if form.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bukan form milikmu")
+
+    form.join_token = security.generate_join_token()
+    db.commit()
+    db.refresh(form)
+    return {"join_token": form.join_token}
 
 
 @router.delete("/{form_id}")

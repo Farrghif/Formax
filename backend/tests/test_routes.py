@@ -28,6 +28,11 @@ class RouteRegistrationTests(unittest.TestCase):
         self.assertIn("/submissions/{submission_id}/result", paths)
         self.assertIn("/submissions/{submission_id}/flag-cheated", paths)
 
+    def test_regenerate_join_token_route_is_registered(self):
+        paths = {route.path for route in app.routes if hasattr(route, "path")}
+
+        self.assertIn("/forms/{form_id}/regenerate-join-token", paths)
+
 
 if __name__ == "__main__":
     unittest.main()

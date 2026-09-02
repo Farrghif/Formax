@@ -6,9 +6,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/form_model.dart';
 import '../services/api_service.dart';
 import '../utils/export_helper.dart';
+import '../widgets/share_form_dialog.dart';
 import 'detail_response_page.dart';
 
 class ResultPage extends StatefulWidget {
@@ -28,6 +30,7 @@ class _ResultPageState extends State<ResultPage> {
         Map<String, Set<String>> gradeMap,
         Map<String, String> labels,
         Map<String, _QuestionAgg> questions,
+        String? joinToken,
       })> _dataFuture;
 
   String _statusFilter = 'semua'; // semua / selesai / proses / curang
@@ -48,6 +51,7 @@ class _ResultPageState extends State<ResultPage> {
         Map<String, Set<String>> gradeMap,
         Map<String, String> labels,
         Map<String, _QuestionAgg> questions,
+        String? joinToken,
       })> _fetchData() async {
     final subRes = await ApiService.getFormSubmissions(widget.formId);
     if (subRes['success'] != true) {
@@ -57,13 +61,16 @@ class _ResultPageState extends State<ResultPage> {
         .map((e) => SubmissionModel.fromJson(e as Map))
         .toList();
 
-    // Ambil detail form: label soal, opsi (untuk kunci + analitik), dan tipe.
+    // Ambil detail form: label soal, opsi (untuk kunci + analitik), tipe, dan token akses.
     final gradeMap = <String, Set<String>>{};
     final labels = <String, String>{};
     final questions = <String, _QuestionAgg>{};
+    String? joinToken;
     final formRes = await ApiService.getForm(widget.formId);
     if (formRes['success'] == true && formRes['data'] is Map) {
-      final qlist = (formRes['data'] as Map)['questions'] as List? ?? [];
+      final formData = Map<String, dynamic>.from(formRes['data'] as Map);
+      joinToken = formData['join_token']?.toString();
+      final qlist = formData['questions'] as List? ?? [];
       for (final raw in qlist) {
         if (raw is! Map) continue;
         final qid = raw['id']?.toString() ?? '';
@@ -90,7 +97,13 @@ class _ResultPageState extends State<ResultPage> {
         }
       }
     }
-    return (subs: subs, gradeMap: gradeMap, labels: labels, questions: questions);
+    return (
+      subs: subs,
+      gradeMap: gradeMap,
+      labels: labels,
+      questions: questions,
+      joinToken: joinToken,
+    );
   }
 
   String _cleanText(String s) => s
@@ -124,6 +137,92 @@ class _ResultPageState extends State<ResultPage> {
       if (_answerMatches(a, e.value)) correct++;
     }
     return (correct / graded.length * 100).round();
+  }
+
+  Future<void> _openShareDialog() async {
+    try {
+      final qrRes = await ApiService.generateQrCode(widget.formId);
+      if (qrRes['success'] != true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(qrRes['message']?.toString() ?? 'Gagal memuat link & QR code'),
+          ),
+        );
+        return;
+      }
+
+      final data = qrRes['data'];
+      if (data is! Map) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Link dan QR code tidak tersedia.')),
+        );
+        return;
+      }
+
+      var shareLink = (data['share_link'] ?? '').toString();
+      final qrUrl = (data['qr_code_url'] ?? '').toString();
+      if (shareLink.isNotEmpty) {
+        shareLink = ApiService.publicFormLink(shareLink);
+      }
+
+      if (shareLink.isEmpty || qrUrl.isEmpty) {
+        final detailRes = await ApiService.getForm(widget.formId);
+        final formData = detailRes['data'];
+        if (formData is Map) {
+          final slug = (formData['slug'] ?? '').toString();
+          if (slug.isNotEmpty) {
+            shareLink = ApiService.publicFormLink(slug);
+          }
+        }
+      }
+
+      if (!mounted) return;
+      if (shareLink.isEmpty || qrUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Link publik belum tersedia untuk form ini.')),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => ShareFormDialog(link: shareLink, qrUrl: qrUrl),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka share dialog: $e')),
+      );
+    }
+  }
+
+  Future<void> _copyJoinToken(String token) async {
+    await Clipboard.setData(ClipboardData(text: token));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Token berhasil disalin ke clipboard')),
+    );
+  }
+
+  Future<void> _regenerateJoinToken() async {
+    final res = await ApiService.regenerateJoinToken(widget.formId);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      final newToken = (res['data'] as Map?)?['join_token']?.toString();
+      if (newToken != null && newToken.isNotEmpty) {
+        setState(() => _dataFuture = _fetchData());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Token berhasil dibuat ulang')),
+        );
+        return;
+      }
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(res['message']?.toString() ?? 'Gagal membuat ulang token')),
+    );
   }
 
   @override
@@ -160,6 +259,14 @@ class _ResultPageState extends State<ResultPage> {
         actions: [
           IconButton(
             icon: const Icon(
+              Icons.share_outlined,
+              color: Color(0xFF2563EB),
+            ),
+            tooltip: 'Lihat Link & QR Code',
+            onPressed: _openShareDialog,
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.table_chart_outlined,
               color: Color(0xFF059669),
             ),
@@ -185,6 +292,7 @@ class _ResultPageState extends State<ResultPage> {
             Map<String, Set<String>> gradeMap,
             Map<String, String> labels,
             Map<String, _QuestionAgg> questions,
+            String? joinToken,
           })>(
         future: _dataFuture,
         builder: (context, snapshot) {
@@ -199,7 +307,12 @@ class _ResultPageState extends State<ResultPage> {
               .where((s) => _passFilter(s))
               .toList();
           return _buildContent(
-              submissions, data.gradeMap, data.labels, data.questions);
+            submissions,
+            data.gradeMap,
+            data.labels,
+            data.questions,
+            data.joinToken,
+          );
         },
       ),
     );
@@ -223,12 +336,17 @@ class _ResultPageState extends State<ResultPage> {
     Map<String, Set<String>> gradeMap,
     Map<String, String> labels,
     Map<String, _QuestionAgg> questions,
+    String? joinToken,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if ((joinToken ?? '').isNotEmpty) ...[
+            _buildJoinTokenCard(joinToken!),
+            const SizedBox(height: 20),
+          ],
           _buildSummaryCard(submissions, gradeMap),
           const SizedBox(height: 20),
           if (submissions.isNotEmpty) ...[
@@ -254,6 +372,111 @@ class _ResultPageState extends State<ResultPage> {
             _buildEmptyState()
           else
             _buildRespondentList(submissions, gradeMap, labels),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJoinTokenCard(String token) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F3FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFC4B5FD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEF2FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.security, size: 18, color: Color(0xFF4338CA)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Token akses form',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF312E81),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Gunakan token untuk membuka akses form',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF4F46E5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Menu token',
+                icon: const Icon(Icons.more_vert, color: Color(0xFF312E81)),
+                onSelected: (value) {
+                  if (value == 'copy') {
+                    _copyJoinToken(token);
+                  } else if (value == 'regen') {
+                    _regenerateJoinToken();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'copy', child: Text('Salin token')),
+                  PopupMenuItem(value: 'regen', child: Text('Generate ulang token')),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E7FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFB8C5FF)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    token,
+                    style: const TextStyle(
+                      letterSpacing: 1.2,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E1B4B),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _copyJoinToken(token),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFC7D2FE),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.copy_all_rounded, size: 18, color: Color(0xFF312E81)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
