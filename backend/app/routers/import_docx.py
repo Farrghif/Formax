@@ -1,6 +1,9 @@
 import io
 
-from docx import Document
+try:
+    from docx import Document
+except ImportError:
+    Document = None
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func

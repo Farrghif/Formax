@@ -47,6 +47,9 @@ export async function readJsonResponse(res, fallbackMessage) {
   }
 
   if (!res.ok) {
+    if (res.status === 404 && json?.detail === 'Not Found') {
+      throw new Error('Endpoint backend belum tersedia atau server backend belum direstart.');
+    }
     throw new Error(json?.detail || fallbackMessage);
   }
 
