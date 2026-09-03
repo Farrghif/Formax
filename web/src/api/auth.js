@@ -17,6 +17,49 @@ export async function sendOtp(email) {
 }
 
 /**
+ * Kirim OTP untuk Lupa Password
+ * @param {string} email
+ */
+export async function sendForgotPasswordOtp(email) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/forgot-password/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  return readJsonResponse(res, 'Gagal mengirim OTP reset password');
+}
+
+/**
+ * Verifikasi OTP untuk Lupa Password
+ * @param {string} email
+ * @param {string} otp
+ */
+export async function verifyForgotPasswordOtp(email, otp) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/forgot-password/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  return readJsonResponse(res, 'Kode OTP tidak valid');
+}
+
+/**
+ * Reset password dengan OTP
+ * @param {{ email: string, otp: string, new_password: string }} data
+ */
+export async function resetPassword(data) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/forgot-password/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  return readJsonResponse(res, 'Gagal mengubah password');
+}
+
+/**
  * Signup / Register user baru (wajib sertakan OTP)
  * @param {{ full_name: string, email: string, password: string, otp: string }} data
  */
