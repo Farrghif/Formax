@@ -324,7 +324,9 @@ export default function ProfilePage() {
 
             {/* Profile Grid Container */}
             <div className="profile-grid-container">
-              {/* Left Main Form Card */}
+              {/* Left Column: Form Cards */}
+              <div className="profile-left-column">
+              {/* Edit Informasi Profil Card */}
               <div className="profile-form-card">
                 <div className="profile-card-header">
                   <div className="profile-header-icon">
@@ -623,6 +625,7 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 </form>
+              </div>
               </div>
 
               {/* Right Side Summary Card */}

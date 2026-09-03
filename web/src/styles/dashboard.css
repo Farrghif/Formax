@@ -2618,6 +2618,12 @@
   align-items: start;
 }
 
+.profile-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 @media (max-width: 860px) {
   .profile-grid-container {
     grid-template-columns: 1fr;
