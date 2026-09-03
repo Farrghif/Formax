@@ -207,18 +207,17 @@ class _LoginPageState extends State<LoginPage> {
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
-                          const Flexible(
-                            child: Text(
-                              'Remember me',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _labelColor,
-                              ),
+                          const Text(
+                            'Remember me',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _labelColor,
                             ),
                           ),
-                          if (isLogin)
+                          if (isLogin) ...[
+                            const Spacer(),
                             TextButton(
-                              onPressed: () => _showForgotPasswordDialog(),
+                              onPressed: _showForgotPasswordDialog,
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
                                 minimumSize: Size.zero,
@@ -229,6 +228,7 @@ class _LoginPageState extends State<LoginPage> {
                                 style: TextStyle(fontSize: 12),
                               ),
                             ),
+                          ],
                         ],
                       ),
 
