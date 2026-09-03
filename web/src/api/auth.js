@@ -117,6 +117,24 @@ export async function updateMe(token, data) {
 }
 
 /**
+ * Change current user password (requires token)
+ * @param {string} token
+ * @param {{ old_password: string, new_password: string }} data
+ */
+export async function changePassword(token, data) {
+  const res = await apiFetch(`${API_BASE_URL}/auth/change-password`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  return readJsonResponse(res, 'Gagal mengubah password');
+}
+
+/**
  * Logout (client-side: hapus token dari localStorage)
  */
 export function logout() {

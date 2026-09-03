@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMe, updateMe, logout } from '../api/auth';
+import { getMe, updateMe, logout, changePassword } from '../api/auth';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
 import '../styles/dashboard.css';
@@ -21,6 +21,21 @@ export default function ProfilePage() {
     email: '',
     avatar_url: '',
   });
+
+  // Password change state
+  const [passForm, setPassForm] = useState({
+    old_password: '',
+    new_password: '',
+    confirm_new_password: '',
+  });
+  const [passMsg, setPassMsg] = useState('');
+  const [passErr, setPassErr] = useState('');
+  const [passSaving, setPassSaving] = useState(false);
+
+  // Eye toggle states for password fields
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -100,6 +115,48 @@ export default function ProfilePage() {
       setError(err.message || 'Gagal memperbarui profil');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPassSaving(true);
+    setPassMsg('');
+    setPassErr('');
+
+    if (!passForm.old_password) {
+      setPassErr('Masukkan password lama Anda');
+      setPassSaving(false);
+      return;
+    }
+
+    if (passForm.new_password.length < 6) {
+      setPassErr('Password baru minimal 6 karakter');
+      setPassSaving(false);
+      return;
+    }
+
+    if (passForm.new_password !== passForm.confirm_new_password) {
+      setPassErr('Konfirmasi password baru tidak cocok dengan password baru');
+      setPassSaving(false);
+      return;
+    }
+
+    try {
+      await changePassword(token, {
+        old_password: passForm.old_password,
+        new_password: passForm.new_password,
+      });
+      setPassMsg('Password Anda berhasil diperbarui!');
+      setPassForm({ old_password: '', new_password: '', confirm_new_password: '' });
+      setShowOldPass(false);
+      setShowNewPass(false);
+      setShowConfirmPass(false);
+      setTimeout(() => setPassMsg(''), 5000);
+    } catch (err) {
+      setPassErr(err.message || 'Gagal mengubah password');
+    } finally {
+      setPassSaving(false);
     }
   };
 
@@ -267,7 +324,9 @@ export default function ProfilePage() {
 
             {/* Profile Grid Container */}
             <div className="profile-grid-container">
-              {/* Left Main Form Card */}
+              {/* Left Column: Form Cards */}
+              <div className="profile-left-column">
+              {/* Edit Informasi Profil Card */}
               <div className="profile-form-card">
                 <div className="profile-card-header">
                   <div className="profile-header-icon">
@@ -388,6 +447,185 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 </form>
+              </div>
+
+              {/* Ganti Password Card */}
+              <div className="profile-form-card">
+                <div className="profile-card-header">
+                  <div className="profile-header-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <div className="profile-card-title">
+                    <h3>Ganti Password</h3>
+                    <p>Masukkan password lama dan password baru untuk memperbarui akun</p>
+                  </div>
+                </div>
+
+                {passMsg && (
+                  <div className="profile-alert success">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{passMsg}</span>
+                  </div>
+                )}
+
+                {passErr && (
+                  <div className="profile-alert danger">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{passErr}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordSubmit} className="profile-form">
+                  <div className="profile-form-group">
+                    <label htmlFor="old_password">Password Lama<span style={{ color: '#ef4444' }}>*</span></label>
+                    <div className="input-icon-wrapper">
+                      <svg className="input-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <input
+                        id="old_password"
+                        type={showOldPass ? 'text' : 'password'}
+                        name="old_password"
+                        value={passForm.old_password}
+                        onChange={(e) => setPassForm({ ...passForm, old_password: e.target.value })}
+                        placeholder="Masukkan password lama Anda"
+                        className="has-eye"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="eye-toggle-btn"
+                        onClick={() => setShowOldPass(!showOldPass)}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showOldPass ? (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label htmlFor="new_password">Password Baru<span style={{ color: '#ef4444' }}>*</span></label>
+                    <div className="input-icon-wrapper">
+                      <svg className="input-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      <input
+                        id="new_password"
+                        type={showNewPass ? 'text' : 'password'}
+                        name="new_password"
+                        value={passForm.new_password}
+                        onChange={(e) => setPassForm({ ...passForm, new_password: e.target.value })}
+                        placeholder="Minimal 6 karakter"
+                        className="has-eye"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="eye-toggle-btn"
+                        onClick={() => setShowNewPass(!showNewPass)}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showNewPass ? (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label htmlFor="confirm_new_password">Konfirmasi Password Baru<span style={{ color: '#ef4444' }}>*</span></label>
+                    <div className="input-icon-wrapper">
+                      <svg className="input-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <input
+                        id="confirm_new_password"
+                        type={showConfirmPass ? 'text' : 'password'}
+                        name="confirm_new_password"
+                        value={passForm.confirm_new_password}
+                        onChange={(e) => setPassForm({ ...passForm, confirm_new_password: e.target.value })}
+                        placeholder="Ulangi password baru"
+                        className="has-eye"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="eye-toggle-btn"
+                        onClick={() => setShowConfirmPass(!showConfirmPass)}
+                        aria-label="Toggle password visibility"
+                      >
+                        {showConfirmPass ? (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="profile-form-actions">
+                    <button
+                      type="button"
+                      className="db-btn-cancel"
+                      onClick={() => {
+                        setPassForm({ old_password: '', new_password: '', confirm_new_password: '' });
+                        setPassErr('');
+                        setPassMsg('');
+                      }}
+                    >
+                      Reset Form
+                    </button>
+                    <button type="submit" className="history-btn-result profile-submit-btn" disabled={passSaving}>
+                      {passSaving ? (
+                        <>
+                          <div className="btn-spinner" />
+                          <span>Memproses...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span>Ubah Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
               </div>
 
               {/* Right Side Summary Card */}
