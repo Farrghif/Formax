@@ -81,7 +81,23 @@ def reset_password(payload: schemas.ResetPasswordRequest, db: Session = Depends(
     user.password_hash = security.hash_password(payload.new_password)
     db.delete(verification)
     db.commit()
-    return {"message": "Password berhasil diubah"}
+    access_token = security.create_access_token({"sub": str(user.id)})
+    return {"message": "Password berhasil diubah", "access_token": access_token}
+
+
+@router.post("/verify-reset-otp")
+def verify_reset_otp(payload: schemas.VerifyResetOtpRequest, db: Session = Depends(get_db)):
+    email = str(payload.email).strip().lower()
+    verification = (
+        db.query(models.EmailVerification)
+        .filter(func.lower(models.EmailVerification.email) == email)
+        .filter(models.EmailVerification.otp_code == payload.otp.strip())
+        .filter(models.EmailVerification.purpose == "password_reset")
+        .first()
+    )
+    if not verification or verification.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP reset tidak valid atau sudah kedaluwarsa")
+    return {"message": "OTP valid"}
 
 @router.post("/signup", response_model=schemas.TokenResponse)
 def signup(payload: schemas.SignUpRequest, db: Session = Depends(get_db)):
@@ -182,4 +198,3 @@ def change_password(
     db.add(current_user)
     db.commit()
 
-    return {"message": "Password berhasil diubah"}

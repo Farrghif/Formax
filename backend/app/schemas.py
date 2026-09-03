@@ -23,6 +23,12 @@ class SendOTPRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
+
+class VerifyResetOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     otp: str

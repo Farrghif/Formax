@@ -182,8 +182,9 @@ class ApiService {
       final data = _safeJson(response.body);
       if (response.statusCode == 200 && data is Map && data['message'] != null) {
         return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': _friendlyError(response, 'Gagal meminta reset password')};
       }
-      return {'success': false, 'message': _friendlyError(response, 'Gagal meminta reset password')};
     } catch (e) {
       return {'success': false, 'message': _friendlyException(e)};
     }
@@ -197,10 +198,31 @@ class ApiService {
         body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
       );
       final data = _safeJson(response.body);
-      if (response.statusCode == 200 && data is Map && data['message'] != null) {
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['message'] != null &&
+          data['access_token'] is String) {
+        await saveToken(data['access_token'] as String);
         return {'success': true, 'data': data};
       }
       return {'success': false, 'message': _friendlyError(response, 'Gagal mengubah password')};
+    } catch (e) {
+      return {'success': false, 'message': _friendlyException(e)};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyPasswordResetOtp(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-reset-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200 && data is Map && data['message'] != null) {
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': _friendlyError(response, 'Kode OTP tidak valid')};
     } catch (e) {
       return {'success': false, 'message': _friendlyException(e)};
     }
