@@ -42,7 +42,7 @@ def forgot_password_send_otp(
     email = str(payload.email).strip().lower()
     user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Email tidak terdaftar")
+        raise HTTPException(status_code=400, detail="Email tidak terdaftar")
 
     otp_code = str(random.randint(100000, 999999))
 
@@ -91,7 +91,7 @@ def reset_password(
     email = str(payload.email).strip().lower()
     user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Email tidak terdaftar")
+        raise HTTPException(status_code=400, detail="Email tidak terdaftar")
 
     otp_record = (
         db.query(models.EmailVerification)
