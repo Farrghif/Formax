@@ -41,6 +41,32 @@ class ApiService {
     }
   }
 
+  static String _friendlyError(http.Response response, String fallback) {
+    final body = response.body.trim();
+    final lowerBody = body.toLowerCase();
+    if (lowerBody.contains('<html') ||
+        lowerBody.contains('<!doctype') ||
+        lowerBody.contains('assets.ngrok.com')) {
+      return 'Tidak dapat terhubung ke server. Pastikan backend dan tunnel ngrok sedang berjalan.';
+    }
+    final data = _safeJson(body);
+    if (data is Map && data['detail'] != null) {
+      return data['detail'].toString();
+    }
+    return fallback;
+  }
+
+  static String _friendlyException(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('socketexception') ||
+        message.contains('failed host lookup') ||
+        message.contains('connection refused') ||
+        message.contains('timeout')) {
+      return 'Tidak dapat terhubung ke server. Pastikan backend dan tunnel ngrok sedang berjalan.';
+    }
+    return 'Terjadi kesalahan saat menghubungi server.';
+  }
+
   // Menyimpan token. Jika rememberMe false, token hanya disimpan di memori.
   static Future<void> saveToken(String token, {bool rememberMe = true}) async {
     _sessionToken = token;
@@ -110,17 +136,17 @@ class ApiService {
       );
 
       final data = _safeJson(response.body);
-      if (response.statusCode == 200) {
-        if (data is Map && data.containsKey('access_token')) {
-          await saveToken(data['access_token'], rememberMe: rememberMe);
-        }
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['access_token'] is String &&
+          (data['access_token'] as String).isNotEmpty) {
+        await saveToken(data['access_token'], rememberMe: rememberMe);
         return {'success': true, 'data': data};
       } else {
-        final msg = data is Map ? (data['detail'] ?? 'Login failed') : 'Login failed';
-        return {'success': false, 'message': msg.toString()};
+        return {'success': false, 'message': _friendlyError(response, 'Login gagal')};
       }
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _friendlyException(e)};
     }
   }
 
@@ -136,14 +162,13 @@ class ApiService {
       );
 
       final data = _safeJson(response.body);
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && data is Map && data['message'] != null) {
         return {'success': true, 'data': data};
       } else {
-        final msg = data is Map ? (data['detail'] ?? 'Failed to send OTP') : 'Failed to send OTP';
-        return {'success': false, 'message': msg.toString()};
+        return {'success': false, 'message': _friendlyError(response, 'Gagal mengirim OTP')};
       }
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _friendlyException(e)};
     }
   }
 
@@ -155,11 +180,12 @@ class ApiService {
         body: jsonEncode({'email': email}),
       );
       final data = _safeJson(response.body);
-      if (response.statusCode == 200) return {'success': true, 'data': data};
-      final msg = data is Map ? (data['detail'] ?? 'Gagal meminta reset password') : 'Gagal meminta reset password';
-      return {'success': false, 'message': msg.toString()};
+      if (response.statusCode == 200 && data is Map && data['message'] != null) {
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': _friendlyError(response, 'Gagal meminta reset password')};
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _friendlyException(e)};
     }
   }
 
@@ -171,11 +197,12 @@ class ApiService {
         body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
       );
       final data = _safeJson(response.body);
-      if (response.statusCode == 200) return {'success': true, 'data': data};
-      final msg = data is Map ? (data['detail'] ?? 'Gagal mengubah password') : 'Gagal mengubah password';
-      return {'success': false, 'message': msg.toString()};
+      if (response.statusCode == 200 && data is Map && data['message'] != null) {
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': _friendlyError(response, 'Gagal mengubah password')};
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _friendlyException(e)};
     }
   }
 

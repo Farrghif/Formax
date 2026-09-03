@@ -200,33 +200,37 @@ class _LoginPageState extends State<LoginPage> {
                             value: _rememberMe,
                             onChanged: (value) {
                               if (value != null) {
-                                setState(() {
-                                  _rememberMe = value;
-                                });
+                                setState(() => _rememberMe = value);
                               }
                             },
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
-                          const Text(
-                            'Remember me',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _labelColor,
+                          const Flexible(
+                            child: Text(
+                              'Remember me',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _labelColor,
+                              ),
                             ),
                           ),
+                          if (isLogin)
+                            TextButton(
+                              onPressed: () => _showForgotPasswordDialog(),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Lupa password?',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
                         ],
                       ),
-
-                      if (isLogin)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => _showForgotPasswordDialog(),
-                            child: const Text('Lupa password?'),
-                          ),
-                        ),
 
                       const SizedBox(height: 8),
 
