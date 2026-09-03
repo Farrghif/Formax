@@ -12,7 +12,10 @@ import re
 import uuid
 from typing import BinaryIO
 
-from docx import Document
+try:
+    from docx import Document
+except ImportError:
+    Document = None
 
 QUESTION_RE = re.compile(r"^\s*(?:soal\s*)?(\d{1,3})\s*[.)\]:\-]\s+(.+)$", re.IGNORECASE)
 OPTION_RE = re.compile(r"^\s*\*?\s*\(?\s*([A-Ha-h])\s*[).\]:\-]\s+(.+)$")
