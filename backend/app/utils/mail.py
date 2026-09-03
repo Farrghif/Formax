@@ -9,11 +9,11 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL", "formax.support@gmail.com")
 APP_PASSWORD = os.getenv("APP_PASSWORD", "duea yiju iblv ljgz")
 
 
-def send_otp_email(recipient_email: str, otp_code: str):
+def send_otp_email(recipient_email: str, otp_code: str, purpose: str = "Verifikasi"):
     msg = MIMEMultipart("alternative")
     msg["From"] = f"Form4x Support <{SENDER_EMAIL}>"
     msg["To"] = recipient_email
-    msg["Subject"] = f"{otp_code} - Kode Verifikasi Form4x Anda"
+    msg["Subject"] = f"{otp_code} - {purpose} Form4x"
 
     # Plain text version for fallback
     text_body = f"""

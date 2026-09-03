@@ -76,7 +76,7 @@ class SubmissionModel {
   factory SubmissionModel.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     final userRaw = map['user'];
-    final user = userRaw is Map ? Map<String, dynamic>.from(userRaw as Map) : null;
+    final user = userRaw is Map ? Map<String, dynamic>.from(userRaw) : null;
     final answersList = map['answers'] as List<dynamic>? ?? [];
     final answersById = <String, AnswerModel>{};
     for (final a in answersList) {
@@ -127,7 +127,7 @@ class AnswerModel {
   factory AnswerModel.fromJson(Map<dynamic, dynamic> json) {
     final map = json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json);
     final qRaw = map['question'];
-    final question = qRaw is Map ? Map<String, dynamic>.from(qRaw as Map) : null;
+    final question = qRaw is Map ? Map<String, dynamic>.from(qRaw) : null;
     final optionsRaw = map['answer_options'];
     return AnswerModel(
       questionId: map['question_id']?.toString() ?? '',

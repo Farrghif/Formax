@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/models/question_model.dart';
-import '../lib/pages/form_maker/models/form_builder_state.dart';
-import '../lib/pages/fillformpage.dart';
+import 'package:form4x/models/question_model.dart';
+import 'package:form4x/pages/form_maker/models/form_builder_state.dart';
+import 'package:form4x/pages/fillformpage.dart';
 
 void main() {
   group('Question Image Attachment Tests', () {

@@ -93,7 +93,7 @@ class TemplateCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? (template.questionsJson?.length ?? 0).toString() + ' pertanyaan' : template.subtitle),
+                          template.plainSubtitle.isNotEmpty ? template.plainSubtitle : (template.subtitle.isEmpty ? '${template.questionsJson?.length ?? 0} pertanyaan' : template.subtitle),
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(context).colorScheme.onSurfaceVariant,

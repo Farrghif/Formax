@@ -212,6 +212,7 @@ class EmailVerification(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     email = Column(String, nullable=False, index=True)
     otp_code = Column(String(6), nullable=False)
+    purpose = Column(String(20), nullable=False, default="signup")
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
 

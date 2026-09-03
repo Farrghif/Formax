@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/form_template.dart';
 import '../services/api_service.dart';
@@ -713,7 +712,7 @@ class _FormMakerPageState extends State<FormMakerPage>
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(_isDark ? 0.3 : 0.1),
+                            color: Colors.black.withValues(alpha: _isDark ? 0.3 : 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -1308,11 +1307,15 @@ class _FormMakerPageState extends State<FormMakerPage>
             SizedBox(
               width: 24,
               height: 24,
-              child: Radio(
-                value: value,
+              child: RadioGroup<String>(
                 groupValue: groupValue,
-                onChanged: onChanged,
-                activeColor: _primaryColor,
+                onChanged: (selected) {
+                  if (selected != null) onChanged(selected);
+                },
+                child: Radio<String>(
+                  value: value,
+                  activeColor: _primaryColor,
+                ),
               ),
             ),
             const SizedBox(width: 12),

@@ -219,6 +219,15 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
 
+                      if (isLogin)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => _showForgotPasswordDialog(),
+                            child: const Text('Lupa password?'),
+                          ),
+                        ),
+
                       const SizedBox(height: 8),
 
                       SizedBox(
@@ -451,6 +460,84 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       ),
     );
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(text: loginEmailController.text.trim());
+    final otpController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    var sent = false;
+    var loading = false;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Lupa password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Masukkan email akun Anda untuk menerima kode reset.'),
+                  const SizedBox(height: 16),
+                  TextField(controller: emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+                  if (sent) ...[
+                    const SizedBox(height: 12),
+                    TextField(controller: otpController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kode OTP')),
+                    const SizedBox(height: 12),
+                    TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password baru')),
+                    const SizedBox(height: 12),
+                    TextField(controller: confirmController, obscureText: true, decoration: const InputDecoration(labelText: 'Konfirmasi password')),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: loading ? null : () => Navigator.pop(dialogContext), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: loading ? null : () async {
+                  final email = emailController.text.trim().toLowerCase();
+                  if (!email.contains('@')) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('Masukkan email yang valid')));
+                    return;
+                  }
+                  if (sent && (passwordController.text.length < 6 || passwordController.text != confirmController.text)) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('Password minimal 6 karakter dan harus sama')));
+                    return;
+                  }
+                  setDialogState(() => loading = true);
+                  final result = sent
+                      ? await ApiService.resetPassword(email, otpController.text.trim(), passwordController.text)
+                      : await ApiService.requestPasswordReset(email);
+                  if (!dialogContext.mounted) return;
+                  setDialogState(() => loading = false);
+                  if (result['success'] == true) {
+                    if (!sent) {
+                      setDialogState(() => sent = true);
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('Kode reset telah dikirim ke email Anda')));
+                    } else {
+                      Navigator.pop(dialogContext);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password berhasil diubah. Silakan login kembali.')));
+                    }
+                  } else {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Proses reset gagal')));
+                  }
+                },
+                child: Text(sent ? 'Ubah password' : 'Kirim kode'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      emailController.dispose();
+      otpController.dispose();
+      passwordController.dispose();
+      confirmController.dispose();
+    }
   }
 
   // Halaman login/register dirancang dengan kartu terang (light) dan textfield

@@ -23,6 +23,7 @@ def send_otp(payload: schemas.SendOTPRequest, background_tasks: BackgroundTasks,
     verification = models.EmailVerification(
         email=email,
         otp_code=otp_code,
+        purpose="signup",
         expires_at=datetime.utcnow() + timedelta(minutes=5)
     )
     db.add(verification)
@@ -31,6 +32,57 @@ def send_otp(payload: schemas.SendOTPRequest, background_tasks: BackgroundTasks,
     background_tasks.add_task(send_otp_email, email, otp_code)
 
     return {"message": "OTP berhasil dikirim"}
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    payload: schemas.ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    email = str(payload.email).strip().lower()
+    user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+    # Jangan membocorkan apakah alamat email terdaftar.
+    if user:
+        otp_code = str(random.randint(100000, 999999))
+        db.query(models.EmailVerification).filter(
+            func.lower(models.EmailVerification.email) == email,
+            models.EmailVerification.purpose == "password_reset",
+        ).delete(synchronize_session=False)
+        db.add(models.EmailVerification(
+            email=email,
+            otp_code=otp_code,
+            purpose="password_reset",
+            expires_at=datetime.utcnow() + timedelta(minutes=5),
+        ))
+        db.commit()
+        background_tasks.add_task(send_otp_email, email, otp_code, "Reset Password")
+    return {"message": "Jika email terdaftar, kode reset telah dikirim"}
+
+
+@router.post("/reset-password")
+def reset_password(payload: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    email = str(payload.email).strip().lower()
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=422, detail="Password minimal 6 karakter")
+    verification = (
+        db.query(models.EmailVerification)
+        .filter(func.lower(models.EmailVerification.email) == email)
+        .filter(models.EmailVerification.otp_code == payload.otp.strip())
+        .filter(models.EmailVerification.purpose == "password_reset")
+        .first()
+    )
+    if not verification:
+        raise HTTPException(status_code=400, detail="OTP reset tidak valid")
+    if verification.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP reset sudah kedaluwarsa")
+    user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="OTP reset tidak valid")
+    user.password_hash = security.hash_password(payload.new_password)
+    db.delete(verification)
+    db.commit()
+    return {"message": "Password berhasil diubah"}
 
 
 @router.post("/signup", response_model=schemas.TokenResponse)

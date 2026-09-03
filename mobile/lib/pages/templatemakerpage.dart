@@ -2,7 +2,6 @@
 // Halaman form builder lengkap — mendukung 12 tipe pertanyaan,
 // drag & drop reorder, multi-page (section break), dan publish ke backend.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/question_model.dart';
 import '../models/form_template.dart';
@@ -78,7 +77,7 @@ class _TemplateMakerPageState extends State<TemplateMakerPage> {
           }).toList();
 
           final settingsRaw = q['settings'];
-          final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw as Map) : <String, dynamic>{};
+          final settings = settingsRaw is Map ? Map<String, dynamic>.from(settingsRaw) : <String, dynamic>{};
           _questions.add(
             QuestionData(
               type: type,

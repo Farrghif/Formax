@@ -147,6 +147,38 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map ? (data['detail'] ?? 'Gagal meminta reset password') : 'Gagal meminta reset password';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
+      );
+      final data = _safeJson(response.body);
+      if (response.statusCode == 200) return {'success': true, 'data': data};
+      final msg = data is Map ? (data['detail'] ?? 'Gagal mengubah password') : 'Gagal mengubah password';
+      return {'success': false, 'message': msg.toString()};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Fungsi Register (Signup)
   static Future<Map<String, dynamic>> register(String fullName, String email, String password, String otp) async {
     try {

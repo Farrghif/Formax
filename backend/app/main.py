@@ -88,6 +88,7 @@ with engine.begin() as conn:
     add_column("submissions", "is_cheated", "BOOLEAN NOT NULL DEFAULT FALSE")
     # Fix 500 /submissions/me — kolom baru untuk anonim (Google-Forms style)
     add_column("submissions", "respondent_key", "VARCHAR(64)")
+    add_column("email_verifications", "purpose", "VARCHAR(20) NOT NULL DEFAULT 'signup'")
     # user_id sekarang boleh NULL untuk submission anonim
     try:
         if dialect == "postgresql":
