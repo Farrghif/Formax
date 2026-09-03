@@ -20,23 +20,9 @@ class SignUpRequest(BaseModel):
 class SendOTPRequest(BaseModel):
     email: EmailStr
 
-
-<<<<<<< HEAD
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
-
-=======
-class ForgotPasswordSendOTPRequest(BaseModel):
-    email: EmailStr
-
-
-class ForgotPasswordVerifyOTPRequest(BaseModel):
-    email: EmailStr
-    otp: str
-
-
->>>>>>> 78b4950b1b6ee643c6879814d5e3c7d2197baf0f
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     otp: str
