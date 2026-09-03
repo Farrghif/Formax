@@ -198,3 +198,22 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.put("/change-password")
+def change_password(
+    payload: schemas.ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if not security.verify_password(payload.old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Password lama Anda salah")
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password baru minimal 6 karakter")
+
+    current_user.password_hash = security.hash_password(payload.new_password)
+    db.add(current_user)
+    db.commit()
+
+    return {"message": "Password berhasil diubah"}

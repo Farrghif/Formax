@@ -2746,6 +2746,30 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
+.input-icon-wrapper input.has-eye {
+  padding-right: 44px;
+}
+
+.input-icon-wrapper .eye-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.18s, background-color 0.18s;
+}
+
+.input-icon-wrapper .eye-toggle-btn:hover {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
 /* Live Avatar Preview Box */
 .profile-avatar-live-preview {
   margin-top: 4px;
