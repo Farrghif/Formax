@@ -7,9 +7,10 @@ import DashboardPage from './pages/DashboardPage';
 import FormBuilderPage from './pages/FormBuilderPage';
 import FormFillPage from './pages/FormFillPage';
 import ProfilePage from './pages/ProfilePage';
+import { getValidToken } from './utils/authStorage';
 
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
+  const token = getValidToken();
   const location = useLocation();
 
   if (!token) {
@@ -20,6 +21,16 @@ function PrivateRoute({ children }) {
   return children;
 }
 
+function PublicRoute({ children }) {
+  const token = getValidToken();
+  const isRemembered = localStorage.getItem('auth_remember') === 'true';
+  // Jika sudah login dengan remember me, langsung ke dashboard tanpa perlu login lagi
+  if (token && isRemembered) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -27,7 +38,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/tentang" element={<TentangPage />} />
         <Route path="/cara-pakai" element={<CaraPakaiPage />} />
-        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
         <Route
           path="/profile"
           element={

@@ -75,7 +75,7 @@ export async function signup(data) {
 
 /**
  * Login user
- * @param {{ email: string, password: string }} data
+ * @param {{ email: string, password: string, remember?: boolean }} data
  */
 export async function login(data) {
   const res = await apiFetch(`${API_BASE_URL}/auth/login`, {
@@ -140,4 +140,7 @@ export async function changePassword(token, data) {
 export function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('auth_expires');
+  localStorage.removeItem('auth_remember');
+  try { sessionStorage.removeItem('token'); } catch {}
 }

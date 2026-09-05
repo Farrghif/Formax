@@ -16,7 +16,8 @@ if not _env_secret or _env_secret.strip() == "" or _env_secret in ("change-this-
 
 SECRET_KEY = _env_secret
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 hari
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 hari default
+REMEMBER_ME_EXPIRE_MINUTES = 60 * 24 * 30  # 30 hari untuk remember me
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

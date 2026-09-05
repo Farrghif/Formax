@@ -140,7 +140,9 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
     if not user or not security.verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email atau password salah")
 
-    token = security.create_access_token({"sub": str(user.id)})
+    # remember me -> 30 hari, else 7 hari default
+    expire = security.REMEMBER_ME_EXPIRE_MINUTES if payload.remember else security.ACCESS_TOKEN_EXPIRE_MINUTES
+    token = security.create_access_token({"sub": str(user.id)}, expires_minutes=expire)
     return schemas.TokenResponse(access_token=token)
 
 

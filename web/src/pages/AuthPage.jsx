@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, signup, sendOtp, sendForgotPasswordOtp, verifyForgotPasswordOtp, resetPassword } from '../api/auth';
+import { setAuth, getValidToken } from '../utils/authStorage';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
 import '../styles/auth.css';
@@ -41,6 +42,16 @@ export default function AuthPage() {
     confirm_password: '',
   });
 
+  // Auto-redirect jika sudah login dengan remember me valid
+  useEffect(() => {
+    const token = getValidToken()
+    if (token && localStorage.getItem('auth_remember') === 'true') {
+      const params = new URLSearchParams(window.location.search)
+      const redirectPath = params.get('redirect')
+      navigate(redirectPath ? decodeURIComponent(redirectPath) : '/dashboard', { replace: true })
+    }
+  }, [navigate])
+
   // Timer effect
   useEffect(() => {
     let interval = null;
@@ -66,8 +77,8 @@ export default function AuthPage() {
     setSuccessMsg('');
     setLoading(true);
     try {
-      const res = await login({ email: loginData.email, password: loginData.password });
-      localStorage.setItem('token', res.access_token);
+      const res = await login({ email: loginData.email, password: loginData.password, remember: !!loginData.remember });
+      setAuth(res.access_token, !!loginData.remember);
       const params = new URLSearchParams(window.location.search);
       const redirectPath = params.get('redirect');
       navigate(redirectPath ? decodeURIComponent(redirectPath) : '/dashboard');
@@ -118,7 +129,7 @@ export default function AuthPage() {
         password: registerData.password,
         otp: otpCode,
       });
-      localStorage.setItem('token', res.access_token);
+      setAuth(res.access_token, !!registerData.remember);
       const params = new URLSearchParams(window.location.search);
       const redirectPath = params.get('redirect');
       navigate(redirectPath ? decodeURIComponent(redirectPath) : '/dashboard');
