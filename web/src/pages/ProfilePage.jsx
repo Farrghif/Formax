@@ -240,7 +240,6 @@ export default function ProfilePage() {
               <span className="db-user-email">{displayEmail}</span>
             </div>
           </div>
-          <ThemeToggle size="sidebar" />
           <button className="db-logout-btn" onClick={handleLogout} aria-label="Logout" title="Keluar">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />

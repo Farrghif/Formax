@@ -21,24 +21,44 @@ _ALLOWED_TAGS = {
     "a", "sub", "sup", "font", "div", "pre",
     # audio/video untuk RichTextEditor dcb894e — harus di-allow agar tidak di-strip
     "audio", "video", "source",
+    # KaTeX / math — harus di-allow agar rumus tidak hilang (fix \frac tampil sebagai teks)
+    "math", "semantics", "annotation", "mrow", "mfrac", "mn", "mo", "mi",
+    "msup", "msub", "msubsup", "munder", "mover", "munderover",
+    "mtable", "mtr", "mtd", "annotation",
 }
 
 _DROP_TAGS = {
     "script", "style", "iframe", "object", "embed", "form", "link",
-    "meta", "base", "noscript", "svg", "math",
+    "meta", "base", "noscript", "svg",
 }
 
 _VOID_TAGS = {"br", "hr", "img", "wbr", "source"}
 
+# class & data-* harus di-allow untuk KaTeX (katex, katex-html, mfrac, frac-line, ql-formula, math-display-block)
 _ALLOWED_ATTRS = {
-    "a": {"href", "title", "target", "rel"},
-    "img": {"src", "alt", "title", "width", "height"},
-    "span": {"style", "title"},
-    "font": {"color", "face", "size"},
-    "ol": {"start"},
-    "audio": {"src", "controls", "style", "preload", "title"},
-    "video": {"src", "controls", "style", "width", "height", "preload"},
-    "source": {"src", "type"},
+    "a": {"href", "title", "target", "rel", "class", "style"},
+    "img": {"src", "alt", "title", "width", "height", "class", "style"},
+    "span": {"style", "title", "class", "data-value", "data-latex", "aria-hidden"},
+    "font": {"color", "face", "size", "class", "style"},
+    "ol": {"start", "class", "style"},
+    "audio": {"src", "controls", "style", "preload", "title", "class"},
+    "video": {"src", "controls", "style", "width", "height", "preload", "class"},
+    "source": {"src", "type", "class"},
+    "div": {"style", "class", "data-value", "data-latex", "aria-hidden"},
+    "p": {"style", "class"},
+    "pre": {"style", "class"},
+    "blockquote": {"style", "class"},
+    "h1": {"style", "class"}, "h2": {"style", "class"}, "h3": {"style", "class"}, "h4": {"style", "class"},
+    "ul": {"style", "class"}, "li": {"style", "class"},
+    # KaTeX MathML
+    "math": {"xmlns", "class", "style"},
+    "semantics": {"class", "style"},
+    "annotation": {"encoding", "class", "style"},
+    "mrow": {"class", "style"}, "mfrac": {"class", "style"}, "mn": {"class", "style"},
+    "mo": {"class", "style"}, "mi": {"class", "style"}, "msup": {"class", "style"},
+    "msub": {"class", "style"}, "msubsup": {"class", "style"}, "munder": {"class", "style"},
+    "mover": {"class", "style"}, "munderover": {"class", "style"},
+    "mtable": {"class", "style"}, "mtr": {"class", "style"}, "mtd": {"class", "style"},
 }
 
 # Pola berbahaya yang tidak boleh ada di dalam nilai atribut style/href/src.
@@ -58,21 +78,34 @@ class _Sanitizer(HTMLParser):
 
     def _attrs(self, tag, attrs):
         rendered = []
+        allowed = _ALLOWED_ATTRS.get(tag)
         for key, value in attrs:
-            key = key.lower()
-            if key.startswith("on"):
+            kl = key.lower()
+            if kl.startswith("on"):
                 continue
             value = "" if value is None else str(value)
-            if key == "style":
+            # allow data-* and aria-* explicitly for KaTeX / formula
+            is_data = kl.startswith("data-") or kl.startswith("aria-")
+            if kl == "style":
                 if not _UNSAFE_STYLE.search(value.lower()):
-                    rendered.append((key, value[:2000]))
-            elif key in ("href", "src"):
+                    rendered.append((kl, value[:2000]))
+            elif kl in ("href", "src"):
                 test = value.strip().lower()
                 if test.startswith(_SAFE_PREFIXES):
-                    rendered.append((key, value))
-            elif _ALLOWED_ATTRS.get(tag) is None or key in _ALLOWED_ATTRS[tag]:
-                if key not in ("class",):
-                    rendered.append((key, value))
+                    rendered.append((kl, value))
+            elif kl == "class":
+                # allow class but strip unsafe chars
+                if not _UNSAFE_STYLE.search(value.lower()):
+                    # hanya izinkan huruf, angka, -, _, spasi
+                    safe = _re.sub(r"[^a-zA-Z0-9\-_ ]", "", value)[:500]
+                    if safe.strip():
+                        rendered.append((kl, safe.strip()))
+            elif is_data:
+                # data-value, data-latex, aria-hidden untuk ql-formula / displayMath / katex
+                if not _UNSAFE_STYLE.search(value.lower()) and "javascript:" not in value.lower():
+                    rendered.append((kl, value[:2000]))
+            elif allowed is None or kl in allowed:
+                rendered.append((kl, value[:2000]))
         return "".join(f' {k}="{_html.escape(v, quote=True)}"' for k, v in rendered)
 
     def handle_starttag(self, tag, attrs):

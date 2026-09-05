@@ -9,7 +9,9 @@ import NgrokAudio from '../components/NgrokAudio';
 import { apiFetch } from '../api/config';
 import logoForm4x from '../assets/logo_form4x.png';
 import 'react-quill-new/dist/quill.snow.css';
+import 'katex/dist/katex.min.css';
 import '../styles/form-fill.css';
+import { prepareMathHtml } from '../utils/mathRender';
 
 const QUESTIONS_PER_PAGE = 5;
 const ZOOM_MIN = 50;
@@ -35,7 +37,9 @@ function normalizeColors(html) {
 // Terjemah HTML rich-text (milik pembuat form) menjadi objek props yang bisa
 // dirender React. Dipakai untuk judul, deskripsi, label soal & opsi agar tampil
 // terformat (mirip RichTextView di aplikasi mobile), bukan sebagai tag mentah.
-const richHtml = (html) => ({ __html: normalizeColors(html ?? '') });
+// Sekarang juga enrich raw LaTeX (\frac dll) yang lolos dari sanitizer lama
+// agar tetap tampil sebagai rumus di fillpage & riwayat.
+const richHtml = (html) => ({ __html: prepareMathHtml(normalizeColors(html ?? '')) });
 
 // Hook untuk fix audio ngrok di dalam container dangerouslySetInnerHTML
 // Hook untuk fix media (audio & image) ngrok di dalam container dangerouslySetInnerHTML

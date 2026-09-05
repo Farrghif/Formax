@@ -8,6 +8,8 @@ import { parseServerTime } from '../utils/date';
 import logoForm4x from '../assets/logo_form4x.png';
 import ThemeToggle from '../components/ThemeToggle';
 import NgrokImage from '../components/NgrokImage';
+import 'katex/dist/katex.min.css';
+import { prepareMathHtml } from '../utils/mathRender';
 import '../styles/dashboard.css';
 
 // Helper: ubah HTML WYSIWYG (Quill) menjadi teks polos agar tidak bocor tag di riwayat
@@ -1382,8 +1384,7 @@ export default function DashboardPage() {
                           return (
                             <div key={q.id} className="analytics-question-card">
                               <div className="analytics-q-header">
-                                <h4 className="analytics-q-title" title={plainLabel(q.label)}>
-                                  {idx + 1}. {plainLabel(q.label)}
+                                <h4 className="analytics-q-title ql-editor" title={plainLabel(q.label)} dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${prepareMathHtml(q.label || '')}` }}>
                                 </h4>
                                 <div className="analytics-q-tags">
                                   <span className="analytics-type-badge">{typeLabels[q.type] || q.type}</span>
@@ -1411,7 +1412,7 @@ export default function DashboardPage() {
                                       <div key={opt.id} className="analytics-bar-item">
                                         <div className="analytics-bar-info">
                                           <div className="analytics-opt-label">
-                                            <span>{stripHtml(opt.label)}</span>
+                                            <span className="ql-editor" dangerouslySetInnerHTML={{ __html: prepareMathHtml(opt.label || '') }} />
                                             {opt.is_correct && <span className="analytics-correct-key">✓ Kunci Jawaban</span>}
                                           </div>
                                           <span className="analytics-opt-stats">
@@ -1574,8 +1575,7 @@ export default function DashboardPage() {
                         return (
                           <div key={q.id} className="detail-question-card">
                             <div className="detail-question-header">
-                              <h3 className="detail-question-title" title={plainLabel(q.label)}>
-                                {idx + 1}. {plainLabel(q.label)}
+                              <h3 className="detail-question-title ql-editor" title={plainLabel(q.label)} dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${prepareMathHtml(q.label || '')}` }}>
                               </h3>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                 <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px' }}>
@@ -1618,7 +1618,7 @@ export default function DashboardPage() {
                                             flexShrink: 0,
                                           }}
                                         />
-                                        <span>{stripHtml(opt.label)}</span>
+                                        <span className="ql-editor" dangerouslySetInnerHTML={{ __html: prepareMathHtml(opt.label || '') }} />
                                       </div>
 
                                       {/* Indicator */}
@@ -1804,8 +1804,7 @@ export default function DashboardPage() {
                         {activityResult.answers.map((a, idx) => (
                           <div key={a.question_id} className="detail-question-card activity-q-card">
                             <div className="detail-question-header">
-                              <h3 className="detail-question-title">
-                                {idx + 1}. {plainLabel(a.label)}
+                              <h3 className="detail-question-title ql-editor" dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${prepareMathHtml(a.label || '')}` }}>
                               </h3>
                               {a.is_correct !== null && a.is_correct !== undefined && (
                                 <span className={`correct-tag ${a.is_correct ? '' : 'incorrect-tag'}`}>
@@ -1815,14 +1814,12 @@ export default function DashboardPage() {
                             </div>
                             <div className="resp-answer-value">
                               <span className="ans-label-tag">Jawaban kamu:</span>
-                              <span className="ans-text-content">
-                                {stripHtml(a.user_answer) || <i style={{ color: '#94a3b8' }}>(tidak dijawab)</i>}
-                              </span>
+                              <span className="ans-text-content ql-editor" dangerouslySetInnerHTML={{ __html: a.user_answer ? prepareMathHtml(a.user_answer) : '<i style="color:#94a3b8">(tidak dijawab)</i>' }} />
                             </div>
                             {a.correct_answer && (
                               <div className="resp-answer-value key-answer-box">
                                 <span className="key-label-tag">Kunci Jawaban:</span>
-                                <span className="key-text-content">{stripHtml(a.correct_answer)}</span>
+                                <span className="key-text-content ql-editor" dangerouslySetInnerHTML={{ __html: prepareMathHtml(a.correct_answer) }} />
                               </div>
                             )}
                           </div>

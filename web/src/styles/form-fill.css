@@ -2793,4 +2793,52 @@
   max-width: 100%;
   border-radius: 8px;
   margin: 8px 0;
+}
+
+/* ── KaTeX Math Rendering (ensure no error in fill/history) ──────────────── */
+.ql-editor .ql-formula,
+.question-label-content .katex,
+.form-description .katex,
+.result-q-label .katex,
+.result-answer-text .katex {
+  font-size: 1.05em;
+  white-space: nowrap;
+}
+.ql-editor .ql-formula {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+/* Display block math (from RichTextEditor displayMath blot) */
+.math-display-block,
+.ql-editor .math-display-block,
+.question-label-content .math-display-block,
+.form-description .math-display-block,
+.result-q-label .math-display-block,
+.result-answer-text .math-display-block {
+  display: block !important;
+  text-align: center;
+  margin: 12px 0 !important;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+[data-theme="dark"] .math-display-block,
+[data-theme="dark"] .ql-editor .math-display-block {
+  background: #1e293b;
+  border-color: #334155;
+}
+.math-display-block .katex-display,
+.ql-editor .math-display-block .katex-display {
+  margin: 0;
+}
+/* Prevent KaTeX error red boxes from breaking layout */
+.katex-error {
+  color: #ef4444 !important;
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }

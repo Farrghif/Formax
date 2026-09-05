@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { uploadFile } from '../api/uploads'
@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.min.css'
 import ImageResize from '@mgreminger/quill-image-resize-module'
+import MathPicker from './MathPicker'
 
 if (typeof window !== 'undefined') {
   window.katex = katex
@@ -44,6 +45,25 @@ Quill.register(Size, true)
 
 // Register image resize module
 Quill.register('modules/imageResize', ImageResize)
+
+// ── Custom Display Math Blot (block, centered) ───────────────────────────────
+const BlockEmbed2 = Quill.import('blots/block/embed')
+class DisplayMathBlot extends BlockEmbed2 {
+  static create({ latex, html }) {
+    const node = super.create()
+    node.setAttribute('data-latex', latex)
+    node.classList.add('math-display-block')
+    // rendered html already safe (katex output)
+    node.innerHTML = html
+    return node
+  }
+  static value(node) {
+    return node.getAttribute('data-latex') || ''
+  }
+}
+DisplayMathBlot.blotName = 'displayMath'
+DisplayMathBlot.tagName = 'div'
+Quill.register(DisplayMathBlot)
 
 // ── Custom Image Blot ────────────────────────────────────────────────────────
 const ImageBlot = Quill.import('formats/image')
@@ -153,7 +173,7 @@ const FULL_MODULES = {
       ['code-block', 'blockquote'],
       [{ list: 'ordered' }, { list: 'bullet' }, { align: [] }],
       ['link', 'image', 'video', 'audio'],
-      ['formula'],
+      ['formula', 'math'],
       ['clean'],
     ],
     handlers: {
@@ -178,6 +198,7 @@ const QUESTION_MODULES = {
       ['code-block', 'blockquote'],
       [{ list: 'ordered' }, { list: 'bullet' }],
       ['link', 'image', 'audio'],
+      ['formula', 'math'],
       ['clean'],
     ],
     handlers: {
@@ -200,6 +221,7 @@ const OPTION_MODULES = {
       ['bold', 'italic', 'underline', 'strike'],
       [{ color: [] }],
       ['image'],
+      ['formula', 'math'],
       ['clean'],
     ],
     handlers: {
@@ -220,7 +242,7 @@ const FORMATS = [
   'blockquote', 'code-block',
   'list', 'indent', 'direction', 'align',
   'link', 'image', 'video', 'formula',
-  'audio',
+  'audio', 'displayMath',
 ]
 
 /**
@@ -235,12 +257,70 @@ const FORMATS = [
 const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'full' }) => {
   const quillRef = useRef(null)
   const modules = variant === 'option' ? OPTION_MODULES : (variant === 'compact' ? QUESTION_MODULES : FULL_MODULES)
+  const [mathOpen, setMathOpen] = useState(false)
+  const [anchorRect, setAnchorRect] = useState(null)
+  const savedRangeRef = useRef(null)
+  const mathBtnRef = useRef(null)
 
-  // Inject audio & image button title/icon into toolbar after mount
+  const handleMathInsert = useCallback((latex, displayMode) => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    const range = savedRangeRef.current || quill.getSelection(true) || { index: quill.getLength(), length: 0 }
+    const index = range.index
+    try {
+      if (displayMode) {
+        // Render display mode HTML and insert as block embed
+        const html = katex.renderToString(latex, { throwOnError: false, displayMode: true, strict: false })
+        // Ensure we are at line boundary: insert newline if needed
+        const needPrefixNewline = index > 0 && quill.getText(index - 1, 1) !== '\n'
+        let insertAt = index
+        if (needPrefixNewline) {
+          quill.insertText(insertAt, '\n', 'user')
+          insertAt += 1
+        }
+        quill.insertEmbed(insertAt, 'displayMath', { latex, html }, 'user')
+        quill.setSelection(insertAt + 1, 0, 'user')
+      } else {
+        // Inline formula - use native formula embed
+        // Validate
+        katex.renderToString(latex, { throwOnError: false, displayMode: false })
+        quill.insertEmbed(index, 'formula', latex, 'user')
+        quill.setSelection(index + 1, 0, 'user')
+      }
+      quill.focus()
+    } catch (err) {
+      console.error('[MathInsert] gagal:', err)
+    }
+    setMathOpen(false)
+  }, [])
+
+  // Inject audio, image, math, formula button title/icon into toolbar after mount
   useEffect(() => {
     const editor = quillRef.current
     if (!editor) return
-    const toolbarEl = editor.getEditor().getModule('toolbar').container
+    const quill = editor.getEditor()
+    const toolbar = quill.getModule('toolbar')
+    const toolbarEl = toolbar.container
+
+    // Register handlers for math & formula to open picker
+    toolbar.addHandler('math', function () {
+      // 'this' is toolbar, quill is this.quill
+      const sel = this.quill.getSelection(true)
+      savedRangeRef.current = sel ? { ...sel } : { index: this.quill.getLength(), length: 0 }
+      const btn = toolbarEl.querySelector('.ql-math')
+      setAnchorRect(btn ? btn.getBoundingClientRect() : null)
+      if (btn) mathBtnRef.current = btn
+      setMathOpen(true)
+    })
+    toolbar.addHandler('formula', function () {
+      const sel = this.quill.getSelection(true)
+      savedRangeRef.current = sel ? { ...sel } : { index: this.quill.getLength(), length: 0 }
+      const btn = toolbarEl.querySelector('.ql-formula') || toolbarEl.querySelector('.ql-math')
+      setAnchorRect(btn ? btn.getBoundingClientRect() : null)
+      if (btn) mathBtnRef.current = btn
+      setMathOpen(true)
+    })
+
     const audioBtns = toolbarEl.querySelectorAll('.ql-audio')
     audioBtns.forEach((btn) => {
       if (!btn.innerHTML.trim()) {
@@ -251,6 +331,32 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
     const imageBtns = toolbarEl.querySelectorAll('.ql-image')
     imageBtns.forEach((btn) => {
       btn.title = 'Sisipkan Gambar'
+    })
+    // Style math button (fx)
+    const mathBtns = toolbarEl.querySelectorAll('.ql-math')
+    mathBtns.forEach((btn) => {
+      mathBtnRef.current = btn
+      btn.innerHTML = `<span style="font-weight:800;font-size:13px;letter-spacing:-0.5px;">fx</span>`
+      btn.title = 'Sisipkan Rumus (∑)'
+      btn.addEventListener('click', () => {
+        // handler already via toolbar.addHandler, but ensure anchor
+        const sel = quill.getSelection(true)
+        savedRangeRef.current = sel ? { ...sel } : { index: quill.getLength(), length: 0 }
+        setAnchorRect(btn.getBoundingClientRect())
+      })
+    })
+    // Also style native formula button to same fx if math not present (fallback)
+    const formulaBtns = toolbarEl.querySelectorAll('.ql-formula')
+    formulaBtns.forEach((btn) => {
+      if (!btn.dataset.styled) {
+        btn.dataset.styled = '1'
+        // Keep original but also ensure title
+        btn.title = 'Sisipkan Rumus (∑) – klik untuk picker'
+        // If there's no ql-math (fallback), style formula as fx
+        if (!toolbarEl.querySelector('.ql-math')) {
+          btn.innerHTML = `<span style="font-weight:800;font-size:13px;letter-spacing:-0.5px;">fx</span>`
+        }
+      }
     })
   }, [])
 
@@ -297,16 +403,24 @@ const RichTextEditor = ({ value, onChange, placeholder, className, variant = 'fu
   }, [value])
 
   return (
-    <ReactQuill
-      ref={quillRef}
-      theme="snow"
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      modules={modules}
-      formats={FORMATS}
-      className={className}
-    />
+    <>
+      <ReactQuill
+        ref={quillRef}
+        theme="snow"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        modules={modules}
+        formats={FORMATS}
+        className={className}
+      />
+      <MathPicker
+        isOpen={mathOpen}
+        onClose={() => setMathOpen(false)}
+        onInsert={handleMathInsert}
+        anchorRect={anchorRect}
+      />
+    </>
   )
 }
 
