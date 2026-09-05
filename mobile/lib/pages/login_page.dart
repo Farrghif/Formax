@@ -219,13 +219,18 @@ class _LoginPageState extends State<LoginPage> {
                             TextButton(
                               onPressed: _showForgotPasswordDialog,
                               style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF1E66D0),
                                 padding: const EdgeInsets.symmetric(horizontal: 4),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: const Text(
                                 'Lupa password?',
-                                style: TextStyle(fontSize: 12),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1E66D0),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
